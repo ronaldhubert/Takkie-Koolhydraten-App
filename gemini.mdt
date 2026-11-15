@@ -1,0 +1,4 @@
+# Project: Takkie & Siep Keto Tracker
+- **Architectuur:** Lichtgewicht PWA (HTML/CSS/JS), gehost op Netlify via GitHub (`takkie-koolhydraten-app`).
+- **Design & Toon:** Warm, speels, Fiep Westendorp-stijl met `Fredoka` font en dikke zwarte randen (`4px solid #1A1A1A`). Teksten in liefdevol Nederlands.
+- **Backend:** Supabase (JS SDK v2) voor opslag van maaltijden, dranken, waterinname, streefdoelen en recepten.

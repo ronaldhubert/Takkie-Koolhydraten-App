@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#E63946">
+    <link rel="manifest" href="manifest.json">
     <title>Takkie & Siep's Liefdevolle Keto Tracker</title>
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -321,24 +323,56 @@
             background-color: #E3F2FD;
             border: 3px solid var(--border-color);
             border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
             box-shadow: 2px 2px 0px var(--border-color);
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
         }
 
         .water-drop.filled { background-color: var(--accent-blue); }
 
-        .item-row {
+        .item-row, .meal-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
             border-bottom: 2px dashed var(--border-color);
-            cursor: pointer;
         }
 
-        .item-row:last-child { border-bottom: none; }
+        .item-row:last-child, .meal-item:last-child { border-bottom: none; }
         .item-title { font-weight: 700; font-size: 0.9rem; }
+
+        .recipe-card {
+            display: flex;
+            align-items: center;
+            background: var(--bubble-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 3px 3px 0px var(--border-color);
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .recipe-card:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px var(--border-color);
+        }
+
+        .recipe-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .recipe-macros {
+            font-size: 0.78rem;
+            color: #444;
+            font-weight: 600;
+        }
 
         .macro-badges {
             display: flex;
@@ -541,6 +575,36 @@
                     <h4 style="margin-top:0; margin-bottom: 8px;">👩‍🍳 Zo maken we het klaar:</h4>
                     <div id="detail-prep" style="font-size: 0.9rem; line-height: 1.4;"></div>
                 </div>
+
+                <button class="btn btn-primary" id="btn-log-recipe" style="width: 100%; margin-top: 14px;">🍽️ Eet dit recept vandaag (+10 pt)</button>
+            </div>
+        </div>
+
+        <!-- TAB 2C: EIGEN RECEPT TOEVOEGEN -->
+        <div id="tab-add-recipe" class="tab-content">
+            <button class="btn btn-back" id="btn-cancel-recipe">⬅️ Terug naar Receptenboek</button>
+            <div class="widget" style="background-color: #FFF9E6;">
+                <h3>➕ Eigen Recept Toevoegen</h3>
+
+                <label>Naam van het recept:</label>
+                <input type="text" id="recipe-name" placeholder="Bijv. Romige Zalm met Avocado">
+
+                <label>Koolhydraten (gram):</label>
+                <input type="number" id="recipe-carbs" value="3" min="0">
+
+                <label>Vetten (gram):</label>
+                <input type="number" id="recipe-fat" value="35" min="0">
+
+                <label>Eiwitten (gram):</label>
+                <input type="number" id="recipe-protein" value="28" min="0">
+
+                <label>Ingrediënten (één per regel):</label>
+                <textarea id="recipe-ingredients" rows="4" placeholder="- 150g zalmfilet&#10;- 1 halve avocado&#10;- Klontje roomboter"></textarea>
+
+                <label>Bereidingswijze (één stap per regel):</label>
+                <textarea id="recipe-prep" rows="4" placeholder="1. Smelt de roomboter in de pan.&#10;2. Bak de zalm goudbruin.&#10;3. Serveer met plakjes avocado."></textarea>
+
+                <button class="btn btn-primary" id="btn-save-recipe">Recept Liefdevol Bewaren (+15 pt)</button>
             </div>
         </div>
 
@@ -665,7 +729,7 @@
                 <hr style="border: 2px solid var(--border-color); margin: 15px 0;">
                 <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
                     <div style="background: #F4F4F4; padding: 10px; border: 2px solid var(--border-color); border-radius: 10px;">
-                        🔥 <b>Streak</b>: <span id="streak-count-text">4</span> dagen[cite: 1]
+                        🔥 <b>Streak</b>: <span id="streak-count-text">4</span> dagen
                     </div>
                     <div style="background: #F4F4F4; padding: 10px; border: 2px solid var(--border-color); border-radius: 10px;">
                         💖 <b>Gevoel</b>: <span id="balance-status">Samen genieten en volhouden</span>
