@@ -6,6 +6,7 @@ let appState = {
     water: 0,
     meals: [],
     recipes: [],
+    savedItems: [],
     goals: { carbs: 25, fat: 110, protein: 90, kcal: 2000 },
     points: 0,
     dailyLogId: null
@@ -78,6 +79,9 @@ async function loadUserData() {
     const { data: recipesData } = await window.supabaseClient.from('recipes').select('*').eq('user_id', currentUser.id);
     if (recipesData) appState.recipes = recipesData;
     
+    const { data: savedItemsData } = await window.supabaseClient.from('saved_items').select('*').eq('user_id', currentUser.id);
+    if (savedItemsData) appState.savedItems = savedItemsData;
+
     renderApp();
 }
 
@@ -226,6 +230,17 @@ function renderApp() {
         document.getElementById('slider-protein').value = gp; document.getElementById('slider-kcal').value = gkcal;
         updateSlidersLive();
     }
+    
+    // Update favorites dropdowns
+    let mealOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
+    let drinkOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
+    appState.savedItems.forEach((item, idx) => {
+        let opt = "<option value='" + idx + "'>" + item.name + " (" + item.carbs + "g KH)</option>";
+        if (item.type === 'meal') mealOptions += opt;
+        else if (item.type === 'drink') drinkOptions += opt;
+    });
+    if(document.getElementById('favorite-meals-select')) document.getElementById('favorite-meals-select').innerHTML = mealOptions;
+    if(document.getElementById('favorite-drinks-select')) document.getElementById('favorite-drinks-select').innerHTML = drinkOptions;
 }
 // ==========================================
 // EVENT LISTENERS
@@ -280,7 +295,16 @@ document.addEventListener("DOMContentLoaded", () => {
             let c = parseInt(document.getElementById('new-meal-carbs').value)||0, f = parseInt(document.getElementById('new-meal-fat').value)||0, p = parseInt(document.getElementById('new-meal-protein').value)||0;
             if(!n) return alert("Vul alsjeblieft een maaltijdnaam in!");
             await saveMeal(t, n, c, f, p); await addPoints(10);
-            document.getElementById('new-meal-name').value = ''; switchTab('home');
+            
+            if(document.getElementById('save-favorite-meal').checked) {
+                const fav = { user_id: currentUser.id, type: 'meal', name: n, carbs: c, fat: f, protein: p };
+                appState.savedItems.push(fav);
+                await window.supabaseClient.from('saved_items').insert([fav]);
+            }
+            
+            document.getElementById('new-meal-name').value = ''; 
+            document.getElementById('save-favorite-meal').checked = false;
+            switchTab('home');
         });
     }
     
@@ -291,7 +315,42 @@ document.addEventListener("DOMContentLoaded", () => {
             if(!n) return alert("Vul even in wat je drinkt!");
             await saveMeal('🥤 Drank', a + "x " + n, c*a, f*a, p*a);
             await updateWater(Math.min(8, appState.water + a)); await addPoints(5);
-            document.getElementById('drink-name').value = ''; switchTab('home');
+            
+            if(document.getElementById('save-favorite-drink').checked) {
+                const fav = { user_id: currentUser.id, type: 'drink', name: n, carbs: c, fat: f, protein: p };
+                appState.savedItems.push(fav);
+                await window.supabaseClient.from('saved_items').insert([fav]);
+            }
+            
+            document.getElementById('drink-name').value = ''; 
+            document.getElementById('save-favorite-drink').checked = false;
+            switchTab('home');
+        });
+    }
+
+    if(document.getElementById('favorite-meals-select')) {
+        document.getElementById('favorite-meals-select').addEventListener('change', (e) => {
+            if(e.target.value === "") return;
+            const item = appState.savedItems[e.target.value];
+            if(item) {
+                document.getElementById('new-meal-name').value = item.name;
+                document.getElementById('new-meal-carbs').value = item.carbs;
+                document.getElementById('new-meal-fat').value = item.fat;
+                document.getElementById('new-meal-protein').value = item.protein;
+            }
+        });
+    }
+
+    if(document.getElementById('favorite-drinks-select')) {
+        document.getElementById('favorite-drinks-select').addEventListener('change', (e) => {
+            if(e.target.value === "") return;
+            const item = appState.savedItems[e.target.value];
+            if(item) {
+                document.getElementById('drink-name').value = item.name;
+                document.getElementById('drink-carbs').value = item.carbs;
+                document.getElementById('drink-fat').value = item.fat;
+                document.getElementById('drink-protein').value = item.protein;
+            }
         });
     }
     

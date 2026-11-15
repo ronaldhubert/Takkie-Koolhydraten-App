@@ -548,6 +548,12 @@
         <div id="tab-log" class="tab-content">
             <div class="widget">
                 <h3>➕ Maaltijd Toevoegen</h3>
+                
+                <label>Kies uit eerdere favorieten:</label>
+                <select id="favorite-meals-select" style="margin-bottom: 12px; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
+                    <option value="">-- Geen favoriet geselecteerd --</option>
+                </select>
+
                 <label>Naam Maaltijd:</label>
                 <input type="text" id="new-meal-name" placeholder="Bijv. Roerei met roomboter">
                 <button class="btn btn-auto" id="btn-autofill-meal">🤖 Vul macro's automatisch in</button>
@@ -569,6 +575,10 @@
                 <label>Eiwitten (gram):</label>
                 <input type="number" id="new-meal-protein" value="30">
 
+                <label class="checkbox-label" style="margin-bottom: 16px;">
+                    <input type="checkbox" id="save-favorite-meal"> 💖 Sla op in mijn favorieten
+                </label>
+
                 <button class="btn btn-primary" id="btn-save-meal">Liefdevol Bewaren (+10 pt)</button>
             </div>
         </div>
@@ -577,6 +587,12 @@
         <div id="tab-log-drink" class="tab-content">
             <div class="widget" style="background-color: #E3F2FD;">
                 <h3>🥤 Drankje Loggen</h3>
+
+                <label>Kies uit eerdere favorieten:</label>
+                <select id="favorite-drinks-select" style="margin-bottom: 12px; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
+                    <option value="">-- Geen favoriet geselecteerd --</option>
+                </select>
+
                 <label>Wat drink je?</label>
                 <input type="text" id="drink-name" placeholder="Bijv. Witte wijn, koffie, thee">
                 <button class="btn btn-auto" id="btn-autofill-drink">🤖 Vul macro's automatisch in</button>
@@ -592,6 +608,10 @@
 
                 <label>Eiwitten (g):</label>
                 <input type="number" id="drink-protein" value="0">
+
+                <label class="checkbox-label" style="margin-bottom: 16px;">
+                    <input type="checkbox" id="save-favorite-drink"> 💖 Sla op in mijn favorieten
+                </label>
 
                 <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue);">Drankje Toevoegen (+5 pt)</button>
             </div>
