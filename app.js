@@ -603,7 +603,7 @@ async function callGeminiJson(promptText) {
         throw new Error('NO_API_KEY');
     }
 
-    const models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    const models = ['gemini-3.8-flash', 'gemini-flash-latest'];
     let lastError = null;
 
     for (const model of models) {
@@ -627,7 +627,10 @@ async function callGeminiJson(promptText) {
         }
 
         const data = await response.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const rawText = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '')
+            .replace(/^```json\s*/i, '')
+            .replace(/```\s*$/i, '')
+            .trim();
         return JSON.parse(rawText);
     }
 
