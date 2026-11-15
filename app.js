@@ -1068,6 +1068,52 @@ async function leaveTeam() {
     renderApp();
 }
 
+function updateNotificationButton() {
+    const btn = document.getElementById('btn-enable-notifications');
+    if (!btn) return;
+    if (!('Notification' in window)) {
+        btn.style.display = 'none';
+    } else if (Notification.permission === 'granted') {
+        btn.innerText = '🔔 Meldingen staan aan';
+    } else if (Notification.permission === 'denied') {
+        btn.innerText = '🔕 Meldingen geblokkeerd in je browser';
+    }
+}
+
+async function enableNotifications() {
+    if (!('Notification' in window)) {
+        alert('Deze browser ondersteunt geen meldingen.');
+        return;
+    }
+    await Notification.requestPermission();
+    updateNotificationButton();
+    if (Notification.permission === 'granted') {
+        showTeamNotification('Takkie & Siep', 'Woef! Je krijgt nu een melding bij nieuwe berichtjes 🐾');
+    }
+}
+
+function showTeamNotification(title, body) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const options = { body, icon: 'takkie.png', tag: 'takkie-team-chat' };
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) reg.showNotification(title, options);
+            else new Notification(title, options);
+        }).catch(() => { try { new Notification(title, options); } catch (e) {} });
+    } else {
+        try { new Notification(title, options); } catch (e) {}
+    }
+}
+
+function notifyNewTeamMessage(msg) {
+    if (!msg || (currentUser && msg.user_id === currentUser.id)) return;
+    const teamTabActive = document.getElementById('tab-team') &&
+        document.getElementById('tab-team').classList.contains('active');
+    if (!document.hidden && teamTabActive) return;
+    const title = msg.msg_type === 'system' ? '🐾 Takkie & Siep' : `💬 ${msg.sender_name || 'Clubje'}`;
+    showTeamNotification(title, msg.content || 'Nieuw berichtje!');
+}
+
 function subscribeToTeamRealtime(teamId) {
     if (!teamId) return;
     if (teamRealtimeChannel) {
@@ -1096,6 +1142,7 @@ function subscribeToTeamRealtime(teamId) {
                     }
                     renderTeamChat();
                     updateSosBannerAndBadge();
+                    notifyNewTeamMessage(newMsg);
                 }
                 if (newMsg.msg_type === 'system') {
                     await refreshTeamMembersCoop();
@@ -2277,6 +2324,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('btn-join-team').addEventListener('click', joinTeamByCode);
     }
 
+    if (document.getElementById('btn-enable-notifications')) {
+        document.getElementById('btn-enable-notifications').addEventListener('click', enableNotifications);
+        updateNotificationButton();
+    }
     if (document.getElementById('btn-leave-team')) {
         document.getElementById('btn-leave-team').addEventListener('click', leaveTeam);
     }
