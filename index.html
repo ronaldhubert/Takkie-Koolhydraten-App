@@ -203,22 +203,22 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            justify-content: center;
             flex-shrink: 0;
+            min-width: 84px;
         }
 
         .takkie-avatar {
             width: 84px;
-            height: 50px;
+            height: 52px;
             background: url('takkie.png') no-repeat center / contain;
             position: relative;
-            filter: drop-shadow(1px 2px 0px rgba(0,0,0,0.12));
         }
 
         .siep-avatar {
-            width: 58px;
-            height: 44px;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cpath d='M18 72 C8 55 8 28 22 18 C20 34 26 46 34 52 L68 52 C72 36 78 24 82 12 L90 28 C96 26 102 26 108 12 L110 34 C116 42 116 56 104 62 L104 82 C104 86 96 86 96 82 L96 66 L84 66 L84 82 C84 86 76 86 76 82 L76 66 L44 66 L44 82 C44 86 36 86 36 82 L36 68 L26 80 C22 84 16 80 18 72 Z' fill='%231A1A1A'/%3E%3Cellipse cx='95' cy='42' rx='4.5' ry='6.5' fill='%23FFFFFF'/%3E%3Cellipse cx='106' cy='42' rx='4' ry='6' fill='%23FFFFFF'/%3E%3Cpath d='M73 48 L80 65 L74 67 L67 50 Z' fill='%23FFFFFF' stroke='%231A1A1A' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain;
+            width: 78px;
+            height: 56px;
+            background: url('siepie.png') no-repeat center / contain;
             position: relative;
         }
 
@@ -408,7 +408,7 @@
 
     <!-- AUTHENTICATIE CONTAINER -->
     <div id="auth-container">
-        <div class="auth-logo"><img src="takkie.png" alt="Takkie" style="height: 80px; width: auto;"></div>
+        <div class="auth-logo"><img id="auth-pet-img" src="takkie.png" alt="Takkie of Siepie" style="height: 80px; width: auto;"></div>
         <h1 style="margin: 0; color: var(--takkie-red);">Takkie & Siep's</h1>
         <h2 style="margin: 4px 0 0 0; color: var(--text-main); font-size: 1.2rem;">Liefdevolle Keto Tracker</h2>
         <p style="margin-top: 16px; font-weight: 600; color: #666;">Welkom terug, lief mens! Laten we inloggen om je dagboekje te openen.</p>
@@ -428,7 +428,7 @@
     <div class="phone-container" id="app-container">
         <header>
             <div class="profile-info">
-                <h1 style="display: flex; align-items: center; gap: 8px;"><img src="takkie.png" alt="Takkie" style="height: 28px; width: auto; background: white; padding: 2px 5px; border-radius: 8px; border: 2px solid var(--border-color);"> Takkie & Siep</h1>
+                <h1>🐾 Takkie & Siep</h1>
                 <p id="level-display">⭐ Level 1: Liefhebber</p>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
@@ -451,8 +451,7 @@
         <div id="tab-home" class="tab-content active">
             <div class="pets-box">
                 <div class="pets-avatars">
-                    <div class="takkie-avatar"></div>
-                    <div class="siep-avatar"></div>
+                    <div class="takkie-avatar" id="home-pet-avatar"></div>
                 </div>
                 <div class="speech-bubble" id="takkie-speech">
                     "Woef! Vandaag zorgen we weer heel lief en goed voor elkaar!"
@@ -729,8 +728,7 @@
         <div id="tab-quotes" class="tab-content">
             <div class="pets-box" style="background-color: #FFF9E6;">
                 <div class="pets-avatars">
-                    <div class="takkie-avatar"></div>
-                    <div class="siep-avatar"></div>
+                    <div class="siep-avatar" id="quote-pet-avatar"></div>
                 </div>
                 <div class="speech-bubble">
                     "Een lief woord voor jou vandaag! Klik hieronder voor een vrolijk duwtje in de rug."
@@ -738,7 +736,7 @@
             </div>
 
             <div class="quote-card">
-                <div style="margin-bottom: 10px;"><img src="takkie.png" alt="Takkie" style="height: 56px; width: auto;"></div>
+                <div style="font-size: 2rem; margin-bottom: 8px;">🐾❤️</div>
                 <div class="quote-text" id="current-quote">
                     "Woef! Vandaag zorgen we heel lief en goed voor elkaar."
                 </div>

@@ -138,6 +138,10 @@ async function checkUser() {
 function showAuth() {
     document.getElementById('auth-container').style.display = 'flex';
     document.getElementById('app-container').style.display = 'none';
+    const authImg = document.getElementById('auth-pet-img');
+    if (authImg) {
+        authImg.src = Math.random() < 0.5 ? 'takkie.png' : 'siepie.png';
+    }
 }
 
 function showApp() {
@@ -855,6 +859,7 @@ function switchTab(tabId) {
 }
 
 let lastQuoteIndex = -1;
+let lastShownPet = 'siepie';
 function getRandomQuote() {
     let idx = Math.floor(Math.random() * motivationalQuotes.length);
     if (motivationalQuotes.length > 1 && idx === lastQuoteIndex) {
@@ -862,6 +867,25 @@ function getRandomQuote() {
     }
     lastQuoteIndex = idx;
     const q = motivationalQuotes[idx];
+
+    // Kies precies 1 dier (Takkie of Siepie) passend bij de quote of afwisselend
+    let pet = 'takkie';
+    const author = q.author || '';
+    if (author.includes('Siep') && !author.includes('Takkie')) {
+        pet = 'siepie';
+    } else if (author.includes('Takkie') && !author.includes('Siep')) {
+        pet = 'takkie';
+    } else {
+        pet = (lastShownPet === 'takkie') ? 'siepie' : 'takkie';
+    }
+    lastShownPet = pet;
+
+    const avatarClass = (pet === 'siepie') ? 'siep-avatar' : 'takkie-avatar';
+    const homeAvatar = document.getElementById('home-pet-avatar');
+    if (homeAvatar) homeAvatar.className = avatarClass;
+    const quoteAvatar = document.getElementById('quote-pet-avatar');
+    if (quoteAvatar) quoteAvatar.className = avatarClass;
+
     if (document.getElementById('takkie-speech')) {
         document.getElementById('takkie-speech').innerText = `"${q.text}"`;
     }
