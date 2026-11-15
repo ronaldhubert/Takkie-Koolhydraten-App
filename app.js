@@ -7,6 +7,8 @@ let editingMealIndex = null;
 let editingFavoriteIndex = null;
 let previousTabBeforeFavorites = 'home';
 
+let teamRealtimeChannel = null;
+
 let appState = {
     water: 0,
     meals: [],
@@ -16,7 +18,14 @@ let appState = {
     points: 0,
     streak: 0,
     dailyLogId: null,
-    geminiApiKey: null
+    geminiApiKey: null,
+    displayName: '',
+    petChoice: 'takkie',
+    teamId: null,
+    team: null,
+    teamMembers: [],
+    teamStreak: 0,
+    teamMessages: []
 };
 
 const motivationalQuotes = [
@@ -206,6 +215,21 @@ async function calculateStreak() {
         }
     }
     appState.streak = streak;
+    await window.supabaseClient
+        .from('profiles')
+        .update({ streak: appState.streak })
+        .eq('id', currentUser.id);
+}
+
+function getDefaultDisplayName() {
+    if (appState.displayName) return appState.displayName;
+    const saved = localStorage.getItem('takkie_display_name');
+    if (saved) return saved;
+    if (currentUser && currentUser.email) {
+        const prefix = currentUser.email.split('@')[0];
+        return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+    }
+    return 'Keto Maatje';
 }
 
 async function loadUserData() {
@@ -224,10 +248,14 @@ async function loadUserData() {
         appState.goals.fat = profileData.goal_fat || 110;
         appState.goals.protein = profileData.goal_protein || 90;
         appState.goals.kcal = profileData.goal_kcal || 2000;
+        appState.displayName = profileData.display_name || getDefaultDisplayName();
+        appState.petChoice = profileData.pet_choice || localStorage.getItem('takkie_pet_choice') || 'takkie';
+        appState.teamId = profileData.team_id || null;
         if (profileData.gemini_api_key) {
             appState.geminiApiKey = profileData.gemini_api_key.trim();
         }
     } else {
+        appState.displayName = getDefaultDisplayName();
         await window.supabaseClient.from('profiles').upsert([{
             id: currentUser.id,
             points: 0,
@@ -284,27 +312,65 @@ async function loadUserData() {
     appState.savedItems = savedItemsData || [];
 
     await calculateStreak();
+    await loadTeamData();
     renderApp();
+}
+
+function getLevelTitle(pts) {
+    let title = "⭐ Level 1: Keto Snuffelaar";
+    if (pts > 50) title = "🌟 Level 2: Speelse Vetverbrander";
+    if (pts > 150) title = "🏆 Level 3: Takkie's Vrolijke Vriendje";
+    if (pts > 300) title = "👑 Level 4: Siep's Spinnende Kampioen";
+    if (pts > 600) title = "🐾 Level 5: Keto Koning(in)";
+    return title;
 }
 
 async function addPoints(amount) {
     if (!currentUser) return;
+    const oldLevel = getLevelTitle(appState.points);
     appState.points += amount;
+    const newLevel = getLevelTitle(appState.points);
     renderApp();
     await window.supabaseClient
         .from('profiles')
         .update({ points: appState.points })
         .eq('id', currentUser.id);
+
+    if (oldLevel !== newLevel && appState.teamId) {
+        await sendTeamMessage(
+            'system',
+            `🌟 Miauw! ${getDefaultDisplayName()} is nu ${newLevel}!`,
+            null,
+            'siepie'
+        );
+    }
 }
 
 async function updateWater(amount) {
     if (!currentUser || !appState.dailyLogId) return;
+    const prevWater = appState.water;
     appState.water = amount;
     renderApp();
     await window.supabaseClient
         .from('daily_logs')
         .update({ water: amount })
         .eq('id', appState.dailyLogId);
+
+    if (prevWater < 8 && amount >= 8 && appState.teamId) {
+        const sentKey = `takkie_water_goal_${getTodayString()}_${currentUser.id}`;
+        if (!localStorage.getItem(sentKey)) {
+            localStorage.setItem(sentKey, '1');
+            await sendTeamMessage(
+                'system',
+                `💧 Woef! ${getDefaultDisplayName()} heeft de drinkbak leeg!`,
+                null,
+                'takkie'
+            );
+        }
+    }
+    if (appState.teamId) {
+        refreshTeamMembersCoop();
+    }
 }
 
 async function saveMeal(type, name, carbs, fat, protein) {
@@ -326,6 +392,9 @@ async function saveMeal(type, name, carbs, fat, protein) {
     appState.meals.push(inserted || newMeal);
     await calculateStreak();
     renderApp();
+    if (appState.teamId) {
+        refreshTeamMembersCoop();
+    }
 }
 
 async function saveRecipe(name, carbs, fat, protein, kcal, ingredients, prep) {
@@ -856,6 +925,635 @@ function generateSmartRecipeFallback(selectedIngredients) {
 }
 
 // ==========================================
+// TEAMS ("TAKKIE'S ROELEKETOE CLUBJES") & REALTIME CHAT
+// ==========================================
+function generateInviteCode() {
+    const digits = Math.floor(1000 + Math.random() * 9000);
+    return `TK-${digits}`;
+}
+
+async function saveMemberIdentity(displayName, petChoice) {
+    if (!currentUser) return;
+    const cleanName = (displayName || '').trim() || getDefaultDisplayName();
+    const cleanPet = petChoice === 'siepie' ? 'siepie' : 'takkie';
+    appState.displayName = cleanName;
+    appState.petChoice = cleanPet;
+    localStorage.setItem('takkie_display_name', cleanName);
+    localStorage.setItem('takkie_pet_choice', cleanPet);
+
+    await window.supabaseClient
+        .from('profiles')
+        .update({ display_name: cleanName, pet_choice: cleanPet })
+        .eq('id', currentUser.id);
+}
+
+async function createTeam() {
+    if (!currentUser) return;
+    const teamName = (document.getElementById('new-team-name')?.value || '').trim();
+    if (!teamName) {
+        alert("Geef jullie nieuwe clubje eerst een gezellige naam (bijv. Keto Kanjers)!");
+        return;
+    }
+
+    const nameInput = document.getElementById('team-display-name-input')?.value;
+    const petInput = document.getElementById('team-pet-choice-input')?.value;
+    await saveMemberIdentity(nameInput, petInput);
+
+    const inviteCode = generateInviteCode();
+    const { data: createdTeam, error } = await window.supabaseClient
+        .from('teams')
+        .insert([{ name: teamName, invite_code: inviteCode, created_by: currentUser.id }])
+        .select()
+        .single();
+
+    if (error || !createdTeam) {
+        alert("Kon het clubje nog niet aanmaken in Supabase. Controleer of je supabase-teams-setup.sql hebt uitgevoerd in de Supabase SQL Editor!\n\nDetails: " + (error?.message || 'Onbekende fout'));
+        return;
+    }
+
+    appState.teamId = createdTeam.id;
+    appState.team = createdTeam;
+
+    await window.supabaseClient
+        .from('profiles')
+        .update({ team_id: createdTeam.id, display_name: appState.displayName, pet_choice: appState.petChoice })
+        .eq('id', currentUser.id);
+
+    await sendTeamMessage(
+        'system',
+        `🐾 Woef! ${appState.displayName} heeft het clubje "${createdTeam.name}" opgericht! Deel code ${createdTeam.invite_code} met je maatje(s).`,
+        null,
+        'takkie'
+    );
+
+    document.getElementById('new-team-name').value = '';
+    await loadTeamData();
+    renderApp();
+}
+
+async function joinTeamByCode() {
+    if (!currentUser) return;
+    const rawCode = (document.getElementById('join-team-code')?.value || '').trim().toUpperCase();
+    if (!rawCode) {
+        alert("Vul de 6-karakter uitnodigingscode van het clubje in (bijv. TK-4821)!");
+        return;
+    }
+
+    const nameInput = document.getElementById('team-display-name-input')?.value;
+    const petInput = document.getElementById('team-pet-choice-input')?.value;
+    await saveMemberIdentity(nameInput, petInput);
+
+    const { data: foundTeam, error } = await window.supabaseClient
+        .from('teams')
+        .select('*')
+        .ilike('invite_code', rawCode)
+        .maybeSingle();
+
+    if (error) {
+        alert("Kon niet zoeken naar het clubje. Controleer of supabase-teams-setup.sql is uitgevoerd in Supabase!\n\nDetails: " + error.message);
+        return;
+    }
+    if (!foundTeam) {
+        alert(`Geen clubje gevonden met code "${rawCode}". Controleer de code even bij je maatje!`);
+        return;
+    }
+
+    appState.teamId = foundTeam.id;
+    appState.team = foundTeam;
+
+    await window.supabaseClient
+        .from('profiles')
+        .update({ team_id: foundTeam.id, display_name: appState.displayName, pet_choice: appState.petChoice })
+        .eq('id', currentUser.id);
+
+    await sendTeamMessage(
+        'system',
+        `🎉 Kwispel! ${appState.displayName} is lid geworden van jullie clubje!`,
+        null,
+        appState.petChoice
+    );
+
+    document.getElementById('join-team-code').value = '';
+    await loadTeamData();
+    renderApp();
+}
+
+async function leaveTeam() {
+    if (!currentUser || !appState.teamId) return;
+    if (!confirm("Weet je zeker dat je dit clubje vriendelijk wilt verlaten?")) return;
+
+    await sendTeamMessage(
+        'system',
+        `🐾 ${getDefaultDisplayName()} heeft het clubje verlaten. Tot snel weer!`,
+        null,
+        appState.petChoice
+    );
+
+    if (teamRealtimeChannel) {
+        window.supabaseClient.removeChannel(teamRealtimeChannel);
+        teamRealtimeChannel = null;
+    }
+
+    appState.teamId = null;
+    appState.team = null;
+    appState.teamMembers = [];
+    appState.teamMessages = [];
+    appState.teamStreak = 0;
+
+    await window.supabaseClient
+        .from('profiles')
+        .update({ team_id: null })
+        .eq('id', currentUser.id);
+
+    renderApp();
+}
+
+function subscribeToTeamRealtime(teamId) {
+    if (!teamId) return;
+    if (teamRealtimeChannel) {
+        window.supabaseClient.removeChannel(teamRealtimeChannel);
+        teamRealtimeChannel = null;
+    }
+
+    teamRealtimeChannel = window.supabaseClient
+        .channel('team-huiskamer-' + teamId)
+        .on(
+            'postgres_changes',
+            {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'team_messages',
+                filter: `team_id=eq.${teamId}`
+            },
+            async (payload) => {
+                const newMsg = payload.new;
+                if (!newMsg) return;
+                const alreadyExists = appState.teamMessages.some(m => m.id === newMsg.id);
+                if (!alreadyExists) {
+                    appState.teamMessages.push(newMsg);
+                    if (appState.teamMessages.length > 50) {
+                        appState.teamMessages = appState.teamMessages.slice(-50);
+                    }
+                    renderTeamChat();
+                    updateSosBannerAndBadge();
+                }
+                if (newMsg.msg_type === 'system') {
+                    await refreshTeamMembersCoop();
+                }
+            }
+        )
+        .subscribe();
+}
+
+async function refreshTeamMembersCoop() {
+    if (!currentUser || !appState.teamId) return;
+    const today = getTodayString();
+
+    const { data: members } = await window.supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('team_id', appState.teamId);
+
+    if (!members || members.length === 0) return;
+
+    const memberIds = members.map(m => m.id);
+
+    const { data: todayLogs } = await window.supabaseClient
+        .from('daily_logs')
+        .select('*')
+        .in('user_id', memberIds)
+        .eq('date', today);
+
+    const { data: allMemberMeals } = await window.supabaseClient
+        .from('meals')
+        .select('user_id, date, type, name')
+        .in('user_id', memberIds)
+        .order('date', { ascending: false });
+
+    const waterByUser = {};
+    (todayLogs || []).forEach(l => {
+        waterByUser[l.user_id] = Number(l.water) || 0;
+    });
+
+    const todayMealsByUser = {};
+    const datesByUser = {};
+    memberIds.forEach(uid => {
+        todayMealsByUser[uid] = [];
+        datesByUser[uid] = new Set();
+    });
+
+    (allMemberMeals || []).forEach(m => {
+        if (datesByUser[m.user_id]) {
+            datesByUser[m.user_id].add(m.date);
+        }
+        if (m.date === today && todayMealsByUser[m.user_id]) {
+            todayMealsByUser[m.user_id].push(m);
+        }
+    });
+
+    // Bereken Team Streak (Kwispel-keten): elke dag dat ALLE leden minimaal 1 maaltijd logden
+    let coopStreak = 0;
+    let checkDate = new Date();
+    for (let i = 0; i < 365; i++) {
+        let dStr = formatDateLocal(checkDate);
+        const allLogged = memberIds.every(uid => datesByUser[uid] && datesByUser[uid].has(dStr));
+        if (allLogged) {
+            coopStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+            if (i === 0) {
+                checkDate.setDate(checkDate.getDate() - 1);
+                dStr = formatDateLocal(checkDate);
+                const allLoggedYesterday = memberIds.every(uid => datesByUser[uid] && datesByUser[uid].has(dStr));
+                if (allLoggedYesterday) {
+                    coopStreak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                    continue;
+                }
+            }
+            break;
+        }
+    }
+    appState.teamStreak = coopStreak;
+
+    appState.teamMembers = members.map(m => {
+        const isMe = m.id === currentUser.id;
+        const mMeals = todayMealsByUser[m.id] || [];
+        const mWater = isMe ? appState.water : (waterByUser[m.id] || 0);
+        let statusParts = [];
+        if (mMeals.length > 0) {
+            const latestMeal = mMeals[mMeals.length - 1];
+            statusParts.push(`Heeft ${(latestMeal.type || 'maaltijd').toLowerCase()} gelogd (${mMeals.length}x)`);
+        } else {
+            statusParts.push('Nog geen hapje gelogd vandaag');
+        }
+        statusParts.push(`💧 ${mWater}/8 glazen`);
+
+        return {
+            id: m.id,
+            displayName: m.display_name || (isMe ? getDefaultDisplayName() : 'Clublid'),
+            petChoice: m.pet_choice || 'takkie',
+            points: Number(m.points) || 0,
+            streak: isMe ? (appState.streak || 0) : (Number(m.streak) || 0),
+            waterToday: mWater,
+            mealsCountToday: mMeals.length,
+            statusText: statusParts.join(' • ')
+        };
+    });
+
+    renderTeamCoopDashboard();
+}
+
+async function loadTeamData() {
+    if (!currentUser) return;
+    if (!appState.teamId) {
+        appState.team = null;
+        appState.teamMembers = [];
+        appState.teamMessages = [];
+        renderTeamSection();
+        return;
+    }
+
+    const { data: teamRow } = await window.supabaseClient
+        .from('teams')
+        .select('*')
+        .eq('id', appState.teamId)
+        .maybeSingle();
+
+    if (!teamRow) {
+        appState.teamId = null;
+        appState.team = null;
+        renderTeamSection();
+        return;
+    }
+
+    appState.team = teamRow;
+
+    const { data: msgRows } = await window.supabaseClient
+        .from('team_messages')
+        .select('*')
+        .eq('team_id', appState.teamId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    appState.teamMessages = (msgRows || []).reverse();
+
+    await refreshTeamMembersCoop();
+    subscribeToTeamRealtime(appState.teamId);
+    renderTeamSection();
+    updateSosBannerAndBadge();
+}
+
+async function sendTeamMessage(msgType, content, recipePayload = null, overridePet = null) {
+    if (!currentUser || !appState.teamId) return;
+    const text = (content || '').trim();
+    if (!text) return;
+
+    const newMsg = {
+        team_id: appState.teamId,
+        user_id: currentUser.id,
+        sender_name: msgType === 'system' ? 'Takkie & Siep' : getDefaultDisplayName(),
+        sender_pet: overridePet || appState.petChoice || 'takkie',
+        msg_type: msgType,
+        content: text,
+        recipe_payload: recipePayload
+    };
+
+    const { data: inserted } = await window.supabaseClient
+        .from('team_messages')
+        .insert([newMsg])
+        .select()
+        .single();
+
+    if (inserted) {
+        const exists = appState.teamMessages.some(m => m.id === inserted.id);
+        if (!exists) {
+            appState.teamMessages.push(inserted);
+            if (appState.teamMessages.length > 50) {
+                appState.teamMessages = appState.teamMessages.slice(-50);
+            }
+        }
+        renderTeamChat();
+        renderSharedRecipesList();
+        updateSosBannerAndBadge();
+    }
+}
+
+window.shareRecipeWithTeam = async function(recipeIdx, evt = null) {
+    if (evt) evt.stopPropagation();
+    if (!appState.teamId) {
+        alert("Je zit nog niet in een clubje! Ga naar het tabblad '🐾 Clubje' om een clubje te maken of lid te worden.");
+        switchTab('team');
+        return;
+    }
+    const r = appState.recipes[recipeIdx];
+    if (!r) return;
+
+    const payload = {
+        name: r.name,
+        carbs: r.carbs,
+        fat: r.fat,
+        protein: r.protein,
+        kcal: r.kcal,
+        ingredients: r.ingredients || '',
+        prep: r.prep || ''
+    };
+
+    await sendTeamMessage(
+        'recipe',
+        `📖 Woef! ${getDefaultDisplayName()} heeft het recept "${r.name}" gedeeld met jullie clubje!`,
+        payload
+    );
+
+    alert(`Woef! "${r.name}" staat nu in Takkie & Siep's Huiskamer voor je hele clubje!`);
+    switchTab('team');
+};
+
+window.addSharedRecipeToMine = async function(msgIdx) {
+    const msg = appState.teamMessages[msgIdx];
+    if (!msg || !msg.recipe_payload) return;
+    const rp = msg.recipe_payload;
+    const c = parseGramNumber(rp.carbs);
+    const f = parseGramNumber(rp.fat);
+    const p = parseGramNumber(rp.protein);
+    const kcal = (c * 4) + (p * 4) + (f * 9);
+
+    // Voeg toe aan favorieten (saved_items)
+    const fav = {
+        user_id: currentUser.id,
+        type: 'meal',
+        name: rp.name,
+        carbs: c,
+        fat: f,
+        protein: p
+    };
+    const { data: insertedFav } = await window.supabaseClient
+        .from('saved_items')
+        .insert([fav])
+        .select()
+        .single();
+    appState.savedItems.push(insertedFav || fav);
+
+    // Voeg ook toe aan eigen receptenboek als hij daar nog niet in staat
+    const alreadyInRecipes = appState.recipes.some(r => (r.name || '').toLowerCase() === (rp.name || '').toLowerCase());
+    if (!alreadyInRecipes) {
+        await saveRecipe(rp.name, c, f, p, kcal, rp.ingredients || '', rp.prep || '');
+    } else {
+        renderApp();
+    }
+
+    alert(`💖 "${rp.name}" is toegevoegd aan jouw favorieten én je receptenboek!`);
+};
+
+window.sendHugToSosSender = async function(senderName) {
+    await sendTeamMessage('reaction', `❤️ Dikke knuffel voor ${senderName} van ${getDefaultDisplayName()}!`);
+};
+
+function updateSosBannerAndBadge() {
+    const bannerEl = document.getElementById('global-sos-banner');
+    const textEl = document.getElementById('global-sos-text');
+    const badgeEl = document.getElementById('nav-team-badge');
+    if (!bannerEl || !appState.teamId || appState.teamMessages.length === 0) {
+        if (bannerEl) bannerEl.style.display = 'none';
+        if (badgeEl) badgeEl.style.display = 'none';
+        return;
+    }
+
+    const cutoff = Date.now() - (6 * 60 * 60 * 1000); // Laatste 6 uur
+    const recentSos = [...appState.teamMessages]
+        .reverse()
+        .find(m => m.msg_type === 'sos' && m.user_id !== currentUser?.id && new Date(m.created_at).getTime() > cutoff);
+
+    if (recentSos) {
+        bannerEl.style.display = 'flex';
+        if (textEl) textEl.innerText = recentSos.content;
+        if (badgeEl) badgeEl.style.display = 'flex';
+    } else {
+        bannerEl.style.display = 'none';
+        if (badgeEl) badgeEl.style.display = 'none';
+    }
+}
+
+function renderTeamCoopDashboard() {
+    const members = appState.teamMembers || [];
+    const totalWater = members.reduce((sum, m) => sum + (Number(m.waterToday) || 0), 0);
+    const goalWater = Math.max(8, members.length * 8);
+
+    const streakTextEl = document.getElementById('team-streak-text');
+    if (streakTextEl) {
+        streakTextEl.innerText = `🔥 ${appState.teamStreak || 0} dagen`;
+    }
+
+    const waterTextEl = document.getElementById('team-water-text');
+    if (waterTextEl) {
+        waterTextEl.innerText = `${totalWater} / ${goalWater} glazen`;
+    }
+
+    const waterBarEl = document.getElementById('team-water-bar');
+    if (waterBarEl) {
+        waterBarEl.style.width = `${Math.min(100, (totalWater / goalWater) * 100)}%`;
+    }
+
+    const membersListEl = document.getElementById('team-members-list');
+    if (membersListEl) {
+        if (members.length === 0) {
+            membersListEl.innerHTML = "<p style='font-size:0.82rem; color:#666;'>Leden worden geladen...</p>";
+        } else {
+            membersListEl.innerHTML = members.map(m => {
+                const petImg = m.petChoice === 'siepie' ? 'siepie.png' : 'takkie.png';
+                const lvl = getLevelTitle(m.points);
+                return `<div class="member-card">
+                    <img src="${petImg}" alt="${escapeHtml(m.petChoice)}" class="member-pet-icon">
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="font-size: 0.92rem;">${escapeHtml(m.displayName)}</strong>
+                            <span style="font-size: 0.75rem; font-weight: 700; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 1px 6px;">🔥 ${m.streak}d</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--takkie-red); font-weight: 700;">${escapeHtml(lvl)}</div>
+                        <div style="font-size: 0.78rem; color: #333; margin-top: 2px;">${escapeHtml(m.statusText)}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+}
+
+function formatChatTime(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderTeamChat() {
+    const chatListEl = document.getElementById('team-chat-list');
+    if (!chatListEl) return;
+
+    if (!appState.teamMessages || appState.teamMessages.length === 0) {
+        chatListEl.innerHTML = "<p style='text-align:center; color:#666; font-size:0.82rem; margin:auto;'>Nog geen berichtjes in de Huiskamer! Stuur het eerste pootje of een lief berichtje.</p>";
+        return;
+    }
+
+    chatListEl.innerHTML = appState.teamMessages.map((m, idx) => {
+        const timeStr = formatChatTime(m.created_at);
+        const petIcon = m.sender_pet === 'siepie' ? '🐱' : '🐶';
+        const isMine = currentUser && m.user_id === currentUser.id;
+
+        if (m.msg_type === 'reaction') {
+            return `<div class="chat-reaction-badge">
+                <div>${escapeHtml(m.content)}</div>
+                <div style="font-size: 0.68rem; font-weight: 600; color: #444; margin-top: 2px;">${petIcon} ${escapeHtml(m.sender_name)} • ${timeStr}</div>
+            </div>`;
+        }
+
+        if (m.msg_type === 'system') {
+            return `<div class="chat-system-msg">
+                ${escapeHtml(m.content)} <span style="font-weight:400; color:#666;">(${timeStr})</span>
+            </div>`;
+        }
+
+        if (m.msg_type === 'sos') {
+            const hugBtn = !isMine
+                ? `<div style="margin-top:6px;"><button onclick="sendHugToSosSender('${escapeHtml(m.sender_name)}')" class="btn" style="padding:4px 10px; font-size:0.75rem; background:white;">❤️ Stuur direct een knuffel!</button></div>`
+                : '';
+            return `<div class="chat-sos-msg">
+                <div>${escapeHtml(m.content)}</div>
+                <div style="font-size:0.7rem; color:#555; margin-top:2px;">${timeStr}</div>
+                ${hugBtn}
+            </div>`;
+        }
+
+        if (m.msg_type === 'recipe' && m.recipe_payload) {
+            const rp = m.recipe_payload;
+            return `<div class="chat-system-msg" style="background: #F1FAEE; border-style: solid;">
+                <span class="shared-recipe-badge">🐾 Gedeeld Club-Recept</span>
+                <div style="font-size: 0.9rem; margin: 2px 0;">📖 ${escapeHtml(rp.name)}</div>
+                <div style="font-size: 0.75rem; color: #444; margin-bottom: 6px;">${escapeHtml(rp.carbs)} • ${escapeHtml(rp.fat)} • ${escapeHtml(rp.protein)}</div>
+                <button onclick="addSharedRecipeToMine(${idx})" class="btn" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-yellow);">💖 Voeg toe aan mijn favorieten</button>
+            </div>`;
+        }
+
+        return `<div class="chat-msg ${isMine ? 'mine' : ''}">
+            <div class="chat-msg-header">
+                <span>${petIcon} ${escapeHtml(m.sender_name)}</span>
+                <span>${timeStr}</span>
+            </div>
+            <div>${escapeHtml(m.content)}</div>
+        </div>`;
+    }).join('');
+
+    chatListEl.scrollTop = chatListEl.scrollHeight;
+}
+
+function renderSharedRecipesList() {
+    const listEl = document.getElementById('team-shared-recipes-list');
+    if (!listEl) return;
+
+    const recipeMsgs = (appState.teamMessages || [])
+        .map((m, idx) => ({ msg: m, idx }))
+        .filter(item => item.msg.msg_type === 'recipe' && item.msg.recipe_payload);
+
+    if (recipeMsgs.length === 0) {
+        listEl.innerHTML = "<p style='text-align:center; color:#666; font-size:0.82rem;'>Nog geen recepten gedeeld in het clubje. Open een recept in je Receptenboek en klik op <b>🐾 Deel met mijn clubje</b>!</p>";
+        return;
+    }
+
+    listEl.innerHTML = recipeMsgs.reverse().map(({ msg, idx }) => {
+        const rp = msg.recipe_payload;
+        return `<div class="recipe-card" style="cursor: default; justify-content: space-between; gap: 10px;">
+            <div style="flex: 1;">
+                <span class="shared-recipe-badge">🐾 Gedeeld door ${escapeHtml(msg.sender_name)}</span>
+                <div class="recipe-title">${escapeHtml(rp.name)}</div>
+                <div class="recipe-macros">${escapeHtml(rp.carbs)} • ${escapeHtml(rp.fat)} • ${escapeHtml(rp.protein)} • ${escapeHtml(rp.kcal)}</div>
+            </div>
+            <button onclick="addSharedRecipeToMine(${idx})" class="btn" style="padding: 6px 10px; font-size: 0.75rem; background: var(--accent-yellow); flex-shrink: 0;">💖 + Favoriet</button>
+        </div>`;
+    }).join('');
+}
+
+function renderTeamSection() {
+    const noGroupEl = document.getElementById('team-no-group');
+    const activeGroupEl = document.getElementById('team-active-group');
+    if (!noGroupEl || !activeGroupEl) return;
+
+    const nameInputNoGroup = document.getElementById('team-display-name-input');
+    if (nameInputNoGroup && !nameInputNoGroup.value) {
+        nameInputNoGroup.value = getDefaultDisplayName();
+    }
+    const petInputNoGroup = document.getElementById('team-pet-choice-input');
+    if (petInputNoGroup) {
+        petInputNoGroup.value = appState.petChoice || 'takkie';
+    }
+
+    if (!appState.teamId || !appState.team) {
+        noGroupEl.style.display = 'block';
+        activeGroupEl.style.display = 'none';
+        return;
+    }
+
+    noGroupEl.style.display = 'none';
+    activeGroupEl.style.display = 'block';
+
+    const teamNameEl = document.getElementById('active-team-name');
+    if (teamNameEl) teamNameEl.innerText = `🐾 ${appState.team.name}`;
+    const teamCodeEl = document.getElementById('active-team-code');
+    if (teamCodeEl) teamCodeEl.innerText = appState.team.invite_code;
+
+    const activeMemberName = document.getElementById('active-member-name');
+    if (activeMemberName && document.activeElement !== activeMemberName) {
+        activeMemberName.value = getDefaultDisplayName();
+    }
+    const activeMemberPet = document.getElementById('active-member-pet');
+    if (activeMemberPet && document.activeElement !== activeMemberPet) {
+        activeMemberPet.value = appState.petChoice || 'takkie';
+    }
+
+    renderTeamCoopDashboard();
+    renderTeamChat();
+    renderSharedRecipesList();
+}
+
+// ==========================================
 // UI EN EVENTS
 // ==========================================
 function switchTab(tabId) {
@@ -866,6 +1564,13 @@ function switchTab(tabId) {
 
     if (tabId === 'home' || tabId === 'quotes') {
         getRandomQuote();
+    }
+    if (tabId === 'team') {
+        const badgeEl = document.getElementById('nav-team-badge');
+        if (badgeEl) badgeEl.style.display = 'none';
+        if (appState.teamId) {
+            refreshTeamMembersCoop();
+        }
     }
 
     let navTabId = tabId;
@@ -1145,6 +1850,7 @@ function renderApp() {
             "<div class='recipe-title'>" + escapeHtml(r.name) + "</div>" +
             "<div class='recipe-macros'>" + escapeHtml(r.carbs) + " • " + escapeHtml(r.fat) + " • " + escapeHtml(r.protein) + " • " + escapeHtml(r.kcal) + "</div>" +
             "<div style='margin-top: 6px;'>" +
+            "<button onclick='shareRecipeWithTeam(" + idx + ", event)' style='background:none; border:none; color:#1b4332; cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; padding:0; margin-right:12px;'>🐾 Deel met clubje</button>" +
             "<button onclick='openEditRecipe(" + idx + ", \"recipes\", event)' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; padding:0; margin-right:12px;'>✏️ Bewerken</button>" +
             "<button onclick='deleteRecipe(" + idx + ", event)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; padding:0;'>🗑️ Verwijderen</button>" +
             "</div>" +
@@ -1195,6 +1901,8 @@ function renderApp() {
     if (document.getElementById('favorite-meals-select')) document.getElementById('favorite-meals-select').innerHTML = mealOptions;
     if (document.getElementById('favorite-drinks-select')) document.getElementById('favorite-drinks-select').innerHTML = drinkOptions;
     if (document.getElementById('favorites-manage-list')) document.getElementById('favorites-manage-list').innerHTML = favManageHtml;
+
+    renderTeamSection();
 }
 
 // ==========================================
@@ -1550,6 +2258,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (document.getElementById('btn-update-recipe')) {
         document.getElementById('btn-update-recipe').addEventListener('click', saveEditedRecipe);
+    }
+
+    if (document.getElementById('btn-share-recipe-team')) {
+        document.getElementById('btn-share-recipe-team').addEventListener('click', () => {
+            if (currentRecipeIndex !== null) {
+                window.shareRecipeWithTeam(currentRecipeIndex);
+            }
+        });
+    }
+
+    // Teams & Huiskamer Chat event listeners
+    if (document.getElementById('btn-create-team')) {
+        document.getElementById('btn-create-team').addEventListener('click', createTeam);
+    }
+
+    if (document.getElementById('btn-join-team')) {
+        document.getElementById('btn-join-team').addEventListener('click', joinTeamByCode);
+    }
+
+    if (document.getElementById('btn-leave-team')) {
+        document.getElementById('btn-leave-team').addEventListener('click', leaveTeam);
+    }
+
+    if (document.getElementById('btn-copy-team-code')) {
+        document.getElementById('btn-copy-team-code').addEventListener('click', async () => {
+            const code = appState.team?.invite_code || '';
+            if (!code) return;
+            try {
+                await navigator.clipboard.writeText(code);
+                alert(`Code ${code} is gekopieerd! Stuur 'm naar je maatje.`);
+            } catch (_e) {
+                prompt("Kopieer deze uitnodigingscode:", code);
+            }
+        });
+    }
+
+    if (document.getElementById('btn-save-member-settings')) {
+        document.getElementById('btn-save-member-settings').addEventListener('click', async () => {
+            const nameVal = document.getElementById('active-member-name')?.value;
+            const petVal = document.getElementById('active-member-pet')?.value;
+            await saveMemberIdentity(nameVal, petVal);
+            await refreshTeamMembersCoop();
+            alert("Woef! Je naam en icoontje in het clubje zijn bijgewerkt.");
+        });
+    }
+
+    if (document.getElementById('btn-send-chat')) {
+        document.getElementById('btn-send-chat').addEventListener('click', async () => {
+            const inputEl = document.getElementById('team-chat-input');
+            if (!inputEl || !inputEl.value.trim()) return;
+            const txt = inputEl.value.trim();
+            inputEl.value = '';
+            await sendTeamMessage('text', txt);
+        });
+    }
+
+    if (document.getElementById('team-chat-input')) {
+        document.getElementById('team-chat-input').addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const inputEl = e.currentTarget;
+                if (!inputEl.value.trim()) return;
+                const txt = inputEl.value.trim();
+                inputEl.value = '';
+                await sendTeamMessage('text', txt);
+            }
+        });
+    }
+
+    document.querySelectorAll('.btn-reaction').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const reactionText = e.currentTarget.getAttribute('data-reaction');
+            if (reactionText) {
+                await sendTeamMessage('reaction', reactionText);
+            }
+        });
+    });
+
+    if (document.getElementById('btn-team-sos')) {
+        document.getElementById('btn-team-sos').addEventListener('click', async () => {
+            await sendTeamMessage(
+                'sos',
+                `❤️ ${getDefaultDisplayName()} kan nu wel wat lieve woordjes gebruiken!`
+            );
+        });
+    }
+
+    if (document.getElementById('btn-goto-sos-chat')) {
+        document.getElementById('btn-goto-sos-chat').addEventListener('click', () => {
+            switchTab('team');
+            const chatInput = document.getElementById('team-chat-input');
+            if (chatInput) chatInput.focus();
+        });
     }
 
     // AI Analyse bij Maaltijd & Drank toevoegen

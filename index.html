@@ -459,6 +459,205 @@
         .checkbox-group .checkbox-label:has(input:checked) {
             background-color: var(--bubble-bg);
         }
+
+        /* TEAMS & HUISKAMER CHAT STYLING */
+        @keyframes pawPop {
+            0% { transform: scale(0.6) rotate(-6deg); opacity: 0; }
+            70% { transform: scale(1.08) rotate(2deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        @keyframes sosPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .nav-badge {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            background-color: var(--takkie-red);
+            color: white;
+            font-style: normal;
+            font-size: 0.65rem;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .sos-highlight-banner {
+            background-color: #FFE5EC;
+            border-bottom: 4px solid var(--border-color);
+            padding: 10px 14px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            animation: sosPulse 2s infinite ease-in-out;
+        }
+
+        .member-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bubble-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            box-shadow: 3px 3px 0px var(--border-color);
+        }
+
+        .member-pet-icon {
+            width: 46px;
+            height: 34px;
+            object-fit: contain;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+
+        .chat-container {
+            background: #FAFAFA;
+            border: 3px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+            box-shadow: inset 2px 2px 0px rgba(0,0,0,0.05);
+        }
+
+        .chat-msg {
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            box-shadow: 2px 2px 0px var(--border-color);
+            max-width: 88%;
+            align-self: flex-start;
+        }
+
+        .chat-msg.mine {
+            background: var(--bubble-bg);
+            align-self: flex-end;
+        }
+
+        .chat-msg-header {
+            font-size: 0.72rem;
+            color: #555;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .chat-reaction-badge {
+            background: var(--accent-yellow);
+            border: 3px solid var(--border-color);
+            border-radius: 18px;
+            padding: 8px 14px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            box-shadow: 3px 3px 0px var(--border-color);
+            align-self: center;
+            text-align: center;
+            animation: pawPop 0.35s ease-out;
+        }
+
+        .chat-system-msg {
+            background: #FFF9E6;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: center;
+            align-self: center;
+            width: 92%;
+        }
+
+        .chat-sos-msg {
+            background: #FFE5EC;
+            border: 3px solid var(--takkie-red);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            align-self: center;
+            width: 92%;
+            text-align: center;
+            box-shadow: 3px 3px 0px var(--border-color);
+            animation: pawPop 0.35s ease-out;
+        }
+
+        .reaction-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .btn-reaction {
+            background: #FFF9E6;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 7px 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            font-family: 'Fredoka', cursive, sans-serif;
+            cursor: pointer;
+            box-shadow: 2px 2px 0px var(--border-color);
+            transition: transform 0.1s;
+        }
+
+        .btn-reaction:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px var(--border-color);
+        }
+
+        .btn-sos {
+            background-color: #FFE5EC;
+            color: var(--takkie-red);
+            border: 3px solid var(--border-color);
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            font-family: 'Fredoka', cursive, sans-serif;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--border-color);
+        }
+
+        .shared-recipe-badge {
+            display: inline-block;
+            background: var(--accent-yellow);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1px 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -498,10 +697,17 @@
     <nav class="top-nav">
         <button class="nav-item active" data-tab="home"><span>🏠</span>Home</button>
         <button class="nav-item" data-tab="recipes"><span>📖</span>Recepten</button>
+        <button class="nav-item" data-tab="team" style="position: relative;"><span>🐾</span>Clubje<i id="nav-team-badge" class="nav-badge" style="display:none;">!</i></button>
         <button class="nav-item" data-tab="quotes"><span>❤️</span>Quotes</button>
         <button class="nav-item" data-tab="log"><span>➕</span>Log</button>
         <button class="nav-item" data-tab="profile"><span>⚙️</span>Profiel</button>
     </nav>
+
+    <!-- Visuele highlight banner als een groepslid de Opkikker / Noodknop indrukt -->
+    <div id="global-sos-banner" class="sos-highlight-banner">
+        <span id="global-sos-text">❤️ Een clubgenootje kan nu wel wat lieve woordjes gebruiken!</span>
+        <button class="btn" id="btn-goto-sos-chat" style="padding: 4px 10px; font-size: 0.75rem; background: var(--accent-yellow);">Stuur liefs 🐾</button>
+    </div>
 
     <div class="content">
         <!-- TAB 1: DASHBOARD -->
@@ -612,6 +818,7 @@
                 </div>
 
                 <button class="btn btn-primary" id="btn-log-recipe" style="width: 100%; margin-top: 14px;">🍽️ Eet dit recept vandaag (+10 pt)</button>
+                <button class="btn btn-ai" id="btn-share-recipe-team" style="width: 100%; margin-top: 10px;">🐾 Deel met mijn clubje</button>
                 <div class="btn-grid" style="margin-top: 10px;">
                     <button class="btn" id="btn-edit-recipe-detail" style="background-color: var(--accent-yellow);">✏️ Bewerken</button>
                     <button class="btn" id="btn-delete-recipe-detail" style="background-color: #FFEEEE; color: var(--takkie-red);">🗑️ Verwijderen</button>
@@ -832,6 +1039,121 @@
                 <input type="number" id="edit-fav-protein" value="0" min="0">
 
                 <button class="btn btn-primary" id="btn-update-favorite" style="width: 100%;">💾 Favoriet Opslaan</button>
+            </div>
+        </div>
+
+        <!-- TAB: TEAMS & HUISKAMER CHAT ("Takkie's Roeleketoe Clubjes") -->
+        <div id="tab-team" class="tab-content">
+            <!-- WEERGAVE ZONDER ACTIEF CLUBJE -->
+            <div id="team-no-group">
+                <div class="pets-box" style="background-color: #FFF9E6;">
+                    <div class="pets-avatars">
+                        <div class="takkie-avatar" id="team-welcome-avatar"></div>
+                    </div>
+                    <div class="speech-bubble">
+                        "Samen volhouden is veel gezelliger! Maak een Roeleketoe Clubje met je maatje of sluit je aan met een code."
+                    </div>
+                </div>
+
+                <div class="widget">
+                    <h3>🐾 Jouw Naam & Maatje</h3>
+                    <label>Hoe mogen je clubgenootjes je noemen?</label>
+                    <input type="text" id="team-display-name-input" placeholder="Bijv. Ronald">
+
+                    <label>Kies jouw icoontje in het clubje:</label>
+                    <select id="team-pet-choice-input">
+                        <option value="takkie">🐶 Takkie (Vrolijke Teckel)</option>
+                        <option value="siepie">🐱 Siepie (Spinnende Kat)</option>
+                    </select>
+                </div>
+
+                <div class="widget" style="background-color: var(--bubble-bg);">
+                    <h3>✨ Nieuw Clubje Oprichten</h3>
+                    <p style="font-size: 0.82rem; color: #555; margin-top: 0;">Bedenk een gezellige naam voor jullie clubje:</p>
+                    <input type="text" id="new-team-name" placeholder="Bijv. Keto Kanjers">
+                    <button class="btn btn-primary" id="btn-create-team" style="width: 100%;">🐾 Clubje Aanmaken</button>
+                </div>
+
+                <div class="widget" style="background-color: #FFF9E6;">
+                    <h3>🤝 Meedoen met Uitnodigingscode</h3>
+                    <p style="font-size: 0.82rem; color: #555; margin-top: 0;">Heb je een code (bijv. <b>TK-4821</b>) gekregen van je maatje?</p>
+                    <input type="text" id="join-team-code" placeholder="Bijv. TK-4821" style="text-transform: uppercase;">
+                    <button class="btn btn-ai" id="btn-join-team" style="width: 100%;">💖 Lid Worden van Clubje</button>
+                </div>
+            </div>
+
+            <!-- WEERGAVE MET ACTIEF CLUBJE -->
+            <div id="team-active-group" style="display: none;">
+                <div class="widget" style="background-color: #FFF9E6;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <div>
+                            <h2 id="active-team-name" style="margin: 0; font-size: 1.15rem; color: var(--takkie-red);">🐾 Clubje</h2>
+                            <div style="font-size: 0.78rem; color: #555; font-weight: 600; margin-top: 2px;">Uitnodigingscode: <b id="active-team-code">TK-0000</b></div>
+                        </div>
+                        <button class="btn" id="btn-copy-team-code" style="padding: 6px 10px; font-size: 0.78rem; background: white;">📋 Kopieer Code</button>
+                    </div>
+                </div>
+
+                <!-- GEZAMENLIJK DASHBOARD (CO-OP DOELEN) -->
+                <div class="widget">
+                    <h3><span>🏆 Kwispel-keten (Team Streak)</span> <span id="team-streak-text" style="color: var(--takkie-red);">🔥 0 dagen</span></h3>
+                    <p style="font-size: 0.78rem; color: #666; margin: 0 0 12px 0;">Telt op als alle clubleden op een dag minimaal 1 maaltijd loggen!</p>
+
+                    <h3><span>💧 De Gezamenlijke Drinkbak</span> <span id="team-water-text" style="color: #0077b6;">0 / 8 glazen</span></h3>
+                    <div class="progress-bar-bg">
+                        <div id="team-water-bar" style="height: 100%; width: 0%; background-color: var(--accent-blue); border-right: 3px solid var(--border-color); transition: width 0.3s ease;"></div>
+                    </div>
+
+                    <h3 style="margin-top: 14px;">🐾 Onze Clubleden Vandaag</h3>
+                    <div id="team-members-list"></div>
+                </div>
+
+                <!-- DE LIEFDEVOLLE CHAT ("Takkie & Siep's Huiskamer") -->
+                <div class="widget" style="background-color: var(--bubble-bg);">
+                    <h3>💬 Takkie & Siep's Huiskamer</h3>
+
+                    <!-- De "Opkikker / Noodknop" (Siep, help me!) -->
+                    <button class="btn-sos" id="btn-team-sos">❤️ Hulp nodig (ik heb trek / een moeilijke dag)</button>
+
+                    <!-- Realtime Berichtenvenster (laatste 50) -->
+                    <div class="chat-container" id="team-chat-list"></div>
+
+                    <!-- Snelle Liefdevolle Reacties (Pootjes sturen) -->
+                    <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 4px;">🐾 Stuur direct een pootje:</div>
+                    <div class="reaction-grid">
+                        <button type="button" class="btn-reaction" data-reaction="🐾 High-paw!">🐾 High-paw!</button>
+                        <button type="button" class="btn-reaction" data-reaction="🦴 Kluifje voor jou!">🦴 Kluifje voor jou!</button>
+                        <button type="button" class="btn-reaction" data-reaction="🐟 Spinnend van trots!">🐟 Spinnend van trots!</button>
+                        <button type="button" class="btn-reaction" data-reaction="❤️ Dikke knuffel!">❤️ Dikke knuffel!</button>
+                    </div>
+
+                    <!-- Tekstbericht typen -->
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="team-chat-input" placeholder="Typ een lief, aanmoedigend berichtje..." style="margin-bottom: 0; flex: 1; background: white;">
+                        <button type="button" class="btn btn-primary" id="btn-send-chat" style="padding: 8px 14px;">🐾 Stuur</button>
+                    </div>
+                </div>
+
+                <!-- GEDEELDE RECEPTEN BINNEN HET TEAM -->
+                <div class="widget">
+                    <h3>📖 Gedeelde Club-Recepten</h3>
+                    <p style="font-size: 0.78rem; color: #666; margin-top: 0;">Recepten die door jullie clubje zijn gedeeld:</p>
+                    <div id="team-shared-recipes-list"></div>
+                </div>
+
+                <!-- CLUBJE PROFIEL & VERLATEN -->
+                <div class="widget" style="background-color: #FAFAFA;">
+                    <h3>⚙️ Jouw Club-instellingen</h3>
+                    <label>Jouw roepnaam in het clubje:</label>
+                    <input type="text" id="active-member-name" placeholder="Jouw naam">
+                    <label>Jouw icoontje:</label>
+                    <select id="active-member-pet">
+                        <option value="takkie">🐶 Takkie</option>
+                        <option value="siepie">🐱 Siepie</option>
+                    </select>
+                    <button class="btn" id="btn-save-member-settings" style="width: 100%; background: var(--accent-yellow); margin-bottom: 10px;">💾 Naam & Icoon Opslaan</button>
+                    <button class="btn" id="btn-leave-team" style="width: 100%; background: #FFEEEE; color: var(--takkie-red);">🚪 Clubje vriendelijk verlaten</button>
+                </div>
             </div>
         </div>
 
