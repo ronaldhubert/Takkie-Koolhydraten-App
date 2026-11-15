@@ -7,8 +7,6 @@ let editingMealIndex = null;
 let editingFavoriteIndex = null;
 let previousTabBeforeFavorites = 'home';
 
-const GEMINI_KEY_STORAGE = 'takkie_gemini_api_key';
-
 let appState = {
     water: 0,
     meals: [],
@@ -17,7 +15,8 @@ let appState = {
     goals: { carbs: 25, fat: 110, protein: 90, kcal: 2000 },
     points: 0,
     streak: 0,
-    dailyLogId: null
+    dailyLogId: null,
+    geminiApiKey: null
 };
 
 const motivationalQuotes = [
@@ -91,26 +90,21 @@ function formatGramLabel(val, unit = 'g') {
     return `${num}${unit}`;
 }
 
-function getGeminiApiKey() {
-    return (localStorage.getItem(GEMINI_KEY_STORAGE) || '').trim();
-}
+async function getGeminiApiKey() {
+    if (appState.geminiApiKey) return appState.geminiApiKey;
+    if (!currentUser) return '';
 
-function renderGeminiKeyStatus() {
-    const keyInput = document.getElementById('gemini-api-key');
-    const statusEl = document.getElementById('gemini-key-status');
-    const key = getGeminiApiKey();
-    if (keyInput && document.activeElement !== keyInput) {
-        keyInput.value = key;
+    const { data: settingRow } = await window.supabaseClient
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'gemini_api_key')
+        .maybeSingle();
+
+    if (settingRow && settingRow.value) {
+        appState.geminiApiKey = settingRow.value.trim();
+        return appState.geminiApiKey;
     }
-    if (statusEl) {
-        if (key) {
-            statusEl.style.color = '#1b4332';
-            statusEl.innerText = '✅ Actief';
-        } else {
-            statusEl.style.color = 'var(--takkie-red)';
-            statusEl.innerText = '⚠️ Niet ingesteld';
-        }
-    }
+    return '';
 }
 
 // ==========================================
@@ -149,6 +143,7 @@ function showAuth() {
 function showApp() {
     document.getElementById('auth-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
+    getRandomQuote();
 }
 
 function showAuthError(msg) {
@@ -215,6 +210,9 @@ async function loadUserData() {
         appState.goals.fat = profileData.goal_fat || 110;
         appState.goals.protein = profileData.goal_protein || 90;
         appState.goals.kcal = profileData.goal_kcal || 2000;
+        if (profileData.gemini_api_key) {
+            appState.geminiApiKey = profileData.gemini_api_key.trim();
+        }
     } else {
         await window.supabaseClient.from('profiles').upsert([{
             id: currentUser.id,
@@ -224,6 +222,10 @@ async function loadUserData() {
             goal_protein: 90,
             goal_kcal: 2000
         }]);
+    }
+
+    if (!appState.geminiApiKey) {
+        await getGeminiApiKey();
     }
 
     const { data: logData } = await window.supabaseClient
@@ -589,8 +591,15 @@ function localFallbackNutrition(inputName) {
 }
 
 async function callGeminiJson(promptText) {
-    const apiKey = getGeminiApiKey();
+    const apiKey = await getGeminiApiKey();
     if (!apiKey) {
+        // Als er een Supabase Edge Function 'gemini-ai' is ingesteld, probeer die dan aan te roepen
+        const { data: fnData, error: fnError } = await window.supabaseClient.functions.invoke('gemini-ai', {
+            body: { prompt: promptText }
+        });
+        if (!fnError && fnData) {
+            return typeof fnData === 'string' ? JSON.parse(fnData) : fnData;
+        }
         throw new Error('NO_API_KEY');
     }
 
@@ -677,7 +686,7 @@ Geef ALLEEN een geldig JSON-object terug in dit formaat:
 
         if (fbEl) {
             if (err.message === 'NO_API_KEY') {
-                fbEl.innerHTML = `⚠️ <b>Nog geen Gemini API-key ingesteld:</b> We hebben nu een snelle schatting ingevuld. Vul bij <a href="#" onclick="switchTab('profile'); return false;" style="color:var(--takkie-red); font-weight:700;">⚙️ Profiel</a> je gratis Gemini API-key in voor echte AI-analyse!`;
+                fbEl.innerHTML = `⚠️ <b>Gemini API-key nog niet gevonden in Supabase:</b> We hebben nu een snelle schatting ingevuld. Sla je sleutel op in de <code>app_settings</code> tabel in Supabase.`;
             } else {
                 fbEl.innerHTML = `⚠️ <b>AI tijdelijk niet bereikbaar (${escapeHtml(err.message)}):</b> We hebben een standaard schatting ingevuld.`;
             }
@@ -774,6 +783,10 @@ function switchTab(tabId) {
     const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) targetTab.classList.add('active');
 
+    if (tabId === 'home' || tabId === 'quotes') {
+        getRandomQuote();
+    }
+
     let navTabId = tabId;
     if (tabId === 'recipe-detail' || tabId === 'add-recipe') navTabId = 'recipes';
     if (tabId === 'log-drink' || tabId === 'favorites' || tabId === 'edit-favorite') navTabId = 'log';
@@ -792,8 +805,15 @@ function getRandomQuote() {
     }
     lastQuoteIndex = idx;
     const q = motivationalQuotes[idx];
-    if (document.getElementById('current-quote')) document.getElementById('current-quote').innerText = `"${q.text}"`;
-    if (document.getElementById('current-author')) document.getElementById('current-author').innerText = q.author;
+    if (document.getElementById('takkie-speech')) {
+        document.getElementById('takkie-speech').innerText = `"${q.text}"`;
+    }
+    if (document.getElementById('current-quote')) {
+        document.getElementById('current-quote').innerText = `"${q.text}"`;
+    }
+    if (document.getElementById('current-author')) {
+        document.getElementById('current-author').innerText = q.author;
+    }
 }
 
 function updateLevel(pts) {
@@ -836,8 +856,6 @@ window.openRecipePage = function(index) {
 };
 
 function renderApp() {
-    renderGeminiKeyStatus();
-
     if (document.getElementById('display-points')) document.getElementById('display-points').innerText = appState.points;
     if (document.getElementById('points-display')) document.getElementById('points-display').innerText = "Punten: " + appState.points + " pt";
 
@@ -1001,22 +1019,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.addEventListener('click', (e) => switchTab(e.currentTarget.getAttribute('data-tab')));
     });
-
-    // Gemini API-key opslaan in Profiel
-    if (document.getElementById('btn-save-api-key')) {
-        document.getElementById('btn-save-api-key').addEventListener('click', () => {
-            const val = (document.getElementById('gemini-api-key').value || '').trim();
-            if (val) {
-                localStorage.setItem(GEMINI_KEY_STORAGE, val);
-                renderGeminiKeyStatus();
-                alert("Woef! Je Gemini AI-sleutel is veilig opgeslagen in je browser.");
-            } else {
-                localStorage.removeItem(GEMINI_KEY_STORAGE);
-                renderGeminiKeyStatus();
-                alert("Gemini AI-sleutel is gewist.");
-            }
-        });
-    }
 
     // Dashboard snelknoppen
     if (document.getElementById('nav-log')) {
@@ -1339,6 +1341,5 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    renderGeminiKeyStatus();
     checkUser();
 });
