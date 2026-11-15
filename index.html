@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Takkie & Siep's Liefdevolle Keto Tracker</title>
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase Config -->
+    <script src="supabase-config.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
 
@@ -46,7 +51,56 @@
             border-right: 4px solid var(--border-color);
             box-shadow: 8px 0px 0px rgba(0,0,0,0.1);
             position: relative;
+            display: none; /* Standaard verborgen tot we zijn ingelogd */
         }
+
+        #auth-container {
+            width: 100%;
+            max-width: 420px;
+            min-height: 100vh;
+            background-color: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            border-left: 4px solid var(--border-color);
+            border-right: 4px solid var(--border-color);
+            box-shadow: 8px 0px 0px rgba(0,0,0,0.1);
+            padding: 32px 24px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .auth-logo {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .auth-form {
+            background-color: var(--bubble-bg);
+            padding: 24px;
+            border: 4px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: 4px 4px 0px var(--border-color);
+            margin-top: 24px;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 3px solid var(--border-color);
+            border-radius: 12px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .auth-error {
+            color: var(--takkie-red);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
 
         header {
             background-color: var(--takkie-red);
@@ -361,14 +415,36 @@
 </head>
 <body>
 
-<div class="phone-container">
-    <header>
-        <div class="profile-info">
-            <h1>🐶 Takkie & Siep</h1>
-            <p id="level-display">⭐ Level 1: Liefhebber</p>
+    <!-- AUTHENTICATIE CONTAINER -->
+    <div id="auth-container">
+        <div class="auth-logo">🐾❤️</div>
+        <h1 style="margin: 0; color: var(--takkie-red);">Takkie & Siep's</h1>
+        <h2 style="margin: 4px 0 0 0; color: var(--text-main); font-size: 1.2rem;">Liefdevolle Keto Tracker</h2>
+        <p style="margin-top: 16px; font-weight: 600; color: #666;">Welkom terug, lief mens! Laten we inloggen om je dagboekje te openen.</p>
+        
+        <div class="auth-form">
+            <div id="auth-error-message" class="auth-error" style="display: none;"></div>
+            
+            <input type="email" id="auth-email" placeholder="Jouw e-mailadres">
+            <input type="password" id="auth-password" placeholder="Jouw wachtwoord">
+            
+            <button class="btn btn-primary" id="btn-login" style="margin-bottom: 12px; background-color: var(--takkie-red);">🐶 Inloggen</button>
+            <button class="btn btn-secondary" id="btn-register" style="margin-bottom: 12px; background-color: var(--accent-yellow);">✨ Nieuw Account Maken</button>
         </div>
-        <div class="streak-badge" id="streak-display">🔥 4 dagen</div>
-    </header>
+    </div>
+
+    <!-- APP CONTAINER -->
+    <div class="phone-container" id="app-container">
+        <header>
+            <div class="profile-info">
+                <h1>🐶 Takkie & Siep</h1>
+                <p id="level-display">⭐ Level 1: Liefhebber</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="streak-badge" id="streak-display">🔥 4 dagen</div>
+                <button id="btn-logout" style="background: none; border: 2px solid white; color: white; border-radius: 8px; padding: 4px 8px; font-family: 'Fredoka'; cursor: pointer; font-weight: bold;">Uitloggen</button>
+            </div>
+        </header>
 
     <!-- Menuknoppen bovenaan geplaatst -->
     <nav class="top-nav">
@@ -580,330 +656,7 @@
     </div>
 </div>
 
-<script>
-    let appState = JSON.parse(localStorage.getItem('takkie_siep_keto_v11')) || {
-        points: 160,
-        streak: 4,
-        water: 6,
-        carbsMax: 25,
-        fatGoal: 110,
-        proteinGoal: 90,
-        kcalGoal: 2000,
-        meals: [
-            { type: '🍳 Ontbijt', name: 'Roerei in roomboter met spek', carbs: 2, fat: 35, protein: 22 },
-            { type: '🥗 Lunch', name: 'Avocado & zalm salade', carbs: 4, fat: 42, protein: 28 }
-        ],
-        recipes: [
-            { 
-                name: 'Ribeye met Kruidenboter', 
-                carbs: '0g KH', fat: '55g Vet', protein: '40g Ei', kcal: '635 kcal',
-                ingredients: '• 250g Ribeye steak\n• 40g ambachtelijke kruidenboter\n• Zeezout & zwarte peper', 
-                prep: '1. Haal de ribeye op tijd uit de koelkast.\n2. Bak de steak op hoog vuur in een hete pan bruin.\n3. Laat een plak ambachtelijke kruidenboter smelten over het warme vlees. Geniet ervan!' 
-            }
-        ]
-    };
-
-    const motivationalQuotes = [
-        { text: "Woef! Vandaag zorgen we heel lief en goed voor elkaar.", author: "— Takkie & Siep" },
-        { text: "Elke kleine stap is er een naar een gelukkig en gezond gevoel. Je doet het ontzettend goed!", author: "— Takkie de Hond" },
-        { text: "Miauw... neem even een rustig momentje voor jezelf vandaag. Je mag trots op je zijn.", author: "— Siep de Kat" },
-        { text: "Zachtjes volhouden is ook winnen. Takkie kwispelt speciaal voor jou!", author: "— Takkie & Siep" },
-        { text: "Laat los wat niet lukt, morgen is er weer een prachtige dag om opnieuw te stralen.", author: "— Takkie" },
-        { text: "Je bent een kanjer, elke dag een klein stukje sterker en liever voor je lijf.", author: "— Takkie & Siep" }
-    ];
-
-    function autoFillNutrition(inputName, carbsId, fatId, proteinId) {
-        let name = inputName.toLowerCase();
-        let c = 0, f = 0, p = 0;
-
-        if (name.includes('wijn') || name.includes('alcohol')) { c = 3; f = 0; p = 0; }
-        else if (name.includes('koffie') || name.includes('thee')) { c = 0; f = 5; p = 0; }
-        else if (name.includes('bulletproof')) { c = 0; f = 15; p = 1; }
-        else if (name.includes('ei') || name.includes('roerei')) { c = 1; f = 15; p = 13; }
-        else if (name.includes('zalm') || name.includes('vis')) { c = 0; f = 18; p = 22; }
-        else if (name.includes('avocado')) { c = 2; f = 15; p = 2; }
-        else if (name.includes('noten') || name.includes('macadamia')) { c = 2; f = 21; p = 3; }
-        else if (name.includes('salade')) { c = 4; f = 25; p = 10; }
-        else if (name.includes('ribeye') || name.includes('biefstuk') || name.includes('vlees')) { c = 0; f = 35; p = 35; }
-        else { c = 2; f = 10; p = 10; }
-
-        document.getElementById(carbsId).value = c;
-        document.getElementById(fatId).value = f;
-        document.getElementById(proteinId).value = p;
-    }
-
-    function getRandomQuote() {
-        let randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
-        let q = motivationalQuotes[randomIndex];
-        document.getElementById('current-quote').innerText = `"${q.text}"`;
-        document.getElementById('current-author').innerText = q.author;
-    }
-
-    function saveState() {
-        localStorage.setItem('takkie_siep_keto_v11', JSON.stringify(appState));
-        renderApp();
-    }
-
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        
-        let targetTab = document.getElementById('tab-' + tabId);
-        if (targetTab) targetTab.classList.add('active');
-        
-        let navBtn = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
-        if (navBtn) navBtn.classList.add('active');
-        
-        window.scrollTo(0, 0);
-    }
-
-    function openRecipePage(index) {
-        let r = appState.recipes[index];
-        document.getElementById('detail-title').innerText = "📖 " + r.name;
-        document.getElementById('detail-badges').innerHTML = `
-            <span class="badge-carb">${r.carbs}</span>
-            <span class="badge-fat">${r.fat}</span>
-            <span class="badge-protein">${r.protein}</span>
-            <span class="badge-kcal">${r.kcal}</span>
-        `;
-        document.getElementById('detail-ingredients').innerHTML = r.ingredients.split('\n').map(line => `<div>${line}</div>`).join('');
-        document.getElementById('detail-prep').innerHTML = r.prep.split('\n').map(line => `<div style="margin-bottom:6px;">${line}</div>`).join('');
-
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-recipe-detail').classList.add('active');
-        window.scrollTo(0, 0);
-    }
-
-    function updateSlidersLive() {
-        document.getElementById('slider-carb-val').innerText = document.getElementById('slider-carbs').value + 'g';
-        document.getElementById('slider-fat-val').innerText = document.getElementById('slider-fat').value + 'g';
-        document.getElementById('slider-protein-val').innerText = document.getElementById('slider-protein').value + 'g';
-        document.getElementById('slider-kcal-val').innerText = document.getElementById('slider-kcal').value + ' kcal';
-    }
-
-    function saveProfileGoals() {
-        appState.carbsMax = parseInt(document.getElementById('slider-carbs').value);
-        appState.fatGoal = parseInt(document.getElementById('slider-fat').value);
-        appState.proteinGoal = parseInt(document.getElementById('slider-protein').value);
-        appState.kcalGoal = parseInt(document.getElementById('slider-kcal').value);
-        saveState();
-    }
-
-    function renderApp() {
-        document.getElementById('streak-display').innerText = `🔥 ${appState.streak} dagen`;[cite: 1]
-        document.getElementById('streak-count-text').innerText = appState.streak;[cite: 1]
-        document.getElementById('points-display').innerText = `Punten: ${appState.points} pt`;
-
-        document.getElementById('slider-carbs').value = appState.carbsMax;
-        document.getElementById('slider-fat').value = appState.fatGoal;
-        document.getElementById('slider-protein').value = appState.proteinGoal;
-        document.getElementById('slider-kcal').value = appState.kcalGoal;
-        updateSlidersLive();
-
-        let totalCarbs = appState.meals.reduce((sum, m) => sum + parseInt(m.carbs || 0), 0);
-        let totalFat = appState.meals.reduce((sum, m) => sum + parseInt(m.fat || 0), 0);
-        let totalProtein = appState.meals.reduce((sum, m) => sum + parseInt(m.protein || 0), 0);
-        let totalKcal = (totalFat * 9) + (totalProtein * 4) + (totalCarbs * 4);
-
-        document.getElementById('carb-text').innerText = `${totalCarbs}g / ${appState.carbsMax}g`;
-        let carbBar = document.getElementById('carb-bar');
-        let carbPercent = Math.min(100, (totalCarbs / appState.carbsMax) * 100);
-        carbBar.style.width = carbPercent + '%';
-
-        document.getElementById('fat-text').innerText = `${totalFat}g / ${appState.fatGoal}g`;
-        document.getElementById('fat-bar').style.width = Math.min(100, (totalFat / appState.fatGoal) * 100) + '%';
-
-        document.getElementById('protein-text').innerText = `${totalProtein}g / ${appState.proteinGoal}g`;
-        document.getElementById('protein-bar').style.width = Math.min(100, (totalProtein / appState.proteinGoal) * 100) + '%';
-
-        document.getElementById('kcal-text').innerText = `${totalKcal} / ${appState.kcalGoal} kcal`;
-        document.getElementById('kcal-bar').style.width = Math.min(100, (totalKcal / appState.kcalGoal) * 100) + '%';
-
-        if(totalCarbs <= appState.carbsMax) {
-            document.getElementById('takkie-speech').innerText = `"Woef! ${totalCarbs}g KH, ${totalFat}g vet, ${totalProtein}g eiwit. Wat doe je het goed!"`;
-        } else {
-            document.getElementById('takkie-speech').innerText = `"Geen zorgen hoor! Morgen pakken we het weer lekker op samen."`;
-        }
-
-        let waterContainer = document.getElementById('water-container');
-        waterContainer.innerHTML = '';
-        for (let i = 1; i <= 8; i++) {
-            let drop = document.createElement('span');
-            drop.className = 'water-drop ' + (i <= appState.water ? 'filled' : '');
-            let dropIdx = i;
-            drop.addEventListener('click', () => { appState.water = dropIdx; saveState(); });
-            waterContainer.appendChild(drop);
-        }
-        document.getElementById('water-text').innerText = `${appState.water} / 8 glazen`;
-
-        let mealList = document.getElementById('meal-list');
-        mealList.innerHTML = '';
-        if(appState.meals.length === 0) {
-            mealList.innerHTML = '<p style="font-size:0.85rem; color:#666;">Nog niks gelogd vandaag.</p>';
-        } else {
-            appState.meals.forEach(m => {
-                let kcalItem = (m.fat * 9) + ((m.protein || 15) * 4) + (m.carbs * 4);
-                mealList.innerHTML += `
-                    <div class="item-row">
-                        <div>
-                            <div class="item-title">${m.type}</div>
-                            <div style="font-size: 0.8rem; color: #666;">${m.name}</div>
-                        </div>
-                        <div class="macro-badges">
-                            <span class="badge-carb">${m.carbs}g KH</span>
-                            <span class="badge-fat">${m.fat}g Vet</span>
-                            <span class="badge-protein">${m.protein || 0}g Ei</span>
-                            <span class="badge-kcal">${kcalItem} kcal</span>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        let recipeList = document.getElementById('recipe-list');
-        recipeList.innerHTML = '';
-        appState.recipes.forEach((r, index) => {
-            let row = document.createElement('div');
-            row.className = 'item-row';
-            row.innerHTML = `
-                <div>
-                    <div class="item-title">📖 ${r.name}</div>
-                    <div style="font-size: 0.8rem; color: #666;">Klik om receptpagina te openen</div>
-                </div>
-                <div class="macro-badges">
-                    <span class="badge-carb">${r.carbs}</span>
-                    <span class="badge-fat">${r.fat}</span>
-                    <span class="badge-protein">${r.protein}</span>
-                    <span class="badge-kcal">${r.kcal}</span>
-                </div>
-            `;
-            row.addEventListener('click', () => openRecipePage(index));
-            recipeList.appendChild(row);
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.nav-item').forEach(btn => {
-            btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
-        });
-
-        document.getElementById('btn-autofill-drink').addEventListener('click', () => {
-            let val = document.getElementById('drink-name').value;
-            autoFillNutrition(val, 'drink-carbs', 'drink-fat', 'drink-protein');
-        });
-
-        document.getElementById('btn-autofill-meal').addEventListener('click', () => {
-            let val = document.getElementById('new-meal-name').value;
-            autoFillNutrition(val, 'new-meal-carbs', 'new-meal-fat', 'new-meal-protein');
-        });
-
-        document.getElementById('btn-repeat').addEventListener('click', () => {
-            appState.meals = [
-                { type: '🍳 Ontbijt', name: 'Roerei in roomboter met spek', carbs: 2, fat: 35, protein: 22 },
-                { type: '🥗 Lunch', name: 'Avocado & zalm salade', carbs: 4, fat: 42, protein: 28 },
-                { type: '🍲 Avondeten', name: 'Ribeye met kruidenboter', carbs: 0, fat: 55, protein: 40 }
-            ];
-            appState.points += 5;
-            saveState();
-            alert("Woef! Gisteren is weer gezellig ingeladen!");
-        });
-
-        document.getElementById('btn-favorite').addEventListener('click', () => {
-            appState.meals.push({ type: '⚡ Snack', name: 'Handje macadamianoten', carbs: 2, fat: 21, protein: 3 });
-            appState.points += 5;
-            saveState();
-            alert("Lekker favoriet snackje toegevoegd!");
-        });
-
-        document.getElementById('nav-drink').addEventListener('click', () => switchTab('log-drink'));
-        document.getElementById('nav-log').addEventListener('click', () => switchTab('log'));
-
-        document.getElementById('btn-generate-ai').addEventListener('click', () => {
-            const checkboxes = document.querySelectorAll('#fridge-ingredients input:checked');
-            let selected = Array.from(checkboxes).map(cb => cb.value);
-            if(selected.length === 0) { alert("Vink eerst liefst even een ingrediënt aan!"); return; }
-
-            let name = "Takkie & Siep's " + selected[0] + "-pannetje";
-            let ingredients = `• ${selected.join('\n• ')}\n• 35g Roomboter of olijfolie\n• Een snufje liefde en zout`;
-            let prep = `1. Smelt de roomboter zachtjes in de pan.\n2. Bak de ${selected.join(' en ')} met alle liefde gaar.\n3. Smullen maar!`;
-            
-            appState.recipes.unshift({ name, carbs: '2g KH', fat: '45g Vet', protein: '25g Ei', kcal: '515 kcal', ingredients, prep });
-            appState.points += 20;
-            saveState();
-            alert(`🤖 Siep spint van geluk! Het recept "${name}" is toegevoegd! (+20 pt)`);
-            switchTab('recipes');
-        });
-
-        document.getElementById('btn-add-recipe').addEventListener('click', () => {
-            let name = prompt("Naam van het recept:");
-            if(!name) return;
-            let carbs = prompt("Koolhydraten (bijv. 2g KH):", "2g KH");
-            let fat = prompt("Vetten (bijv. 40g Vet):", "40g Vet");
-            let protein = prompt("Eiwitten (bijv. 30g Ei):", "30g Ei");
-            let kcal = prompt("Calorieën (bijv. 450 kcal):", "450 kcal");
-            let ingredients = prompt("Ingrediënten:", "• Ingrediënt 1\n• Ingrediënt 2");
-            let prep = prompt("Bereidingswijze:", "1. Bak in roomboter.\n2. Geniet ervan.");
-
-            appState.recipes.push({ name, carbs, fat, protein, kcal, ingredients, prep });
-            appState.points += 15;
-            saveState();
-        });
-
-        document.getElementById('btn-back-recipes').addEventListener('click', () => switchTab('recipes'));
-
-        document.getElementById('btn-save-meal').addEventListener('click', () => {
-            let name = document.getElementById('new-meal-name').value;
-            let type = document.getElementById('new-meal-type').value;
-            let carbs = parseInt(document.getElementById('new-meal-carbs').value) || 0;
-            let fat = parseInt(document.getElementById('new-meal-fat').value) || 0;
-            let protein = parseInt(document.getElementById('new-meal-protein').value) || 20;
-
-            if(!name) { alert('Vul alsjeblieft een maaltijdnaam in!'); return; }
-
-            appState.meals.push({ type, name, carbs, fat, protein });
-            appState.points += 10;
-            document.getElementById('new-meal-name').value = '';
-            saveState();
-            switchTab('home');
-        });
-
-        document.getElementById('btn-save-drink').addEventListener('click', () => {
-            let name = document.getElementById('drink-name').value;
-            let amount = parseInt(document.getElementById('drink-amount').value) || 1;
-            let carbs = parseInt(document.getElementById('drink-carbs').value) || 0;
-            let fat = parseInt(document.getElementById('drink-fat').value) || 0;
-            let protein = parseInt(document.getElementById('drink-protein').value) || 0;
-
-            if(!name) { alert('Vul even in wat je drinkt!'); return; }
-
-            appState.meals.push({ 
-                type: '🥤 Drank', 
-                name: `${amount}x ${name}`, 
-                carbs: carbs * amount, 
-                fat: fat * amount,
-                protein: protein * amount
-            });
-            appState.water = Math.min(8, appState.water + amount);
-            appState.points += 5;
-            document.getElementById('drink-name').value = '';
-            saveState();
-            switchTab('home');
-        });
-
-        document.getElementById('btn-new-quote').addEventListener('click', getRandomQuote);
-
-        document.getElementById('slider-carbs').addEventListener('input', updateSlidersLive);
-        document.getElementById('slider-carbs').addEventListener('change', saveProfileGoals);
-        document.getElementById('slider-fat').addEventListener('input', updateSlidersLive);
-        document.getElementById('slider-fat').addEventListener('change', saveProfileGoals);
-        document.getElementById('slider-protein').addEventListener('input', updateSlidersLive);
-        document.getElementById('slider-protein').addEventListener('change', saveProfileGoals);
-        document.getElementById('slider-kcal').addEventListener('input', updateSlidersLive);
-        document.getElementById('slider-kcal').addEventListener('change', saveProfileGoals);
-
-        renderApp();
-    });
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>
