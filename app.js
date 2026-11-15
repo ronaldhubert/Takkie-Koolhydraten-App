@@ -3,6 +3,12 @@
 // ==========================================
 let currentUser = null;
 let currentRecipeIndex = null;
+let editingMealIndex = null;
+let editingFavoriteIndex = null;
+let previousTabBeforeFavorites = 'home';
+
+const GEMINI_KEY_STORAGE = 'takkie_gemini_api_key';
+
 let appState = {
     water: 0,
     meals: [],
@@ -15,12 +21,37 @@ let appState = {
 };
 
 const motivationalQuotes = [
-    { text: "Woef! Vandaag zorgen we heel lief en goed voor elkaar.", author: "— Takkie & Siep" },
+    { text: "Woef! Vandaag zorgen we heel lief en goed voor elkaar.", author: "— Takkie & Siepie" },
     { text: "Elke kleine stap is er een naar een gelukkig en gezond gevoel. Je doet het ontzettend goed!", author: "— Takkie de Hond" },
-    { text: "Miauw... neem even een rustig momentje voor jezelf vandaag. Je mag trots op je zijn.", author: "— Siep de Kat" },
-    { text: "Zachtjes volhouden is ook winnen. Takkie kwispelt speciaal voor jou!", author: "— Takkie & Siep" },
+    { text: "Miauw... neem even een rustig momentje voor jezelf vandaag. Je mag trots op je zijn.", author: "— Siepie de Kat" },
+    { text: "Zachtjes volhouden is ook winnen. Takkie kwispelt speciaal voor jou!", author: "— Takkie & Siepie" },
     { text: "Laat los wat niet lukt, morgen is er weer een prachtige dag om opnieuw te stralen.", author: "— Takkie" },
-    { text: "Je bent een kanjer, elke dag een klein stukje sterker en liever voor je lijf.", author: "— Takkie & Siep" }
+    { text: "Je bent een kanjer, elke dag een klein stukje sterker en liever voor je lijf.", author: "— Takkie & Siepie" },
+    { text: "Snuffel de dag vrolijk tegemoet! Eén gezond hapje tegelijk is al helemaal geweldig.", author: "— Takkie" },
+    { text: "Prrrr... rek je even lekker uit zoals ik op het vloerkleed. Jij verdient vandaag alle zachtheid.", author: "— Siepie" },
+    { text: "Ook op een regenachtige dag ben jij ons eigen warme zonnetje in huis.", author: "— Takkie & Siepie" },
+    { text: "Vergeet je niet een lekker glaasje water te drinken? Wij slobberen gezellig met je mee!", author: "— Takkie" },
+    { text: "Je hoeft helemaal niet streng te zijn voor jezelf; liefdevol zorgen werkt veel beter.", author: "— Siepie" },
+    { text: "Mijn korte pootjes zetten kleine stapjes, maar ik kom altijd waar ik wezen wil. Jij ook!", author: "— Takkie" },
+    { text: "Een klontje roomboter, een eitje en een dikke knuffel van ons: dat wordt een topdag!", author: "— Takkie & Siepie" },
+    { text: "Miauw! Kijk eens in de spiegel en geef jezelf een complimentje. Wij vinden je prachtig.", author: "— Siepie" },
+    { text: "Als het even lastig is, kruip ik dicht tegen je aan. Samen kunnen we alles aan!", author: "— Takkie" },
+    { text: "Gezond voor jezelf zorgen is het mooiste cadeautje dat je jezelf vandaag kunt geven.", author: "— Takkie & Siepie" },
+    { text: "Soms heb je een sprint-dag, soms een dutjes-dag op de vensterbank. Allebei is helemaal goed.", author: "— Siepie" },
+    { text: "Woef! Mijn staartje maakt overuren omdat ik zo blij ben dat je zo goed voor jezelf zorgt.", author: "— Takkie" },
+    { text: "Foutjes bestaan helemaal niet in ons dagboekje, alleen nieuwe kansen om lief te beginnen.", author: "— Takkie & Siepie" },
+    { text: "Luister goed naar je buikje en je hartje, die weten precies wat je nodig hebt vandaag.", author: "— Siepie" },
+    { text: "Kom, we gaan met onze neus in de wind en maken er een vrolijk avontuur van!", author: "— Takkie" },
+    { text: "Elke keer dat je iets gezonds kiest, geven Takkie en ik elkaar een vrolijke high-five met onze pootjes.", author: "— Siepie" },
+    { text: "Je doet het op jouw eigen tempo, en dat tempo is precies goed zoals het is.", author: "— Takkie & Siepie" },
+    { text: "Zelfs de allerlangste wandeling begint met één vrolijk huppeltje naar de voordeur.", author: "— Takkie" },
+    { text: "Spinnend op schoot fluister ik het nog een keer: je bent goed bezig, lieverd!", author: "— Siepie" },
+    { text: "Wees net zo lief voor jezelf als je altijd voor ons bent. Dat heb je dubbel en dwars verdiend.", author: "— Takkie & Siepie" },
+    { text: "Een lekkere maaltijd klaarmaken voor jezelf is pure liefde op een bordje.", author: "— Takkie" },
+    { text: "Maak je niet druk om gisteren of morgen; vandaag liggen we lekker warm in het zonnetje.", author: "— Siepie" },
+    { text: "Woef woef! Ik geef je een natte neuzen-kus omdat je zo dapper volhoudt.", author: "— Takkie" },
+    { text: "Geen haast, geen stress, alleen een kopje thee en een rustig muziekje. Prrrr...", author: "— Siepie" },
+    { text: "Wat er vandaag ook gebeurt: Takkie kwispelt en Siepie spint altijd voor jou!", author: "— Takkie & Siepie" }
 ];
 
 function formatDateLocal(dateObj) {
@@ -52,12 +83,34 @@ function escapeHtml(str) {
 function parseGramNumber(val) {
     if (typeof val === 'number') return val;
     const match = String(val ?? '').match(/\d+(\.\d+)?/);
-    return match ? Math.round( parseFloat(match[0]) ) : 0;
+    return match ? Math.round(parseFloat(match[0])) : 0;
 }
 
 function formatGramLabel(val, unit = 'g') {
     const num = parseGramNumber(val);
     return `${num}${unit}`;
+}
+
+function getGeminiApiKey() {
+    return (localStorage.getItem(GEMINI_KEY_STORAGE) || '').trim();
+}
+
+function renderGeminiKeyStatus() {
+    const keyInput = document.getElementById('gemini-api-key');
+    const statusEl = document.getElementById('gemini-key-status');
+    const key = getGeminiApiKey();
+    if (keyInput && document.activeElement !== keyInput) {
+        keyInput.value = key;
+    }
+    if (statusEl) {
+        if (key) {
+            statusEl.style.color = '#1b4332';
+            statusEl.innerText = '✅ Actief';
+        } else {
+            statusEl.style.color = 'var(--takkie-red)';
+            statusEl.innerText = '⚠️ Niet ingesteld';
+        }
+    }
 }
 
 // ==========================================
@@ -131,7 +184,6 @@ async function calculateStreak() {
             streak++;
             checkDate.setDate(checkDate.getDate() - 1);
         } else {
-            // Sta toe dat vandaag nog niet gelogd is als gisteren wel gelogd was
             if (i === 0) {
                 checkDate.setDate(checkDate.getDate() - 1);
                 dStr = formatDateLocal(checkDate);
@@ -342,6 +394,80 @@ async function updateProfileGoals() {
     }).eq('id', currentUser.id);
 }
 
+// ==========================================
+// GELOGDE MAALTIJD / DRANK WIJZIGEN & VERWIJDEREN
+// ==========================================
+window.openEditMeal = function(idx) {
+    const meal = appState.meals[idx];
+    if (!meal) return;
+    editingMealIndex = idx;
+
+    const typeSelect = document.getElementById('edit-meal-type');
+    if (typeSelect) {
+        // Voeg eventueel afwijkend type toe als optie zodat niets verloren gaat
+        const exists = Array.from(typeSelect.options).some(opt => opt.value === meal.type);
+        if (!exists && meal.type) {
+            const opt = document.createElement('option');
+            opt.value = meal.type;
+            opt.textContent = meal.type;
+            typeSelect.appendChild(opt);
+        }
+        typeSelect.value = meal.type || '🍳 Ontbijt';
+    }
+
+    document.getElementById('edit-meal-name').value = meal.name || '';
+    document.getElementById('edit-meal-carbs').value = Number(meal.carbs) || 0;
+    document.getElementById('edit-meal-fat').value = Number(meal.fat) || 0;
+    document.getElementById('edit-meal-protein').value = Number(meal.protein) || 0;
+
+    const fb = document.getElementById('ai-edit-meal-feedback');
+    if (fb) fb.style.display = 'none';
+
+    switchTab('edit-meal');
+};
+
+async function saveEditedMeal() {
+    if (editingMealIndex === null || !appState.meals[editingMealIndex]) return;
+    const meal = appState.meals[editingMealIndex];
+
+    const newType = document.getElementById('edit-meal-type').value;
+    const newName = document.getElementById('edit-meal-name').value.trim();
+    const newCarbs = parseInt(document.getElementById('edit-meal-carbs').value, 10) || 0;
+    const newFat = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
+    const newProtein = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
+
+    if (!newName) return alert("Vul alsjeblieft een naam in!");
+
+    const oldName = meal.name;
+    const oldType = meal.type;
+
+    meal.type = newType;
+    meal.name = newName;
+    meal.carbs = newCarbs;
+    meal.fat = newFat;
+    meal.protein = newProtein;
+
+    renderApp();
+
+    if (meal.id) {
+        await window.supabaseClient
+            .from('meals')
+            .update({ type: newType, name: newName, carbs: newCarbs, fat: newFat, protein: newProtein })
+            .eq('id', meal.id);
+    } else if (currentUser) {
+        await window.supabaseClient
+            .from('meals')
+            .update({ type: newType, name: newName, carbs: newCarbs, fat: newFat, protein: newProtein })
+            .eq('user_id', currentUser.id)
+            .eq('date', meal.date || getTodayString())
+            .eq('name', oldName)
+            .eq('type', oldType);
+    }
+
+    editingMealIndex = null;
+    switchTab('home');
+}
+
 window.deleteMeal = async function(idx) {
     if (confirm("Weet je zeker dat je dit hapje wilt vergeten?")) {
         const mealToDel = appState.meals[idx];
@@ -356,43 +482,247 @@ window.deleteMeal = async function(idx) {
 };
 
 // ==========================================
-// UI EN EVENTS
+// FAVORIETEN BEHEREN, WIJZIGEN & VERWIJDEREN
 // ==========================================
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    const targetTab = document.getElementById('tab-' + tabId);
-    if (targetTab) targetTab.classList.add('active');
-
-    // Koppel sub-tabs aan hun hoofd-navigatieknop
-    let navTabId = tabId;
-    if (tabId === 'recipe-detail' || tabId === 'add-recipe') navTabId = 'recipes';
-    if (tabId === 'log-drink') navTabId = 'log';
-
-    const navBtn = document.querySelector(".nav-item[data-tab='" + navTabId + "']");
-    if (navBtn) navBtn.classList.add('active');
-    window.scrollTo(0, 0);
+function openFavoritesManager(fromTab) {
+    previousTabBeforeFavorites = fromTab || 'home';
+    renderApp();
+    switchTab('favorites');
 }
 
-function autoFillNutrition(inputName, carbsId, fatId, proteinId) {
+window.openEditFavorite = function(idx) {
+    const fav = appState.savedItems[idx];
+    if (!fav) return;
+    editingFavoriteIndex = idx;
+
+    document.getElementById('edit-fav-type').value = fav.type || 'meal';
+    document.getElementById('edit-fav-name').value = fav.name || '';
+    document.getElementById('edit-fav-carbs').value = Number(fav.carbs) || 0;
+    document.getElementById('edit-fav-fat').value = Number(fav.fat) || 0;
+    document.getElementById('edit-fav-protein').value = Number(fav.protein) || 0;
+
+    const fb = document.getElementById('ai-edit-fav-feedback');
+    if (fb) fb.style.display = 'none';
+
+    switchTab('edit-favorite');
+};
+
+async function saveEditedFavorite() {
+    if (editingFavoriteIndex === null || !appState.savedItems[editingFavoriteIndex]) return;
+    const fav = appState.savedItems[editingFavoriteIndex];
+
+    const newType = document.getElementById('edit-fav-type').value;
+    const newName = document.getElementById('edit-fav-name').value.trim();
+    const newCarbs = parseInt(document.getElementById('edit-fav-carbs').value, 10) || 0;
+    const newFat = parseInt(document.getElementById('edit-fav-fat').value, 10) || 0;
+    const newProtein = parseInt(document.getElementById('edit-fav-protein').value, 10) || 0;
+
+    if (!newName) return alert("Vul alsjeblieft een naam voor je favoriet in!");
+
+    const oldName = fav.name;
+    const oldType = fav.type;
+
+    fav.type = newType;
+    fav.name = newName;
+    fav.carbs = newCarbs;
+    fav.fat = newFat;
+    fav.protein = newProtein;
+
+    renderApp();
+
+    if (fav.id) {
+        await window.supabaseClient
+            .from('saved_items')
+            .update({ type: newType, name: newName, carbs: newCarbs, fat: newFat, protein: newProtein })
+            .eq('id', fav.id);
+    } else if (currentUser) {
+        await window.supabaseClient
+            .from('saved_items')
+            .update({ type: newType, name: newName, carbs: newCarbs, fat: newFat, protein: newProtein })
+            .eq('user_id', currentUser.id)
+            .eq('name', oldName)
+            .eq('type', oldType);
+    }
+
+    editingFavoriteIndex = null;
+    switchTab('favorites');
+}
+
+window.deleteFavorite = async function(idx) {
+    const fav = appState.savedItems[idx];
+    if (!fav) return;
+    if (!confirm(`Weet je zeker dat je favoriet "${fav.name}" wilt verwijderen?`)) return;
+
+    appState.savedItems.splice(idx, 1);
+    renderApp();
+
+    if (fav.id) {
+        await window.supabaseClient.from('saved_items').delete().eq('id', fav.id);
+    } else if (currentUser) {
+        await window.supabaseClient
+            .from('saved_items')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('name', fav.name)
+            .eq('type', fav.type);
+    }
+};
+
+// ==========================================
+// AI ANALYSE (GEMINI API + FALLBACK)
+// ==========================================
+function localFallbackNutrition(inputName) {
     const name = inputName.toLowerCase();
     let c = 0, f = 0, p = 0;
-    if (name.includes('wijn') || name.includes('alcohol')) { c = 3; }
-    else if (name.includes('bulletproof')) { f = 15; p = 1; }
-    else if (name.includes('koffie') || name.includes('thee')) { f = 5; }
+    if (name.includes('wijn') || name.includes('alcohol')) { c = 3; f = 0; p = 0; }
+    else if (name.includes('bulletproof')) { c = 0; f = 15; p = 1; }
+    else if (name.includes('koffie') || name.includes('thee')) { c = 0; f = 5; p = 0; }
     else if (name.includes('ei')) { c = 1; f = 15; p = 13; }
-    else if (name.includes('zalm') || name.includes('vis')) { f = 18; p = 22; }
+    else if (name.includes('zalm') || name.includes('vis') || name.includes('makreel') || name.includes('haring')) { c = 0; f = 18; p = 22; }
     else if (name.includes('avocado')) { c = 2; f = 15; p = 2; }
-    else if (name.includes('noten')) { c = 2; f = 21; p = 3; }
+    else if (name.includes('noten') || name.includes('amandel') || name.includes('walnoot')) { c = 2; f = 21; p = 5; }
+    else if (name.includes('kaas') || name.includes('brie') || name.includes('oude kaas')) { c = 0; f = 16; p = 12; }
     else if (name.includes('salade')) { c = 4; f = 25; p = 10; }
-    else if (name.includes('vlees') || name.includes('ribeye') || name.includes('spek')) { f = 35; p = 35; }
+    else if (name.includes('vlees') || name.includes('ribeye') || name.includes('spek') || name.includes('kip') || name.includes('gehakt')) { c = 0; f = 30; p = 32; }
     else { c = 2; f = 10; p = 10; }
-    document.getElementById(carbsId).value = c;
-    document.getElementById(fatId).value = f;
-    document.getElementById(proteinId).value = p;
+    return { carbs: c, fat: f, protein: p };
 }
 
-function generateSmartRecipe(selectedIngredients) {
+async function callGeminiJson(promptText) {
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        throw new Error('NO_API_KEY');
+    }
+
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    let lastError = null;
+
+    for (const model of models) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: {
+                    temperature: 0.2,
+                    responseMimeType: 'application/json'
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            lastError = new Error(errData?.error?.message || `HTTP ${response.status}`);
+            continue;
+        }
+
+        const data = await response.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return JSON.parse(rawText);
+    }
+
+    throw lastError || new Error('Kon geen verbinding maken met Gemini AI.');
+}
+
+async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, proteinId, feedbackId, btnEl) {
+    const description = (inputName || '').trim();
+    if (!description) {
+        alert("Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!");
+        return;
+    }
+
+    const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
+    const originalBtnText = btnEl ? btnEl.innerText : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerText = '🐾 Takkie & Siep rekenen met AI...';
+    }
+    if (fbEl) {
+        fbEl.style.display = 'block';
+        fbEl.innerText = '🐶 Snuffel snuffel... macro\'s worden berekend...';
+    }
+
+    const isDrink = contextType === 'drink';
+    const prompt = `Je bent de liefdevolle keto-voedingsexpert van Takkie & Siep.
+Bereken een realistische schatting van de netto koolhydraten (carbs), vetten (fat) en eiwitten (protein) in hele grammen voor het volgende ${isDrink ? 'drankje (LET OP: geef de waarden per 1 standaard glas/kopje, tenzij de gebruiker expliciet een specifieke hoeveelheid in ml noemt)' : 'gerecht of voedingsmiddel'}:
+"${description}"
+
+Geef ALLEEN een geldig JSON-object terug in dit formaat:
+{
+  "carbs": <geheel getal in grammen>,
+  "fat": <geheel getal in grammen>,
+  "protein": <geheel getal in grammen>,
+  "explanation": "<korte, warme Nederlandse toelichting van 1 zin namens Takkie & Siep over de aangenomen portie en macro's>"
+}`;
+
+    try {
+        const result = await callGeminiJson(prompt);
+        const c = Math.max(0, Math.round(Number(result.carbs) || 0));
+        const f = Math.max(0, Math.round(Number(result.fat) || 0));
+        const p = Math.max(0, Math.round(Number(result.protein) || 0));
+
+        document.getElementById(carbsId).value = c;
+        document.getElementById(fatId).value = f;
+        document.getElementById(proteinId).value = p;
+
+        if (fbEl) {
+            fbEl.innerHTML = `✨ <b>AI Analyse:</b> ${escapeHtml(result.explanation || `Berekend op ${c}g KH, ${f}g vet en ${p}g eiwit.`)}`;
+        }
+    } catch (err) {
+        const fallback = localFallbackNutrition(description);
+        document.getElementById(carbsId).value = fallback.carbs;
+        document.getElementById(fatId).value = fallback.fat;
+        document.getElementById(proteinId).value = fallback.protein;
+
+        if (fbEl) {
+            if (err.message === 'NO_API_KEY') {
+                fbEl.innerHTML = `⚠️ <b>Nog geen Gemini API-key ingesteld:</b> We hebben nu een snelle schatting ingevuld. Vul bij <a href="#" onclick="switchTab('profile'); return false;" style="color:var(--takkie-red); font-weight:700;">⚙️ Profiel</a> je gratis Gemini API-key in voor echte AI-analyse!`;
+            } else {
+                fbEl.innerHTML = `⚠️ <b>AI tijdelijk niet bereikbaar (${escapeHtml(err.message)}):</b> We hebben een standaard schatting ingevuld.`;
+            }
+        }
+    } finally {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerText = originalBtnText;
+        }
+    }
+}
+
+async function generateRecipeWithAI(selectedIngredients) {
+    const prompt = `Je bent de liefdevolle keto-kok van Takkie & Siep (in warme Fiep Westendorp sfeer).
+Bedenk een heerlijk, makkelijk ketogeen recept op basis van deze ingrediënten: ${selectedIngredients.join(', ')}.
+Je mag standaard keuken-smaakmakers zoals peper, zeezout, kruiden of olijfolie/roomboter toevoegen.
+
+Geef ALLEEN een geldig JSON-object terug in exact dit formaat:
+{
+  "name": "<gezellige naam van het recept>",
+  "carbs": <geheel getal netto koolhydraten per portie in gram>,
+  "fat": <geheel getal vetten per portie in gram>,
+  "protein": <geheel getal eiwitten per portie in gram>,
+  "ingredients": "<ingrediëntenlijst met hoeveelheden, gescheiden door \\n en beginnend met '- '>",
+  "prep": "<genummerde bereidingsstappen, gescheiden door \\n>"
+}`;
+
+    const result = await callGeminiJson(prompt);
+    const c = Math.max(0, Math.round(Number(result.carbs) || 0));
+    const f = Math.max(0, Math.round(Number(result.fat) || 0));
+    const p = Math.max(0, Math.round(Number(result.protein) || 0));
+    const kcal = (c * 4) + (p * 4) + (f * 9);
+
+    return {
+        name: result.name || `Takkie & Siep's ${selectedIngredients[0]} Creatie`,
+        carbs: c,
+        fat: f,
+        protein: p,
+        kcal: kcal,
+        ingredients: Array.isArray(result.ingredients) ? result.ingredients.join('\n') : String(result.ingredients || ''),
+        prep: Array.isArray(result.prep) ? result.prep.join('\n') : String(result.prep || '')
+    };
+}
+
+function generateSmartRecipeFallback(selectedIngredients) {
     const items = selectedIngredients.length > 0 ? selectedIngredients : ['Eieren', 'Roomboter', 'Avocado'];
     const macroMap = {
         'Eieren': { c: 1, f: 11, p: 13, line: '- 2 verse vrije-uitloop eieren', step: 'Klop of bak de eieren zachtjes zodat ze heerlijk smeuïg blijven.' },
@@ -435,8 +765,33 @@ function generateSmartRecipe(selectedIngredients) {
     };
 }
 
+// ==========================================
+// UI EN EVENTS
+// ==========================================
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const targetTab = document.getElementById('tab-' + tabId);
+    if (targetTab) targetTab.classList.add('active');
+
+    let navTabId = tabId;
+    if (tabId === 'recipe-detail' || tabId === 'add-recipe') navTabId = 'recipes';
+    if (tabId === 'log-drink' || tabId === 'favorites' || tabId === 'edit-favorite') navTabId = 'log';
+    if (tabId === 'edit-meal') navTabId = 'home';
+
+    const navBtn = document.querySelector(".nav-item[data-tab='" + navTabId + "']");
+    if (navBtn) navBtn.classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+let lastQuoteIndex = -1;
 function getRandomQuote() {
-    const q = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+    let idx = Math.floor(Math.random() * motivationalQuotes.length);
+    if (motivationalQuotes.length > 1 && idx === lastQuoteIndex) {
+        idx = (idx + 1) % motivationalQuotes.length;
+    }
+    lastQuoteIndex = idx;
+    const q = motivationalQuotes[idx];
     if (document.getElementById('current-quote')) document.getElementById('current-quote').innerText = `"${q.text}"`;
     if (document.getElementById('current-author')) document.getElementById('current-author').innerText = q.author;
 }
@@ -481,6 +836,8 @@ window.openRecipePage = function(index) {
 };
 
 function renderApp() {
+    renderGeminiKeyStatus();
+
     if (document.getElementById('display-points')) document.getElementById('display-points').innerText = appState.points;
     if (document.getElementById('points-display')) document.getElementById('points-display').innerText = "Punten: " + appState.points + " pt";
 
@@ -500,7 +857,6 @@ function renderApp() {
         document.querySelectorAll('.water-drop').forEach(drop => drop.addEventListener('click', async () => {
             const clickedVal = parseInt(drop.getAttribute('data-val'), 10);
             const prevWater = appState.water;
-            // Klik op het hoogste gevulde glas zet hem 1 terug, anders naar clickedVal
             const nextWater = (clickedVal === prevWater) ? clickedVal - 1 : clickedVal;
             await updateWater(nextWater);
             if (nextWater > prevWater) {
@@ -523,6 +879,7 @@ function renderApp() {
             "<span style='color:var(--takkie-red); font-weight:700;'>" + mc + "g</span> | " +
             "<span style='color:#B2530C; font-weight:700;'>" + mf + "g</span> | " +
             "<span style='color:#1b4332; font-weight:700;'>" + mp + "g</span><br>" +
+            "<button onclick='openEditMeal(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
             "<button onclick='deleteMeal(" + idx + ")' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
     });
@@ -577,16 +934,38 @@ function renderApp() {
         updateSlidersLive();
     }
 
-    // Update favorieten dropdowns
+    // Update favorieten dropdowns & beheeroverzicht
     let mealOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
     let drinkOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
+    let favManageHtml = '';
+
     appState.savedItems.forEach((item, idx) => {
-        const opt = "<option value='" + idx + "'>" + escapeHtml(item.name) + " (" + (Number(item.carbs) || 0) + "g KH)</option>";
+        const ic = Number(item.carbs) || 0;
+        const ifat = Number(item.fat) || 0;
+        const ip = Number(item.protein) || 0;
+        const opt = "<option value='" + idx + "'>" + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
         if (item.type === 'meal') mealOptions += opt;
         else if (item.type === 'drink') drinkOptions += opt;
+
+        const badgeLabel = item.type === 'drink' ? '🥤 Drank' : '🍽️ Maaltijd';
+        favManageHtml += "<div class='meal-item'>" +
+            "<div style='flex-grow:1;'><strong>" + badgeLabel + "</strong><br>" + escapeHtml(item.name) + "</div>" +
+            "<div style='text-align: right; font-size: 0.8rem;'>" +
+            "<span style='color:var(--takkie-red); font-weight:700;'>" + ic + "g</span> | " +
+            "<span style='color:#B2530C; font-weight:700;'>" + ifat + "g</span> | " +
+            "<span style='color:#1b4332; font-weight:700;'>" + ip + "g</span><br>" +
+            "<button onclick='openEditFavorite(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
+            "<button onclick='deleteFavorite(" + idx + ")' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
+            "</div></div>";
     });
+
+    if (appState.savedItems.length === 0) {
+        favManageHtml = "<p style='text-align:center; color:#666; font-size:0.85rem;'>Je hebt nog geen favorieten opgeslagen. Vink bij het loggen van een maaltijd of drankje <b>💖 Sla op in mijn favorieten</b> aan!</p>";
+    }
+
     if (document.getElementById('favorite-meals-select')) document.getElementById('favorite-meals-select').innerHTML = mealOptions;
     if (document.getElementById('favorite-drinks-select')) document.getElementById('favorite-drinks-select').innerHTML = drinkOptions;
+    if (document.getElementById('favorites-manage-list')) document.getElementById('favorites-manage-list').innerHTML = favManageHtml;
 }
 
 // ==========================================
@@ -623,6 +1002,22 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener('click', (e) => switchTab(e.currentTarget.getAttribute('data-tab')));
     });
 
+    // Gemini API-key opslaan in Profiel
+    if (document.getElementById('btn-save-api-key')) {
+        document.getElementById('btn-save-api-key').addEventListener('click', () => {
+            const val = (document.getElementById('gemini-api-key').value || '').trim();
+            if (val) {
+                localStorage.setItem(GEMINI_KEY_STORAGE, val);
+                renderGeminiKeyStatus();
+                alert("Woef! Je Gemini AI-sleutel is veilig opgeslagen in je browser.");
+            } else {
+                localStorage.removeItem(GEMINI_KEY_STORAGE);
+                renderGeminiKeyStatus();
+                alert("Gemini AI-sleutel is gewist.");
+            }
+        });
+    }
+
     // Dashboard snelknoppen
     if (document.getElementById('nav-log')) {
         document.getElementById('nav-log').addEventListener('click', () => switchTab('log'));
@@ -644,6 +1039,93 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('btn-repeat').addEventListener('click', repeatYesterdayMeals);
     }
 
+    // Gelogde maaltijd / drank wijzigen knoppen
+    if (document.getElementById('btn-cancel-edit-meal')) {
+        document.getElementById('btn-cancel-edit-meal').addEventListener('click', () => {
+            editingMealIndex = null;
+            switchTab('home');
+        });
+    }
+
+    if (document.getElementById('btn-update-meal')) {
+        document.getElementById('btn-update-meal').addEventListener('click', saveEditedMeal);
+    }
+
+    if (document.getElementById('btn-autofill-edit-meal')) {
+        document.getElementById('btn-autofill-edit-meal').addEventListener('click', (e) => {
+            const typeVal = document.getElementById('edit-meal-type').value || '';
+            const context = typeVal.includes('Drank') ? 'drink' : 'meal';
+            analyzeNutritionWithAI(
+                document.getElementById('edit-meal-name').value,
+                context,
+                'edit-meal-carbs',
+                'edit-meal-fat',
+                'edit-meal-protein',
+                'ai-edit-meal-feedback',
+                e.currentTarget
+            );
+        });
+    }
+
+    // Favorieten beheren & wijzigen knoppen
+    if (document.getElementById('btn-manage-favs-meal')) {
+        document.getElementById('btn-manage-favs-meal').addEventListener('click', () => {
+            const selVal = document.getElementById('favorite-meals-select').value;
+            if (selVal !== "") {
+                previousTabBeforeFavorites = 'log';
+                window.openEditFavorite(parseInt(selVal, 10));
+            } else {
+                openFavoritesManager('log');
+            }
+        });
+    }
+
+    if (document.getElementById('btn-manage-favs-drink')) {
+        document.getElementById('btn-manage-favs-drink').addEventListener('click', () => {
+            const selVal = document.getElementById('favorite-drinks-select').value;
+            if (selVal !== "") {
+                previousTabBeforeFavorites = 'log-drink';
+                window.openEditFavorite(parseInt(selVal, 10));
+            } else {
+                openFavoritesManager('log-drink');
+            }
+        });
+    }
+
+    if (document.getElementById('btn-profile-favorites')) {
+        document.getElementById('btn-profile-favorites').addEventListener('click', () => openFavoritesManager('profile'));
+    }
+
+    if (document.getElementById('btn-back-from-favorites')) {
+        document.getElementById('btn-back-from-favorites').addEventListener('click', () => switchTab(previousTabBeforeFavorites));
+    }
+
+    if (document.getElementById('btn-cancel-edit-favorite')) {
+        document.getElementById('btn-cancel-edit-favorite').addEventListener('click', () => {
+            editingFavoriteIndex = null;
+            switchTab('favorites');
+        });
+    }
+
+    if (document.getElementById('btn-update-favorite')) {
+        document.getElementById('btn-update-favorite').addEventListener('click', saveEditedFavorite);
+    }
+
+    if (document.getElementById('btn-autofill-edit-fav')) {
+        document.getElementById('btn-autofill-edit-fav').addEventListener('click', (e) => {
+            const context = document.getElementById('edit-fav-type').value === 'drink' ? 'drink' : 'meal';
+            analyzeNutritionWithAI(
+                document.getElementById('edit-fav-name').value,
+                context,
+                'edit-fav-carbs',
+                'edit-fav-fat',
+                'edit-fav-protein',
+                'ai-edit-fav-feedback',
+                e.currentTarget
+            );
+        });
+    }
+
     // Recepten knoppen
     if (document.getElementById('btn-back-recipes')) {
         document.getElementById('btn-back-recipes').addEventListener('click', () => switchTab('recipes'));
@@ -658,14 +1140,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (document.getElementById('btn-generate-ai')) {
-        document.getElementById('btn-generate-ai').addEventListener('click', async () => {
+        document.getElementById('btn-generate-ai').addEventListener('click', async (e) => {
             const checked = Array.from(document.querySelectorAll('#fridge-ingredients input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
             if (checked.length === 0) {
                 alert("Vink eerst één of meer lekkere ingrediënten aan die je in huis hebt!");
                 return;
             }
-            const generated = generateSmartRecipe(checked);
+            const btn = e.currentTarget;
+            const origText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '🐾 Takkie & Siep kokkerellen met AI...';
+
+            let generated;
+            try {
+                generated = await generateRecipeWithAI(checked);
+            } catch (_err) {
+                generated = generateSmartRecipeFallback(checked);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = origText;
+            }
+
             const newIdx = await saveRecipe(
                 generated.name,
                 generated.carbs,
@@ -722,16 +1218,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Maaltijden & Dranken loggen
+    // AI Analyse bij Maaltijd & Drank toevoegen
     if (document.getElementById('btn-autofill-drink')) {
-        document.getElementById('btn-autofill-drink').addEventListener('click', () =>
-            autoFillNutrition(document.getElementById('drink-name').value, 'drink-carbs', 'drink-fat', 'drink-protein')
+        document.getElementById('btn-autofill-drink').addEventListener('click', (e) =>
+            analyzeNutritionWithAI(
+                document.getElementById('drink-name').value,
+                'drink',
+                'drink-carbs',
+                'drink-fat',
+                'drink-protein',
+                'ai-drink-feedback',
+                e.currentTarget
+            )
         );
     }
 
     if (document.getElementById('btn-autofill-meal')) {
-        document.getElementById('btn-autofill-meal').addEventListener('click', () =>
-            autoFillNutrition(document.getElementById('new-meal-name').value, 'new-meal-carbs', 'new-meal-fat', 'new-meal-protein')
+        document.getElementById('btn-autofill-meal').addEventListener('click', (e) =>
+            analyzeNutritionWithAI(
+                document.getElementById('new-meal-name').value,
+                'meal',
+                'new-meal-carbs',
+                'new-meal-fat',
+                'new-meal-protein',
+                'ai-meal-feedback',
+                e.currentTarget
+            )
         );
     }
 
@@ -756,6 +1268,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             document.getElementById('new-meal-name').value = '';
             document.getElementById('save-favorite-meal').checked = false;
+            const fb = document.getElementById('ai-meal-feedback');
+            if (fb) fb.style.display = 'none';
             switchTab('home');
         });
     }
@@ -782,6 +1296,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             document.getElementById('drink-name').value = '';
             document.getElementById('save-favorite-drink').checked = false;
+            const fb = document.getElementById('ai-drink-feedback');
+            if (fb) fb.style.display = 'none';
             switchTab('home');
         });
     }
@@ -823,5 +1339,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    renderGeminiKeyStatus();
     checkUser();
 });

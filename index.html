@@ -613,14 +613,18 @@
             <div class="widget">
                 <h3>➕ Maaltijd Toevoegen</h3>
                 
-                <label>Kies uit eerdere favorieten:</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin: 0;">Kies uit eerdere favorieten:</label>
+                    <button type="button" class="btn btn-auto" id="btn-manage-favs-meal" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow);">✏️ Favorieten wijzigen</button>
+                </div>
                 <select id="favorite-meals-select" style="margin-bottom: 12px; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
                     <option value="">-- Geen favoriet geselecteerd --</option>
                 </select>
 
-                <label>Naam Maaltijd:</label>
-                <input type="text" id="new-meal-name" placeholder="Bijv. Roerei met roomboter">
-                <button class="btn btn-auto" id="btn-autofill-meal">🤖 Vul macro's automatisch in</button>
+                <label>Naam Maaltijd (of beschrijving):</label>
+                <input type="text" id="new-meal-name" placeholder="Bijv. 2 roereieren met 15g roomboter en spek">
+                <button class="btn btn-auto" id="btn-autofill-meal" style="width: 100%;">🤖 Analyseer macro's met AI</button>
+                <div id="ai-meal-feedback" style="display: none; font-size: 0.8rem; background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
                 
                 <label>Type:</label>
                 <select id="new-meal-type">
@@ -631,19 +635,19 @@
                 </select>
 
                 <label>Koolhydraten (gram):</label>
-                <input type="number" id="new-meal-carbs" value="1">
+                <input type="number" id="new-meal-carbs" value="1" min="0">
 
                 <label>Vetten (gram):</label>
-                <input type="number" id="new-meal-fat" value="45">
+                <input type="number" id="new-meal-fat" value="45" min="0">
 
                 <label>Eiwitten (gram):</label>
-                <input type="number" id="new-meal-protein" value="30">
+                <input type="number" id="new-meal-protein" value="30" min="0">
 
                 <label class="checkbox-label" style="margin-bottom: 16px;">
                     <input type="checkbox" id="save-favorite-meal"> 💖 Sla op in mijn favorieten
                 </label>
 
-                <button class="btn btn-primary" id="btn-save-meal">Liefdevol Bewaren (+10 pt)</button>
+                <button class="btn btn-primary" id="btn-save-meal" style="width: 100%;">Liefdevol Bewaren (+10 pt)</button>
             </div>
         </div>
 
@@ -652,32 +656,110 @@
             <div class="widget" style="background-color: #E3F2FD;">
                 <h3>🥤 Drankje Loggen</h3>
 
-                <label>Kies uit eerdere favorieten:</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin: 0;">Kies uit eerdere favorieten:</label>
+                    <button type="button" class="btn btn-auto" id="btn-manage-favs-drink" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow);">✏️ Favorieten wijzigen</button>
+                </div>
                 <select id="favorite-drinks-select" style="margin-bottom: 12px; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
                     <option value="">-- Geen favoriet geselecteerd --</option>
                 </select>
 
-                <label>Wat drink je?</label>
-                <input type="text" id="drink-name" placeholder="Bijv. Witte wijn, koffie, thee">
-                <button class="btn btn-auto" id="btn-autofill-drink">🤖 Vul macro's automatisch in</button>
+                <label>Wat drink je? (per glas/kopje):</label>
+                <input type="text" id="drink-name" placeholder="Bijv. Droge witte wijn, cappuccino met room">
+                <button class="btn btn-auto" id="btn-autofill-drink" style="width: 100%; background-color: var(--accent-yellow);">🤖 Analyseer macro's met AI</button>
+                <div id="ai-drink-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
 
                 <label>Aantal glazen / kopjes:</label>
                 <input type="number" id="drink-amount" value="1" min="1">
 
-                <label>Koolhydraten (g):</label>
-                <input type="number" id="drink-carbs" value="0">
+                <label>Koolhydraten per glas (g):</label>
+                <input type="number" id="drink-carbs" value="0" min="0">
 
-                <label>Vetten (g):</label>
-                <input type="number" id="drink-fat" value="0">
+                <label>Vetten per glas (g):</label>
+                <input type="number" id="drink-fat" value="0" min="0">
 
-                <label>Eiwitten (g):</label>
-                <input type="number" id="drink-protein" value="0">
+                <label>Eiwitten per glas (g):</label>
+                <input type="number" id="drink-protein" value="0" min="0">
 
                 <label class="checkbox-label" style="margin-bottom: 16px;">
                     <input type="checkbox" id="save-favorite-drink"> 💖 Sla op in mijn favorieten
                 </label>
 
-                <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue);">Drankje Toevoegen (+5 pt)</button>
+                <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue); width: 100%;">Drankje Toevoegen (+5 pt)</button>
+            </div>
+        </div>
+
+        <!-- TAB 3C: GELOGDE MAALTIJD OF DRANK WIJZIGEN -->
+        <div id="tab-edit-meal" class="tab-content">
+            <button class="btn btn-back" id="btn-cancel-edit-meal">⬅️ Terug naar Home</button>
+            <div class="widget" style="background-color: #FFF9E6;">
+                <h3>✏️ Gelogd Item Wijzigen</h3>
+
+                <label>Type:</label>
+                <select id="edit-meal-type">
+                    <option value="🍳 Ontbijt">🍳 Ontbijt</option>
+                    <option value="🥗 Lunch">🥗 Lunch</option>
+                    <option value="🍲 Avondeten">🍲 Avondeten</option>
+                    <option value="⚡ Snack">⚡ Snack</option>
+                    <option value="🥤 Drank">🥤 Drank</option>
+                    <option value="🍲 Recept">🍲 Recept</option>
+                </select>
+
+                <label>Naam Maaltijd of Drank:</label>
+                <input type="text" id="edit-meal-name" placeholder="Naam van hapje of drankje">
+                <button class="btn btn-auto" id="btn-autofill-edit-meal" style="width: 100%;">🤖 Analyseer opnieuw met AI</button>
+                <div id="ai-edit-meal-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
+
+                <label>Koolhydraten (gram):</label>
+                <input type="number" id="edit-meal-carbs" value="0" min="0">
+
+                <label>Vetten (gram):</label>
+                <input type="number" id="edit-meal-fat" value="0" min="0">
+
+                <label>Eiwitten (gram):</label>
+                <input type="number" id="edit-meal-protein" value="0" min="0">
+
+                <button class="btn btn-primary" id="btn-update-meal" style="width: 100%;">💾 Wijzigingen Opslaan</button>
+            </div>
+        </div>
+
+        <!-- TAB 3D: FAVORIETEN BEHEREN & WIJZIGEN -->
+        <div id="tab-favorites" class="tab-content">
+            <button class="btn btn-back" id="btn-back-from-favorites">⬅️ Terug</button>
+            <div class="widget">
+                <h3>⭐ Mijn Favorieten Beheren</h3>
+                <p style="font-size: 0.8rem; color: #666; margin-top: 0;">Klik op <b>Wijzigen</b> om een favoriete maaltijd of drank aan te passen:</p>
+                <div id="favorites-manage-list"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3E: EEN FAVORIET WIJZIGEN -->
+        <div id="tab-edit-favorite" class="tab-content">
+            <button class="btn btn-back" id="btn-cancel-edit-favorite">⬅️ Terug naar Favorieten</button>
+            <div class="widget" style="background-color: #FFF9E6;">
+                <h3>✏️ Favoriet Wijzigen</h3>
+
+                <label>Categorie:</label>
+                <select id="edit-fav-type">
+                    <option value="meal">🍽️ Maaltijd</option>
+                    <option value="drink">🥤 Drank</option>
+                </select>
+
+                <label>Naam Favoriet:</label>
+                <input type="text" id="edit-fav-name" placeholder="Naam van favoriet">
+                <button class="btn btn-auto" id="btn-autofill-edit-fav" style="width: 100%;">🤖 Analyseer opnieuw met AI</button>
+                <div id="ai-edit-fav-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
+
+                <label>Koolhydraten (gram):</label>
+                <input type="number" id="edit-fav-carbs" value="0" min="0">
+
+                <label>Vetten (gram):</label>
+                <input type="number" id="edit-fav-fat" value="0" min="0">
+
+                <label>Eiwitten (gram):</label>
+                <input type="number" id="edit-fav-protein" value="0" min="0">
+
+                <button class="btn btn-primary" id="btn-update-favorite" style="width: 100%;">💾 Favoriet Opslaan</button>
             </div>
         </div>
 
@@ -706,6 +788,24 @@
 
         <!-- TAB 5: PROFIEL & STREEFGETALLEN -->
         <div id="tab-profile" class="tab-content">
+            <div class="widget" style="background-color: #FFF9E6;">
+                <h3>🤖 Takkie & Siep's AI Brein (Gemini)</h3>
+                <p style="font-size: 0.82rem; color: #555; margin-top: 0;">
+                    Vul hier je gratis <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color: var(--takkie-red); font-weight: 700;">Google Gemini API-key</a> in zodat Takkie & Siep elke maaltijd, drank en recept slim met AI kunnen berekenen!
+                </p>
+                <input type="password" id="gemini-api-key" placeholder="Plak hier je Gemini API-key (AIza...)">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-primary" id="btn-save-api-key" style="flex: 1; padding: 8px;">🔑 Sleutel Bewaren</button>
+                    <span id="gemini-key-status" style="font-size: 0.8rem; font-weight: 700;"></span>
+                </div>
+            </div>
+
+            <div class="widget">
+                <h3>⭐ Favorieten</h3>
+                <p style="font-size: 0.82rem; color: #666; margin-top: 0;">Bekijk, wijzig of verwijder je opgeslagen favoriete maaltijden en drankjes:</p>
+                <button class="btn btn-ai" id="btn-profile-favorites" style="width: 100%;">✏️ Mijn Favorieten Beheren</button>
+            </div>
+
             <div class="widget">
                 <h3>⚙️ Jouw Liefdevolle Doelen</h3>
                 <p style="font-size: 0.85rem; color: #666; margin-top:0;">Pas je dagelijkse doelen zachtjes aan:</p>
