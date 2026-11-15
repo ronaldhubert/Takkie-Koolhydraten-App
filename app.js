@@ -951,6 +951,23 @@ function renderApp() {
         const filledClass = (i <= appState.water) ? 'filled' : '';
         waterHtml += "<div class='water-drop " + filledClass + "' data-val='" + i + "'>💧</div>";
     }
+    if (document.getElementById('water-goal-message')) {
+        const waterMsgEl = document.getElementById('water-goal-message');
+        if (appState.water >= 8) {
+            waterMsgEl.style.display = 'flex';
+            const waterPet = document.getElementById('water-pet-avatar');
+            const waterSpeech = document.getElementById('water-goal-speech');
+            const isSiep = (lastShownPet === 'siepie');
+            if (waterPet) waterPet.className = isSiep ? 'siep-avatar' : 'takkie-avatar';
+            if (waterSpeech) {
+                waterSpeech.innerText = isSiep
+                    ? '"Miauw! Je hebt al je water op vandaag, goed zo!"'
+                    : '"Woef! Je hebt al je water op vandaag, goed zo!"';
+            }
+        } else {
+            waterMsgEl.style.display = 'none';
+        }
+    }
     if (document.getElementById('water-container')) {
         document.getElementById('water-container').innerHTML = waterHtml;
         document.querySelectorAll('.water-drop').forEach(drop => drop.addEventListener('click', async () => {
@@ -960,7 +977,6 @@ function renderApp() {
             await updateWater(nextWater);
             if (nextWater > prevWater) {
                 await addPoints(2);
-                if (nextWater === 8) alert("Woef! Je hebt al je water op vandaag, goed zo!");
             }
         }));
     }

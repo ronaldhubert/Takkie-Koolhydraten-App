@@ -229,9 +229,33 @@
             background: white;
             padding: 10px 14px;
             border: 3px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 14px;
             box-shadow: 2px 2px 0px var(--border-color);
             flex: 1;
+            position: relative;
+            margin-left: 6px;
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            left: -13px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 9px 13px 9px 0;
+            border-style: solid;
+            border-color: transparent var(--border-color) transparent transparent;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 6px 10px 6px 0;
+            border-style: solid;
+            border-color: transparent white transparent transparent;
         }
 
         .widget {
@@ -475,6 +499,14 @@
             <div class="widget">
                 <h3><span>Takkie & Siep's Drinkbak</span> <span id="water-text">0 / 8 glazen</span></h3>
                 <div class="water-dots" id="water-container"></div>
+                <div id="water-goal-message" class="pets-box" style="display: none; margin-top: 14px; margin-bottom: 0; padding: 12px;">
+                    <div class="pets-avatars">
+                        <div class="takkie-avatar" id="water-pet-avatar"></div>
+                    </div>
+                    <div class="speech-bubble" id="water-goal-speech">
+                        "Woef! Je hebt al je water op vandaag, goed zo!"
+                    </div>
+                </div>
             </div>
 
             <div class="widget">
