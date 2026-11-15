@@ -1386,12 +1386,72 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('btn-add-recipe').addEventListener('click', () => switchTab('add-recipe'));
     }
 
+    function appendCustomIngredientCard(name, isChecked = true) {
+        const container = document.getElementById('fridge-ingredients');
+        if (!container || !name) return;
+        const existing = Array.from(container.querySelectorAll('input[type="checkbox"]'))
+            .find(cb => cb.value.toLowerCase() === name.toLowerCase());
+        if (existing) {
+            if (isChecked) existing.checked = true;
+            return;
+        }
+        const label = document.createElement('label');
+        label.className = 'checkbox-label';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = name;
+        cb.checked = isChecked;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' 🥗 ' + name));
+        container.appendChild(label);
+    }
+
+    // Laad eerder toegevoegde eigen ingrediënten uit localStorage
+    try {
+        const savedCustomIngs = JSON.parse(localStorage.getItem('takkie_custom_ingredients') || '[]');
+        if (Array.isArray(savedCustomIngs)) {
+            savedCustomIngs.forEach(ing => appendCustomIngredientCard(ing, false));
+        }
+    } catch (_e) {}
+
+    function handleAddCustomIngredient() {
+        const inputEl = document.getElementById('custom-ingredient-input');
+        if (!inputEl) return;
+        const raw = inputEl.value.trim();
+        if (!raw) return;
+        raw.split(',').map(s => s.trim()).filter(Boolean).forEach(part => {
+            appendCustomIngredientCard(part, true);
+            try {
+                const list = JSON.parse(localStorage.getItem('takkie_custom_ingredients') || '[]');
+                if (!list.some(x => x.toLowerCase() === part.toLowerCase())) {
+                    list.push(part);
+                    localStorage.setItem('takkie_custom_ingredients', JSON.stringify(list));
+                }
+            } catch (_e) {}
+        });
+        inputEl.value = '';
+    }
+
+    if (document.getElementById('btn-add-custom-ingredient')) {
+        document.getElementById('btn-add-custom-ingredient').addEventListener('click', handleAddCustomIngredient);
+    }
+
+    if (document.getElementById('custom-ingredient-input')) {
+        document.getElementById('custom-ingredient-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddCustomIngredient();
+            }
+        });
+    }
+
     if (document.getElementById('btn-generate-ai')) {
         document.getElementById('btn-generate-ai').addEventListener('click', async (e) => {
+            handleAddCustomIngredient();
             const checked = Array.from(document.querySelectorAll('#fridge-ingredients input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
             if (checked.length === 0) {
-                alert("Vink eerst één of meer lekkere ingrediënten aan die je in huis hebt!");
+                alert("Vink eerst één of meer lekkere ingrediënten aan (of typ een eigen ingrediënt)!");
                 return;
             }
             const btn = e.currentTarget;
