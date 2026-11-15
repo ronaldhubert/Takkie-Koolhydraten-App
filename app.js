@@ -799,8 +799,18 @@ function generateSmartRecipeFallback(selectedIngredients) {
         'Spek': { c: 0, f: 20, p: 12, line: '- 4 plakjes krokant ontbijtspek', step: 'Bak het spek in een koekenpan tot het goudbruin en knapperig is.' },
         'Avocado': { c: 2, f: 15, p: 2, line: '- 1 rijpe avocado in plakjes', step: 'Snijd de avocado in mooie partjes en leg deze liefdevol op het bord.' },
         'Roomboter': { c: 0, f: 12, p: 0, line: '- Een flinke klont roomboter', step: 'Smelt een royale klont roomboter in de warme pan voor extra smaak en brandstof.' },
+        'Kruidenboter': { c: 0, f: 12, p: 0, line: '- Een lekkere lepel kruidenboter', step: 'Laat een klontje kruidenboter zachtjes smelten over het gerecht.' },
         'Zalm': { c: 0, f: 18, p: 25, line: '- 150g verse zalmfilet', step: 'Bak de zalmfilet op de huid in 4-5 minuutjes mooi rosé vanbinnen.' },
-        'Ribeye': { c: 0, f: 28, p: 32, line: '- 180g malse ribeye steak', step: 'Schroei de ribeye op hoog vuur dicht en laat hem even rusten onder een dekentje van folie.' }
+        'Ribeye': { c: 0, f: 28, p: 32, line: '- 180g malse ribeye steak', step: 'Schroei de ribeye op hoog vuur dicht en laat hem even rusten onder een dekentje van folie.' },
+        'Kipfilet': { c: 0, f: 4, p: 35, line: '- 150g malse kipfilet in blokjes', step: 'Bak de kipfilet goudbruin en gaar in de pan.' },
+        'Kipfilet beleg': { c: 0, f: 2, p: 12, line: '- 4 plakjes kipfilet beleg', step: 'Rol de plakjes kipfilet beleg gezellig op als rolletjes.' },
+        'Ham': { c: 1, f: 4, p: 14, line: '- 4 plakjes lekkere achterham', step: 'Snijd of rol de plakjes ham en voeg ze toe.' },
+        'Kaas': { c: 0, f: 17, p: 13, line: '- 50g geraspte of plakjes volvette kaas', step: 'Laat de kaas heerlijk smelten voor een romig laagje.' },
+        'Brie': { c: 0, f: 18, p: 11, line: '- 60g romige Franse brie in plakjes', step: 'Leg de plakjes romige brie erop zodat ze zacht worden.' },
+        'Kwark': { c: 5, f: 8, p: 12, line: '- 150g volle romige kwark', step: 'Schep de volle kwark in een gezellig kommetje.' },
+        'Hüttenkäse': { c: 3, f: 4, p: 12, line: '- 100g frisse Hüttenkäse', step: 'Schep de frisse Hüttenkäse erbij en roer zachtjes door.' },
+        'Pecannoten': { c: 1, f: 18, p: 2, line: '- Een handje (25g) knapperige pecannoten', step: 'Hak de pecannoten grof en strooi ze er als knapperige topping overheen.' },
+        'Walnoten': { c: 1, f: 16, p: 4, line: '- Een handje (25g) walnoten', step: 'Breek de walnoten in stukjes en strooi ze er liefdevol overheen.' }
     };
 
     let c = 1, f = 0, p = 0;
@@ -849,7 +859,7 @@ function switchTab(tabId) {
     }
 
     let navTabId = tabId;
-    if (tabId === 'recipe-detail' || tabId === 'add-recipe') navTabId = 'recipes';
+    if (tabId === 'recipe-detail' || tabId === 'add-recipe' || tabId === 'edit-recipe') navTabId = 'recipes';
     if (tabId === 'log-drink' || tabId === 'favorites' || tabId === 'edit-favorite') navTabId = 'log';
     if (tabId === 'edit-meal') navTabId = 'home';
 
@@ -915,6 +925,9 @@ function updateSlidersLive() {
     document.getElementById('slider-kcal-val').innerText = document.getElementById('slider-kcal').value + ' kcal';
 }
 
+let editingRecipeIndex = null;
+let editRecipeReturnTab = 'recipes';
+
 window.openRecipePage = function(index) {
     const r = appState.recipes[index];
     if (!r) return;
@@ -934,6 +947,92 @@ window.openRecipePage = function(index) {
         .map(line => "<div style='margin-bottom:6px;'>" + escapeHtml(line) + "</div>")
         .join('');
     switchTab('recipe-detail');
+};
+
+window.openEditRecipe = function(index, fromTab = 'recipes', evt = null) {
+    if (evt) evt.stopPropagation();
+    const r = appState.recipes[index];
+    if (!r) return;
+    editingRecipeIndex = index;
+    editRecipeReturnTab = fromTab;
+
+    document.getElementById('edit-recipe-name').value = r.name || '';
+    document.getElementById('edit-recipe-carbs').value = parseGramNumber(r.carbs);
+    document.getElementById('edit-recipe-fat').value = parseGramNumber(r.fat);
+    document.getElementById('edit-recipe-protein').value = parseGramNumber(r.protein);
+    document.getElementById('edit-recipe-ingredients').value = r.ingredients || '';
+    document.getElementById('edit-recipe-prep').value = r.prep || '';
+
+    switchTab('edit-recipe');
+};
+
+async function saveEditedRecipe() {
+    if (editingRecipeIndex === null || !appState.recipes[editingRecipeIndex]) return;
+    const r = appState.recipes[editingRecipeIndex];
+
+    const newName = document.getElementById('edit-recipe-name').value.trim();
+    const c = parseInt(document.getElementById('edit-recipe-carbs').value, 10) || 0;
+    const f = parseInt(document.getElementById('edit-recipe-fat').value, 10) || 0;
+    const p = parseInt(document.getElementById('edit-recipe-protein').value, 10) || 0;
+    const kcal = (c * 4) + (p * 4) + (f * 9);
+    const newIngredients = document.getElementById('edit-recipe-ingredients').value.trim();
+    const newPrep = document.getElementById('edit-recipe-prep').value.trim();
+
+    if (!newName) return alert("Geef je recept nog even een leuke naam!");
+
+    const oldName = r.name;
+    const updatedFields = {
+        name: newName,
+        carbs: formatGramLabel(c, 'g KH'),
+        fat: formatGramLabel(f, 'g Vet'),
+        protein: formatGramLabel(p, 'g Eiwit'),
+        kcal: formatGramLabel(kcal, ' kcal'),
+        ingredients: newIngredients,
+        prep: newPrep
+    };
+
+    Object.assign(r, updatedFields);
+    renderApp();
+
+    if (r.id) {
+        await window.supabaseClient
+            .from('recipes')
+            .update(updatedFields)
+            .eq('id', r.id);
+    } else if (currentUser) {
+        await window.supabaseClient
+            .from('recipes')
+            .update(updatedFields)
+            .eq('user_id', currentUser.id)
+            .eq('name', oldName);
+    }
+
+    const targetIdx = editingRecipeIndex;
+    editingRecipeIndex = null;
+    window.openRecipePage(targetIdx);
+}
+
+window.deleteRecipe = async function(index, evt = null) {
+    if (evt) evt.stopPropagation();
+    const r = appState.recipes[index];
+    if (!r) return;
+    if (!confirm(`Weet je zeker dat je het recept "${r.name}" wilt verwijderen?`)) return;
+
+    appState.recipes.splice(index, 1);
+    if (currentRecipeIndex === index) currentRecipeIndex = null;
+    renderApp();
+
+    if (r.id) {
+        await window.supabaseClient.from('recipes').delete().eq('id', r.id);
+    } else if (currentUser) {
+        await window.supabaseClient
+            .from('recipes')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('name', r.name);
+    }
+
+    switchTab('recipes');
 };
 
 function renderApp() {
@@ -1032,8 +1131,13 @@ function renderApp() {
     appState.recipes.forEach((r, idx) => {
         rhtml += "<div class='recipe-card' onclick='openRecipePage(" + idx + ")'>" +
             "<div style='font-size: 1.5rem; margin-right: 12px;'>🍲</div>" +
-            "<div><div class='recipe-title'>" + escapeHtml(r.name) + "</div>" +
+            "<div style='flex-grow: 1;'>" +
+            "<div class='recipe-title'>" + escapeHtml(r.name) + "</div>" +
             "<div class='recipe-macros'>" + escapeHtml(r.carbs) + " • " + escapeHtml(r.fat) + " • " + escapeHtml(r.protein) + " • " + escapeHtml(r.kcal) + "</div>" +
+            "<div style='margin-top: 6px;'>" +
+            "<button onclick='openEditRecipe(" + idx + ", \"recipes\", event)' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; padding:0; margin-right:12px;'>✏️ Bewerken</button>" +
+            "<button onclick='deleteRecipe(" + idx + ", event)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; padding:0;'>🗑️ Verwijderen</button>" +
+            "</div>" +
             "</div></div>";
     });
     if (appState.recipes.length === 0) {
@@ -1349,6 +1453,33 @@ document.addEventListener("DOMContentLoaded", () => {
             await addPoints(10);
             switchTab('home');
         });
+    }
+
+    if (document.getElementById('btn-edit-recipe-detail')) {
+        document.getElementById('btn-edit-recipe-detail').addEventListener('click', () => {
+            if (currentRecipeIndex !== null) {
+                window.openEditRecipe(currentRecipeIndex, 'recipe-detail');
+            }
+        });
+    }
+
+    if (document.getElementById('btn-delete-recipe-detail')) {
+        document.getElementById('btn-delete-recipe-detail').addEventListener('click', () => {
+            if (currentRecipeIndex !== null) {
+                window.deleteRecipe(currentRecipeIndex);
+            }
+        });
+    }
+
+    if (document.getElementById('btn-cancel-edit-recipe')) {
+        document.getElementById('btn-cancel-edit-recipe').addEventListener('click', () => {
+            editingRecipeIndex = null;
+            switchTab(editRecipeReturnTab || 'recipes');
+        });
+    }
+
+    if (document.getElementById('btn-update-recipe')) {
+        document.getElementById('btn-update-recipe').addEventListener('click', saveEditedRecipe);
     }
 
     // AI Analyse bij Maaltijd & Drank toevoegen
