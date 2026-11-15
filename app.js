@@ -399,6 +399,18 @@ async function updateProfileGoals() {
 // ==========================================
 // GELOGDE MAALTIJD / DRANK WIJZIGEN & VERWIJDEREN
 // ==========================================
+let editingDrinkOriginalAmount = 1;
+let editingDrinkPerGlass = { carbs: 0, fat: 0, protein: 0 };
+
+function toggleEditDrinkAmountVisibility() {
+    const typeVal = document.getElementById('edit-meal-type')?.value || '';
+    const isDrink = typeVal.includes('Drank');
+    const wrapper = document.getElementById('edit-meal-amount-wrapper');
+    if (wrapper) {
+        wrapper.style.display = isDrink ? 'block' : 'none';
+    }
+}
+
 window.openEditMeal = function(idx) {
     const meal = appState.meals[idx];
     if (!meal) return;
@@ -406,7 +418,6 @@ window.openEditMeal = function(idx) {
 
     const typeSelect = document.getElementById('edit-meal-type');
     if (typeSelect) {
-        // Voeg eventueel afwijkend type toe als optie zodat niets verloren gaat
         const exists = Array.from(typeSelect.options).some(opt => opt.value === meal.type);
         if (!exists && meal.type) {
             const opt = document.createElement('option');
@@ -417,10 +428,38 @@ window.openEditMeal = function(idx) {
         typeSelect.value = meal.type || '🍳 Ontbijt';
     }
 
-    document.getElementById('edit-meal-name').value = meal.name || '';
-    document.getElementById('edit-meal-carbs').value = Number(meal.carbs) || 0;
-    document.getElementById('edit-meal-fat').value = Number(meal.fat) || 0;
-    document.getElementById('edit-meal-protein').value = Number(meal.protein) || 0;
+    const isDrink = (meal.type || '').includes('Drank');
+    let rawName = meal.name || '';
+    let amount = 1;
+
+    if (isDrink) {
+        const match = rawName.match(/^(\d+)\s*x\s+(.+)$/i);
+        if (match) {
+            amount = Math.max(1, parseInt(match[1], 10) || 1);
+            rawName = match[2];
+        }
+    }
+
+    editingDrinkOriginalAmount = amount;
+    const totalC = Number(meal.carbs) || 0;
+    const totalF = Number(meal.fat) || 0;
+    const totalP = Number(meal.protein) || 0;
+
+    editingDrinkPerGlass = {
+        carbs: totalC / amount,
+        fat: totalF / amount,
+        protein: totalP / amount
+    };
+
+    document.getElementById('edit-meal-name').value = rawName;
+    if (document.getElementById('edit-meal-amount')) {
+        document.getElementById('edit-meal-amount').value = amount;
+    }
+    document.getElementById('edit-meal-carbs').value = totalC;
+    document.getElementById('edit-meal-fat').value = totalF;
+    document.getElementById('edit-meal-protein').value = totalP;
+
+    toggleEditDrinkAmountVisibility();
 
     const fb = document.getElementById('ai-edit-meal-feedback');
     if (fb) fb.style.display = 'none';
@@ -433,12 +472,22 @@ async function saveEditedMeal() {
     const meal = appState.meals[editingMealIndex];
 
     const newType = document.getElementById('edit-meal-type').value;
-    const newName = document.getElementById('edit-meal-name').value.trim();
+    let newName = document.getElementById('edit-meal-name').value.trim();
     const newCarbs = parseInt(document.getElementById('edit-meal-carbs').value, 10) || 0;
     const newFat = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
     const newProtein = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
 
     if (!newName) return alert("Vul alsjeblieft een naam in!");
+
+    const isDrink = newType.includes('Drank');
+    const newAmount = isDrink
+        ? Math.max(1, parseInt(document.getElementById('edit-meal-amount')?.value, 10) || 1)
+        : 1;
+
+    if (isDrink) {
+        const cleanDrinkName = newName.replace(/^(\d+)\s*x\s+/i, '');
+        newName = `${newAmount}x ${cleanDrinkName}`;
+    }
 
     const oldName = meal.name;
     const oldType = meal.type;
@@ -449,7 +498,12 @@ async function saveEditedMeal() {
     meal.fat = newFat;
     meal.protein = newProtein;
 
-    renderApp();
+    if (isDrink && newAmount !== editingDrinkOriginalAmount) {
+        const nextWater = Math.max(0, Math.min(8, appState.water + (newAmount - editingDrinkOriginalAmount)));
+        await updateWater(nextWater);
+    } else {
+        renderApp();
+    }
 
     if (meal.id) {
         await window.supabaseClient
@@ -1052,15 +1106,39 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    if (document.getElementById('edit-meal-type')) {
+        document.getElementById('edit-meal-type').addEventListener('change', toggleEditDrinkAmountVisibility);
+    }
+
+    if (document.getElementById('edit-meal-amount')) {
+        document.getElementById('edit-meal-amount').addEventListener('input', (e) => {
+            const amt = Math.max(1, parseInt(e.target.value, 10) || 1);
+            document.getElementById('edit-meal-carbs').value = Math.round(editingDrinkPerGlass.carbs * amt);
+            document.getElementById('edit-meal-fat').value = Math.round(editingDrinkPerGlass.fat * amt);
+            document.getElementById('edit-meal-protein').value = Math.round(editingDrinkPerGlass.protein * amt);
+        });
+    }
+
+    ['carbs', 'fat', 'protein'].forEach(macro => {
+        const el = document.getElementById('edit-meal-' + macro);
+        if (el) {
+            el.addEventListener('input', () => {
+                const amt = Math.max(1, parseInt(document.getElementById('edit-meal-amount')?.value, 10) || 1);
+                editingDrinkPerGlass[macro] = (parseInt(el.value, 10) || 0) / amt;
+            });
+        }
+    });
+
     if (document.getElementById('btn-update-meal')) {
         document.getElementById('btn-update-meal').addEventListener('click', saveEditedMeal);
     }
 
     if (document.getElementById('btn-autofill-edit-meal')) {
-        document.getElementById('btn-autofill-edit-meal').addEventListener('click', (e) => {
+        document.getElementById('btn-autofill-edit-meal').addEventListener('click', async (e) => {
             const typeVal = document.getElementById('edit-meal-type').value || '';
-            const context = typeVal.includes('Drank') ? 'drink' : 'meal';
-            analyzeNutritionWithAI(
+            const isDrink = typeVal.includes('Drank');
+            const context = isDrink ? 'drink' : 'meal';
+            await analyzeNutritionWithAI(
                 document.getElementById('edit-meal-name').value,
                 context,
                 'edit-meal-carbs',
@@ -1069,6 +1147,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 'ai-edit-meal-feedback',
                 e.currentTarget
             );
+            if (isDrink) {
+                const amt = Math.max(1, parseInt(document.getElementById('edit-meal-amount')?.value, 10) || 1);
+                const c1 = parseInt(document.getElementById('edit-meal-carbs').value, 10) || 0;
+                const f1 = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
+                const p1 = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
+                editingDrinkPerGlass = { carbs: c1, fat: f1, protein: p1 };
+                document.getElementById('edit-meal-carbs').value = c1 * amt;
+                document.getElementById('edit-meal-fat').value = f1 * amt;
+                document.getElementById('edit-meal-protein').value = p1 * amt;
+            }
         });
     }
 
