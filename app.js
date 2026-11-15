@@ -50,7 +50,17 @@ const motivationalQuotes = [
     { text: "Maak je niet druk om gisteren of morgen; vandaag liggen we lekker warm in het zonnetje.", author: "— Siepie" },
     { text: "Woef woef! Ik geef je een natte neuzen-kus omdat je zo dapper volhoudt.", author: "— Takkie" },
     { text: "Geen haast, geen stress, alleen een kopje thee en een rustig muziekje. Prrrr...", author: "— Siepie" },
-    { text: "Wat er vandaag ook gebeurt: Takkie kwispelt en Siepie spint altijd voor jou!", author: "— Takkie & Siepie" }
+    { text: "Wat er vandaag ook gebeurt: Takkie kwispelt en Siepie spint altijd voor jou!", author: "— Takkie & Siepie" },
+    { text: "Koolhydraten? Kun je daar achteraan rennen? Nee? Nou, geef mij dan maar een plakje worst!", author: "— Takkie" },
+    { text: "Ik doe al jaren aan intermittent fasting: ik slaap gewoon zestien uur per dag op de bank.", author: "— Siepie" },
+    { text: "Als jij dat laatste blokje kaas echt niet meer op kunt... ik offer me wel weer op hoor. Heel onbaatzuchtig.", author: "— Takkie" },
+    { text: "Mensen tellen macro's, ik tel alleen hoe vaak mijn etensbakje per dag vol zit. Tot nu toe: te weinig.", author: "— Siepie" },
+    { text: "Mijn ideale ketodieet bestaat uit 50% spek, 50% kaas en 100% kruimels die jij 'per ongeluk' laat vallen.", author: "— Takkie" },
+    { text: "Ik heb net drie minuten naar een vlieg gestaard; volgens mij heb ik mijn sportdoel voor deze week weer gehaald.", author: "— Siepie" },
+    { text: "Zeg maar tegen de weegschaal dat ik zware botjes heb... en een heel groot hart!", author: "— Takkie" },
+    { text: "Wist je dat spinnen calorieën verbrandt? Niet bij jou, maar je mag mij best een uurtje aaien om het te testen.", author: "— Siepie" },
+    { text: "Groenten zijn prima hoor, vooral als je ze eerst voert aan een koe en er daarna een biefstukje van bakt!", author: "— Takkie" },
+    { text: "Wij hebben besloten: elke keer als jij braaf water drinkt, krijgen wij een snoepje. Eerlijke deal toch?", author: "— Takkie & Siepie" }
 ];
 
 function formatDateLocal(dateObj) {
