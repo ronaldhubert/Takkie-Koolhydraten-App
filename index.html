@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takkie & Siep's Liefdevolle Keto Tracker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-color: #FFFDF9;
+            --card-bg: #FFFFFF;
+            --text-main: #1A1A1A;
+            --border-color: #1A1A1A;
+            --takkie-red: #E63946;
+            --siep-blue: #1D3557;
+            --accent-yellow: #FFD166;
+            --accent-green: #06D6A0;
+            --accent-blue: #48CAE4;
+            --accent-fat: #F4A261;
+            --accent-protein: #2a9d8f;
+            --accent-kcal: #9b5de5;
+            --bubble-bg: #F1FAEE;
+        }
+
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#1A1A1A 8px, transparent 9px);
+            background-size: 40px 40px;
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 420px;
+            min-height: 100vh;
+            background-color: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            border-left: 4px solid var(--border-color);
+            border-right: 4px solid var(--border-color);
+            box-shadow: 8px 0px 0px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        header {
+            background-color: var(--takkie-red);
+            border-bottom: 4px solid var(--border-color);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .profile-info h1 {
+            font-size: 1.1rem;
+            margin: 0 0 4px 0;
+            text-shadow: 2px 2px 0px var(--border-color);
+        }
+
+        .profile-info p {
+            font-size: 0.8rem;
+            margin: 0;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .streak-badge {
+            background-color: var(--accent-yellow);
+            color: var(--text-main);
+            border: 3px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            box-shadow: 3px 3px 0px var(--border-color);
+            transform: rotate(3deg);
+        }
+
+        /* Navigatiebalk bovenaan */
+        .top-nav {
+            background-color: white;
+            border-bottom: 4px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 4px;
+            box-shadow: 0px 4px 0px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: 'Fredoka', cursive, sans-serif;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .nav-item span { display: block; font-size: 1.1rem; }
+        .nav-item.active { background-color: var(--bubble-bg); color: var(--takkie-red); border: 2px solid var(--border-color); box-shadow: 2px 2px 0px var(--border-color); }
+
+        .content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            padding-bottom: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .pets-box {
+            background-color: var(--bubble-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 5px 5px 0px var(--border-color);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .pets-avatars {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .takkie-avatar {
+            width: 50px;
+            height: 50px;
+            background: var(--text-main);
+            border-radius: 50% 50% 40% 40%;
+            border: 3px solid var(--border-color);
+            position: relative;
+        }
+        .takkie-avatar::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 3px;
+            width: 12px;
+            height: 20px;
+            background: var(--text-main);
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            transform: rotate(-15deg);
+        }
+        .takkie-avatar::after {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 10px;
+            width: 26px;
+            height: 6px;
+            background: var(--takkie-red);
+            border-radius: 4px;
+            border: 2px solid var(--border-color);
+        }
+
+        .siep-avatar {
+            width: 45px;
+            height: 45px;
+            background: #EAEAEA;
+            border-radius: 50% 50% 45% 45%;
+            border: 3px solid var(--border-color);
+            position: relative;
+            background-image: repeating-linear-gradient(
+                0deg,
+                var(--siep-blue),
+                var(--siep-blue) 6px,
+                #FFFFFF 6px,
+                #FFFFFF 12px
+            );
+        }
+        .siep-avatar::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: -8px;
+            width: 12px;
+            height: 22px;
+            background: var(--text-main);
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            transform: rotate(20deg);
+        }
+
+        .speech-bubble {
+            font-size: 0.9rem;
+            line-height: 1.3;
+            font-weight: 600;
+            background: white;
+            padding: 10px 14px;
+            border: 3px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 2px 2px 0px var(--border-color);
+            flex: 1;
+        }
+
+        .widget {
+            background-color: white;
+            border: 4px solid var(--border-color);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 5px 5px 0px var(--border-color);
+        }
+
+        .widget h3 {
+            font-size: 0.95rem;
+            margin: 0 0 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-bar-bg {
+            background-color: #eee;
+            border: 3px solid var(--border-color);
+            height: 16px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .progress-bar-fill-carb { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.4s ease; background: linear-gradient(90deg, #06D6A0, #E63946); }
+        .progress-bar-fill-fat { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.3s ease; background-color: var(--accent-fat); }
+        .progress-bar-fill-protein { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.3s ease; background-color: var(--accent-protein); }
+        .progress-bar-fill-kcal { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.3s ease; background-color: var(--accent-kcal); }
+
+        .water-dots {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .water-drop {
+            width: 28px;
+            height: 32px;
+            background-color: #E3F2FD;
+            border: 3px solid var(--border-color);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            display: inline-block;
+            box-shadow: 2px 2px 0px var(--border-color);
+            transition: background-color 0.2s;
+        }
+
+        .water-drop.filled { background-color: var(--accent-blue); }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 2px dashed var(--border-color);
+            cursor: pointer;
+        }
+
+        .item-row:last-child { border-bottom: none; }
+        .item-title { font-weight: 700; font-size: 0.9rem; }
+
+        .macro-badges {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .badge-carb { font-size: 0.7rem; color: var(--takkie-red); background: #FFEEEE; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+        .badge-fat { font-size: 0.7rem; color: #B2530C; background: #FDF0E5; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+        .badge-protein { font-size: 0.7rem; color: #1b4332; background: #e8f5e9; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+        .badge-kcal { font-size: 0.7rem; color: #5a189a; background: #f3e8ff; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .btn {
+            background-color: white;
+            border: 3px solid var(--border-color);
+            padding: 12px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--border-color);
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-align: center;
+            font-family: 'Fredoka', cursive, sans-serif;
+        }
+
+        .btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--border-color); }
+
+        .btn-primary { background-color: var(--accent-green); color: var(--text-main); grid-column: span 2; }
+        .btn-ai { background-color: var(--accent-yellow); grid-column: span 2; }
+        .btn-drink { background-color: #E3F2FD; }
+        .btn-back { background-color: var(--accent-yellow); width: 100%; margin-bottom: 12px; }
+        .btn-quote { background-color: #FFD166; width: 100%; margin-top: 12px; }
+        .btn-auto { background-color: #E3F2FD; font-size: 0.8rem; padding: 6px; margin-bottom: 10px; }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 3px solid var(--border-color);
+            border-radius: 10px;
+            font-family: 'Fredoka', cursive, sans-serif;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            background: #FAFAFA;
+        }
+
+        input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
+        .slider-value { font-weight: 700; color: var(--takkie-red); float: right; }
+
+        .quote-card {
+            background: var(--bubble-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px 18px;
+            text-align: center;
+            box-shadow: 6px 6px 0px var(--border-color);
+            margin-bottom: 20px;
+        }
+        .quote-text { font-size: 1.1rem; font-weight: 700; line-height: 1.5; color: var(--text-main); margin-bottom: 12px; }
+        .quote-author { font-size: 0.85rem; color: #555; font-weight: 600; background: white; display: inline-block; padding: 4px 12px; border: 2px solid var(--border-color); border-radius: 12px; }
+
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .checkbox-label { font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <header>
+        <div class="profile-info">
+            <h1>🐶 Takkie & Siep</h1>
+            <p id="level-display">⭐ Level 1: Liefhebber</p>
+        </div>
+        <div class="streak-badge" id="streak-display">🔥 4 dagen</div>
+    </header>
+
+    <!-- Menuknoppen bovenaan geplaatst -->
+    <nav class="top-nav">
+        <button class="nav-item active" data-tab="home"><span>🏠</span>Home</button>
+        <button class="nav-item" data-tab="recipes"><span>📖</span>Recepten</button>
+        <button class="nav-item" data-tab="quotes"><span>❤️</span>Quotes</button>
+        <button class="nav-item" data-tab="log"><span>➕</span>Log</button>
+        <button class="nav-item" data-tab="profile"><span>⚙️</span>Profiel</button>
+    </nav>
+
+    <div class="content">
+        <!-- TAB 1: DASHBOARD -->
+        <div id="tab-home" class="tab-content active">
+            <div class="pets-box">
+                <div class="pets-avatars">
+                    <div class="takkie-avatar"></div>
+                    <div class="siep-avatar"></div>
+                </div>
+                <div class="speech-bubble" id="takkie-speech">
+                    "Woef! Vandaag zorgen we weer heel lief en goed voor elkaar!"
+                </div>
+            </div>
+
+            <div class="widget">
+                <h3><span>Koolhydraten</span> <span id="carb-text" style="color: var(--takkie-red);">0g / 25g</span></h3>
+                <div class="progress-bar-bg"><div class="progress-bar-fill-carb" id="carb-bar"></div></div>
+
+                <h3><span>Vetten (Brandstof 🧈)</span> <span id="fat-text" style="color: #B2530C;">0g / 110g</span></h3>
+                <div class="progress-bar-bg"><div class="progress-bar-fill-fat" id="fat-bar"></div></div>
+
+                <h3><span>Eiwitten (Spierbehoud 🥩)</span> <span id="protein-text" style="color: #1b4332;">0g / 90g</span></h3>
+                <div class="progress-bar-bg"><div class="progress-bar-fill-protein" id="protein-bar"></div></div>
+
+                <h3><span>Calorieën (Energie ⚡)</span> <span id="kcal-text" style="color: #5a189a;">0 / 2000 kcal</span></h3>
+                <div class="progress-bar-bg"><div class="progress-bar-fill-kcal" id="kcal-bar"></div></div>
+            </div>
+
+            <div class="widget">
+                <h3><span>Takkie & Siep's Drinkbak</span> <span id="water-text">0 / 8 glazen</span></h3>
+                <div class="water-dots" id="water-container"></div>
+            </div>
+
+            <div class="widget">
+                <h3>📖 Vandaag Loggen</h3>
+                <div id="meal-list"></div>
+
+                <div class="btn-grid">
+                    <button class="btn" id="btn-repeat">🔄 Gisteren</button>
+                    <button class="btn" id="btn-favorite">⭐ Favoriet</button>
+                    <button class="btn btn-drink" id="nav-drink">🥤 Drank Loggen</button>
+                    <button class="btn btn-primary" id="nav-log">➕ Maaltijd Toevoegen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: RECEPTEN OVERZICHT -->
+        <div id="tab-recipes" class="tab-content">
+            <div class="widget" style="background-color: #FFF9E6;">
+                <h3>🤖 Takkie & Siep's Keuken</h3>
+                <p style="font-size: 0.85rem; margin-top:0;">Vink aan wat je in huis hebt:</p>
+                <div class="checkbox-group" id="fridge-ingredients">
+                    <label class="checkbox-label"><input type="checkbox" value="Eieren"> 🥚 Eieren</label>
+                    <label class="checkbox-label"><input type="checkbox" value="Spek"> 🥓 Spek</label>
+                    <label class="checkbox-label"><input type="checkbox" value="Avocado"> 🥑 Avocado</label>
+                    <label class="checkbox-label"><input type="checkbox" value="Roomboter"> 🧈 Roomboter</label>
+                    <label class="checkbox-label"><input type="checkbox" value="Zalm"> 🐟 Zalm</label>
+                    <label class="checkbox-label"><input type="checkbox" value="Ribeye"> 🥩 Ribeye</label>
+                </div>
+                <button class="btn btn-ai" id="btn-generate-ai" style="width: 100%;">✨ Bedenk een fijn recept</button>
+            </div>
+
+            <div class="widget">
+                <h3>📖 Ons Receptenboek</h3>
+                <p style="font-size: 0.8rem; color: #666; margin-top:0;">Klik op een recept om de gezellige pagina te openen:</p>
+                <div id="recipe-list"></div>
+                <button class="btn btn-primary" id="btn-add-recipe" style="margin-top: 10px;">➕ Eigen Recept Toevoegen</button>
+            </div>
+        </div>
+
+        <!-- TAB 2B: RECEPT DETAIL PAGINA -->
+        <div id="tab-recipe-detail" class="tab-content">
+            <button class="btn btn-back" id="btn-back-recipes">⬅️ Terug naar Receptenboek</button>
+            
+            <div class="widget" style="background-color: #F1FAEE;">
+                <h2 id="detail-title" style="margin-top:0; color: var(--takkie-red);">Naam Recept</h2>
+                <div id="detail-badges" class="macro-badges" style="justify-content: flex-start; gap: 8px; margin-bottom: 12px;"></div>
+                
+                <div style="background: white; border: 3px solid var(--border-color); border-radius: 14px; padding: 14px; margin-bottom: 14px; box-shadow: 3px 3px 0px var(--border-color);">
+                    <h4 style="margin-top:0; margin-bottom: 8px;">🛒 Wat heb je nodig?</h4>
+                    <div id="detail-ingredients" style="font-size: 0.9rem; line-height: 1.4;"></div>
+                </div>
+
+                <div style="background: white; border: 3px solid var(--border-color); border-radius: 14px; padding: 14px; box-shadow: 3px 3px 0px var(--border-color);">
+                    <h4 style="margin-top:0; margin-bottom: 8px;">👩‍🍳 Zo maken we het klaar:</h4>
+                    <div id="detail-prep" style="font-size: 0.9rem; line-height: 1.4;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: MAALTIJD TOEVOEGEN -->
+        <div id="tab-log" class="tab-content">
+            <div class="widget">
+                <h3>➕ Maaltijd Toevoegen</h3>
+                <label>Naam Maaltijd:</label>
+                <input type="text" id="new-meal-name" placeholder="Bijv. Roerei met roomboter">
+                <button class="btn btn-auto" id="btn-autofill-meal">🤖 Vul macro's automatisch in</button>
+                
+                <label>Type:</label>
+                <select id="new-meal-type">
+                    <option value="🍳 Ontbijt">🍳 Ontbijt</option>
+                    <option value="🥗 Lunch">🥗 Lunch</option>
+                    <option value="🍲 Avondeten">🍲 Avondeten</option>
+                    <option value="⚡ Snack">⚡ Snack</option>
+                </select>
+
+                <label>Koolhydraten (gram):</label>
+                <input type="number" id="new-meal-carbs" value="1">
+
+                <label>Vetten (gram):</label>
+                <input type="number" id="new-meal-fat" value="45">
+
+                <label>Eiwitten (gram):</label>
+                <input type="number" id="new-meal-protein" value="30">
+
+                <button class="btn btn-primary" id="btn-save-meal">Liefdevol Bewaren (+10 pt)</button>
+            </div>
+        </div>
+
+        <!-- TAB 3B: DRANK TOEVOEGEN -->
+        <div id="tab-log-drink" class="tab-content">
+            <div class="widget" style="background-color: #E3F2FD;">
+                <h3>🥤 Drankje Loggen</h3>
+                <label>Wat drink je?</label>
+                <input type="text" id="drink-name" placeholder="Bijv. Witte wijn, koffie, thee">
+                <button class="btn btn-auto" id="btn-autofill-drink">🤖 Vul macro's automatisch in</button>
+
+                <label>Aantal glazen / kopjes:</label>
+                <input type="number" id="drink-amount" value="1" min="1">
+
+                <label>Koolhydraten (g):</label>
+                <input type="number" id="drink-carbs" value="0">
+
+                <label>Vetten (g):</label>
+                <input type="number" id="drink-fat" value="0">
+
+                <label>Eiwitten (g):</label>
+                <input type="number" id="drink-protein" value="0">
+
+                <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue);">Drankje Toevoegen (+5 pt)</button>
+            </div>
+        </div>
+
+        <!-- TAB 4: LIEFDEVOLLE QUOTES PAGINA -->
+        <div id="tab-quotes" class="tab-content">
+            <div class="pets-box" style="background-color: #FFF9E6;">
+                <div class="pets-avatars">
+                    <div class="takkie-avatar"></div>
+                    <div class="siep-avatar"></div>
+                </div>
+                <div class="speech-bubble">
+                    "Een lief woord voor jou vandaag! Klik hieronder voor een vrolijk duwtje in de rug."
+                </div>
+            </div>
+
+            <div class="quote-card">
+                <div style="font-size: 2rem; margin-bottom: 8px;">🐾❤️</div>
+                <div class="quote-text" id="current-quote">
+                    "Woef! Vandaag zorgen we heel lief en goed voor elkaar."
+                </div>
+                <div class="quote-author" id="current-author">— Takkie & Siep</div>
+            </div>
+
+            <button class="btn btn-quote" id="btn-new-quote">✨ Nog een lief liefje horen?</button>
+        </div>
+
+        <!-- TAB 5: PROFIEL & STREEFGETALLEN -->
+        <div id="tab-profile" class="tab-content">
+            <div class="widget">
+                <h3>⚙️ Jouw Liefdevolle Doelen</h3>
+                <p style="font-size: 0.85rem; color: #666; margin-top:0;">Pas je dagelijkse doelen zachtjes aan:</p>
+                
+                <label>Max Koolhydraten: <span id="slider-carb-val" class="slider-value">25g</span></label>
+                <input type="range" id="slider-carbs" min="10" max="80" step="5" value="25">
+
+                <label style="margin-top: 12px; display:block;">Doel Vetten (Brandstof): <span id="slider-fat-val" class="slider-value" style="color: #B2530C;">110g</span></label>
+                <input type="range" id="slider-fat" min="50" max="200" step="5" value="110">
+
+                <label style="margin-top: 12px; display:block;">Doel Eiwitten (Spierbehoud): <span id="slider-protein-val" class="slider-value" style="color: #1b4332;">90g</span></label>
+                <input type="range" id="slider-protein" min="40" max="180" step="5" value="90">
+
+                <label style="margin-top: 12px; display:block;">Doel Calorieën: <span id="slider-kcal-val" class="slider-value" style="color: #5a189a;">2000 kcal</span></label>
+                <input type="range" id="slider-kcal" min="1200" max="3500" step="50" value="2000">
+            </div>
+
+            <div class="widget" style="text-align: center;">
+                <h3 style="justify-content: center;">🏆 Takkie & Siep's Vriendjes</h3>
+                <p style="font-size: 0.9rem; color: #666;" id="points-display">Punten: 0 pt</p>
+                <hr style="border: 2px solid var(--border-color); margin: 15px 0;">
+                <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+                    <div style="background: #F4F4F4; padding: 10px; border: 2px solid var(--border-color); border-radius: 10px;">
+                        🔥 <b>Streak</b>: <span id="streak-count-text">4</span> dagen[cite: 1]
+                    </div>
+                    <div style="background: #F4F4F4; padding: 10px; border: 2px solid var(--border-color); border-radius: 10px;">
+                        💖 <b>Gevoel</b>: <span id="balance-status">Samen genieten en volhouden</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let appState = JSON.parse(localStorage.getItem('takkie_siep_keto_v11')) || {
+        points: 160,
+        streak: 4,
+        water: 6,
+        carbsMax: 25,
+        fatGoal: 110,
+        proteinGoal: 90,
+        kcalGoal: 2000,
+        meals: [
+            { type: '🍳 Ontbijt', name: 'Roerei in roomboter met spek', carbs: 2, fat: 35, protein: 22 },
+            { type: '🥗 Lunch', name: 'Avocado & zalm salade', carbs: 4, fat: 42, protein: 28 }
+        ],
+        recipes: [
+            { 
+                name: 'Ribeye met Kruidenboter', 
+                carbs: '0g KH', fat: '55g Vet', protein: '40g Ei', kcal: '635 kcal',
+                ingredients: '• 250g Ribeye steak\n• 40g ambachtelijke kruidenboter\n• Zeezout & zwarte peper', 
+                prep: '1. Haal de ribeye op tijd uit de koelkast.\n2. Bak de steak op hoog vuur in een hete pan bruin.\n3. Laat een plak ambachtelijke kruidenboter smelten over het warme vlees. Geniet ervan!' 
+            }
+        ]
+    };
+
+    const motivationalQuotes = [
+        { text: "Woef! Vandaag zorgen we heel lief en goed voor elkaar.", author: "— Takkie & Siep" },
+        { text: "Elke kleine stap is er een naar een gelukkig en gezond gevoel. Je doet het ontzettend goed!", author: "— Takkie de Hond" },
+        { text: "Miauw... neem even een rustig momentje voor jezelf vandaag. Je mag trots op je zijn.", author: "— Siep de Kat" },
+        { text: "Zachtjes volhouden is ook winnen. Takkie kwispelt speciaal voor jou!", author: "— Takkie & Siep" },
+        { text: "Laat los wat niet lukt, morgen is er weer een prachtige dag om opnieuw te stralen.", author: "— Takkie" },
+        { text: "Je bent een kanjer, elke dag een klein stukje sterker en liever voor je lijf.", author: "— Takkie & Siep" }
+    ];
+
+    function autoFillNutrition(inputName, carbsId, fatId, proteinId) {
+        let name = inputName.toLowerCase();
+        let c = 0, f = 0, p = 0;
+
+        if (name.includes('wijn') || name.includes('alcohol')) { c = 3; f = 0; p = 0; }
+        else if (name.includes('koffie') || name.includes('thee')) { c = 0; f = 5; p = 0; }
+        else if (name.includes('bulletproof')) { c = 0; f = 15; p = 1; }
+        else if (name.includes('ei') || name.includes('roerei')) { c = 1; f = 15; p = 13; }
+        else if (name.includes('zalm') || name.includes('vis')) { c = 0; f = 18; p = 22; }
+        else if (name.includes('avocado')) { c = 2; f = 15; p = 2; }
+        else if (name.includes('noten') || name.includes('macadamia')) { c = 2; f = 21; p = 3; }
+        else if (name.includes('salade')) { c = 4; f = 25; p = 10; }
+        else if (name.includes('ribeye') || name.includes('biefstuk') || name.includes('vlees')) { c = 0; f = 35; p = 35; }
+        else { c = 2; f = 10; p = 10; }
+
+        document.getElementById(carbsId).value = c;
+        document.getElementById(fatId).value = f;
+        document.getElementById(proteinId).value = p;
+    }
+
+    function getRandomQuote() {
+        let randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
+        let q = motivationalQuotes[randomIndex];
+        document.getElementById('current-quote').innerText = `"${q.text}"`;
+        document.getElementById('current-author').innerText = q.author;
+    }
+
+    function saveState() {
+        localStorage.setItem('takkie_siep_keto_v11', JSON.stringify(appState));
+        renderApp();
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        
+        let targetTab = document.getElementById('tab-' + tabId);
+        if (targetTab) targetTab.classList.add('active');
+        
+        let navBtn = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+        if (navBtn) navBtn.classList.add('active');
+        
+        window.scrollTo(0, 0);
+    }
+
+    function openRecipePage(index) {
+        let r = appState.recipes[index];
+        document.getElementById('detail-title').innerText = "📖 " + r.name;
+        document.getElementById('detail-badges').innerHTML = `
+            <span class="badge-carb">${r.carbs}</span>
+            <span class="badge-fat">${r.fat}</span>
+            <span class="badge-protein">${r.protein}</span>
+            <span class="badge-kcal">${r.kcal}</span>
+        `;
+        document.getElementById('detail-ingredients').innerHTML = r.ingredients.split('\n').map(line => `<div>${line}</div>`).join('');
+        document.getElementById('detail-prep').innerHTML = r.prep.split('\n').map(line => `<div style="margin-bottom:6px;">${line}</div>`).join('');
+
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-recipe-detail').classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    function updateSlidersLive() {
+        document.getElementById('slider-carb-val').innerText = document.getElementById('slider-carbs').value + 'g';
+        document.getElementById('slider-fat-val').innerText = document.getElementById('slider-fat').value + 'g';
+        document.getElementById('slider-protein-val').innerText = document.getElementById('slider-protein').value + 'g';
+        document.getElementById('slider-kcal-val').innerText = document.getElementById('slider-kcal').value + ' kcal';
+    }
+
+    function saveProfileGoals() {
+        appState.carbsMax = parseInt(document.getElementById('slider-carbs').value);
+        appState.fatGoal = parseInt(document.getElementById('slider-fat').value);
+        appState.proteinGoal = parseInt(document.getElementById('slider-protein').value);
+        appState.kcalGoal = parseInt(document.getElementById('slider-kcal').value);
+        saveState();
+    }
+
+    function renderApp() {
+        document.getElementById('streak-display').innerText = `🔥 ${appState.streak} dagen`;[cite: 1]
+        document.getElementById('streak-count-text').innerText = appState.streak;[cite: 1]
+        document.getElementById('points-display').innerText = `Punten: ${appState.points} pt`;
+
+        document.getElementById('slider-carbs').value = appState.carbsMax;
+        document.getElementById('slider-fat').value = appState.fatGoal;
+        document.getElementById('slider-protein').value = appState.proteinGoal;
+        document.getElementById('slider-kcal').value = appState.kcalGoal;
+        updateSlidersLive();
+
+        let totalCarbs = appState.meals.reduce((sum, m) => sum + parseInt(m.carbs || 0), 0);
+        let totalFat = appState.meals.reduce((sum, m) => sum + parseInt(m.fat || 0), 0);
+        let totalProtein = appState.meals.reduce((sum, m) => sum + parseInt(m.protein || 0), 0);
+        let totalKcal = (totalFat * 9) + (totalProtein * 4) + (totalCarbs * 4);
+
+        document.getElementById('carb-text').innerText = `${totalCarbs}g / ${appState.carbsMax}g`;
+        let carbBar = document.getElementById('carb-bar');
+        let carbPercent = Math.min(100, (totalCarbs / appState.carbsMax) * 100);
+        carbBar.style.width = carbPercent + '%';
+
+        document.getElementById('fat-text').innerText = `${totalFat}g / ${appState.fatGoal}g`;
+        document.getElementById('fat-bar').style.width = Math.min(100, (totalFat / appState.fatGoal) * 100) + '%';
+
+        document.getElementById('protein-text').innerText = `${totalProtein}g / ${appState.proteinGoal}g`;
+        document.getElementById('protein-bar').style.width = Math.min(100, (totalProtein / appState.proteinGoal) * 100) + '%';
+
+        document.getElementById('kcal-text').innerText = `${totalKcal} / ${appState.kcalGoal} kcal`;
+        document.getElementById('kcal-bar').style.width = Math.min(100, (totalKcal / appState.kcalGoal) * 100) + '%';
+
+        if(totalCarbs <= appState.carbsMax) {
+            document.getElementById('takkie-speech').innerText = `"Woef! ${totalCarbs}g KH, ${totalFat}g vet, ${totalProtein}g eiwit. Wat doe je het goed!"`;
+        } else {
+            document.getElementById('takkie-speech').innerText = `"Geen zorgen hoor! Morgen pakken we het weer lekker op samen."`;
+        }
+
+        let waterContainer = document.getElementById('water-container');
+        waterContainer.innerHTML = '';
+        for (let i = 1; i <= 8; i++) {
+            let drop = document.createElement('span');
+            drop.className = 'water-drop ' + (i <= appState.water ? 'filled' : '');
+            let dropIdx = i;
+            drop.addEventListener('click', () => { appState.water = dropIdx; saveState(); });
+            waterContainer.appendChild(drop);
+        }
+        document.getElementById('water-text').innerText = `${appState.water} / 8 glazen`;
+
+        let mealList = document.getElementById('meal-list');
+        mealList.innerHTML = '';
+        if(appState.meals.length === 0) {
+            mealList.innerHTML = '<p style="font-size:0.85rem; color:#666;">Nog niks gelogd vandaag.</p>';
+        } else {
+            appState.meals.forEach(m => {
+                let kcalItem = (m.fat * 9) + ((m.protein || 15) * 4) + (m.carbs * 4);
+                mealList.innerHTML += `
+                    <div class="item-row">
+                        <div>
+                            <div class="item-title">${m.type}</div>
+                            <div style="font-size: 0.8rem; color: #666;">${m.name}</div>
+                        </div>
+                        <div class="macro-badges">
+                            <span class="badge-carb">${m.carbs}g KH</span>
+                            <span class="badge-fat">${m.fat}g Vet</span>
+                            <span class="badge-protein">${m.protein || 0}g Ei</span>
+                            <span class="badge-kcal">${kcalItem} kcal</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        let recipeList = document.getElementById('recipe-list');
+        recipeList.innerHTML = '';
+        appState.recipes.forEach((r, index) => {
+            let row = document.createElement('div');
+            row.className = 'item-row';
+            row.innerHTML = `
+                <div>
+                    <div class="item-title">📖 ${r.name}</div>
+                    <div style="font-size: 0.8rem; color: #666;">Klik om receptpagina te openen</div>
+                </div>
+                <div class="macro-badges">
+                    <span class="badge-carb">${r.carbs}</span>
+                    <span class="badge-fat">${r.fat}</span>
+                    <span class="badge-protein">${r.protein}</span>
+                    <span class="badge-kcal">${r.kcal}</span>
+                </div>
+            `;
+            row.addEventListener('click', () => openRecipePage(index));
+            recipeList.appendChild(row);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+        });
+
+        document.getElementById('btn-autofill-drink').addEventListener('click', () => {
+            let val = document.getElementById('drink-name').value;
+            autoFillNutrition(val, 'drink-carbs', 'drink-fat', 'drink-protein');
+        });
+
+        document.getElementById('btn-autofill-meal').addEventListener('click', () => {
+            let val = document.getElementById('new-meal-name').value;
+            autoFillNutrition(val, 'new-meal-carbs', 'new-meal-fat', 'new-meal-protein');
+        });
+
+        document.getElementById('btn-repeat').addEventListener('click', () => {
+            appState.meals = [
+                { type: '🍳 Ontbijt', name: 'Roerei in roomboter met spek', carbs: 2, fat: 35, protein: 22 },
+                { type: '🥗 Lunch', name: 'Avocado & zalm salade', carbs: 4, fat: 42, protein: 28 },
+                { type: '🍲 Avondeten', name: 'Ribeye met kruidenboter', carbs: 0, fat: 55, protein: 40 }
+            ];
+            appState.points += 5;
+            saveState();
+            alert("Woef! Gisteren is weer gezellig ingeladen!");
+        });
+
+        document.getElementById('btn-favorite').addEventListener('click', () => {
+            appState.meals.push({ type: '⚡ Snack', name: 'Handje macadamianoten', carbs: 2, fat: 21, protein: 3 });
+            appState.points += 5;
+            saveState();
+            alert("Lekker favoriet snackje toegevoegd!");
+        });
+
+        document.getElementById('nav-drink').addEventListener('click', () => switchTab('log-drink'));
+        document.getElementById('nav-log').addEventListener('click', () => switchTab('log'));
+
+        document.getElementById('btn-generate-ai').addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('#fridge-ingredients input:checked');
+            let selected = Array.from(checkboxes).map(cb => cb.value);
+            if(selected.length === 0) { alert("Vink eerst liefst even een ingrediënt aan!"); return; }
+
+            let name = "Takkie & Siep's " + selected[0] + "-pannetje";
+            let ingredients = `• ${selected.join('\n• ')}\n• 35g Roomboter of olijfolie\n• Een snufje liefde en zout`;
+            let prep = `1. Smelt de roomboter zachtjes in de pan.\n2. Bak de ${selected.join(' en ')} met alle liefde gaar.\n3. Smullen maar!`;
+            
+            appState.recipes.unshift({ name, carbs: '2g KH', fat: '45g Vet', protein: '25g Ei', kcal: '515 kcal', ingredients, prep });
+            appState.points += 20;
+            saveState();
+            alert(`🤖 Siep spint van geluk! Het recept "${name}" is toegevoegd! (+20 pt)`);
+            switchTab('recipes');
+        });
+
+        document.getElementById('btn-add-recipe').addEventListener('click', () => {
+            let name = prompt("Naam van het recept:");
+            if(!name) return;
+            let carbs = prompt("Koolhydraten (bijv. 2g KH):", "2g KH");
+            let fat = prompt("Vetten (bijv. 40g Vet):", "40g Vet");
+            let protein = prompt("Eiwitten (bijv. 30g Ei):", "30g Ei");
+            let kcal = prompt("Calorieën (bijv. 450 kcal):", "450 kcal");
+            let ingredients = prompt("Ingrediënten:", "• Ingrediënt 1\n• Ingrediënt 2");
+            let prep = prompt("Bereidingswijze:", "1. Bak in roomboter.\n2. Geniet ervan.");
+
+            appState.recipes.push({ name, carbs, fat, protein, kcal, ingredients, prep });
+            appState.points += 15;
+            saveState();
+        });
+
+        document.getElementById('btn-back-recipes').addEventListener('click', () => switchTab('recipes'));
+
+        document.getElementById('btn-save-meal').addEventListener('click', () => {
+            let name = document.getElementById('new-meal-name').value;
+            let type = document.getElementById('new-meal-type').value;
+            let carbs = parseInt(document.getElementById('new-meal-carbs').value) || 0;
+            let fat = parseInt(document.getElementById('new-meal-fat').value) || 0;
+            let protein = parseInt(document.getElementById('new-meal-protein').value) || 20;
+
+            if(!name) { alert('Vul alsjeblieft een maaltijdnaam in!'); return; }
+
+            appState.meals.push({ type, name, carbs, fat, protein });
+            appState.points += 10;
+            document.getElementById('new-meal-name').value = '';
+            saveState();
+            switchTab('home');
+        });
+
+        document.getElementById('btn-save-drink').addEventListener('click', () => {
+            let name = document.getElementById('drink-name').value;
+            let amount = parseInt(document.getElementById('drink-amount').value) || 1;
+            let carbs = parseInt(document.getElementById('drink-carbs').value) || 0;
+            let fat = parseInt(document.getElementById('drink-fat').value) || 0;
+            let protein = parseInt(document.getElementById('drink-protein').value) || 0;
+
+            if(!name) { alert('Vul even in wat je drinkt!'); return; }
+
+            appState.meals.push({ 
+                type: '🥤 Drank', 
+                name: `${amount}x ${name}`, 
+                carbs: carbs * amount, 
+                fat: fat * amount,
+                protein: protein * amount
+            });
+            appState.water = Math.min(8, appState.water + amount);
+            appState.points += 5;
+            document.getElementById('drink-name').value = '';
+            saveState();
+            switchTab('home');
+        });
+
+        document.getElementById('btn-new-quote').addEventListener('click', getRandomQuote);
+
+        document.getElementById('slider-carbs').addEventListener('input', updateSlidersLive);
+        document.getElementById('slider-carbs').addEventListener('change', saveProfileGoals);
+        document.getElementById('slider-fat').addEventListener('input', updateSlidersLive);
+        document.getElementById('slider-fat').addEventListener('change', saveProfileGoals);
+        document.getElementById('slider-protein').addEventListener('input', updateSlidersLive);
+        document.getElementById('slider-protein').addEventListener('change', saveProfileGoals);
+        document.getElementById('slider-kcal').addEventListener('input', updateSlidersLive);
+        document.getElementById('slider-kcal').addEventListener('change', saveProfileGoals);
+
+        renderApp();
+    });
+</script>
+
+</body>
+</html>
