@@ -136,6 +136,7 @@ function showRecoveryForm() {
     document.getElementById('auth-container').style.display = 'flex';
     document.getElementById('app-container').style.display = 'none';
     document.getElementById('auth-main-form').style.display = 'none';
+    document.getElementById('auth-forgot-form').style.display = 'none';
     document.getElementById('auth-recovery-form').style.display = 'block';
 }
 
@@ -1994,14 +1995,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (document.getElementById('btn-forgot-password')) {
-        document.getElementById('btn-forgot-password').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-forgot-password');
-            const errEl = document.getElementById('auth-error-message');
-            const email = document.getElementById('auth-email').value.trim();
-            errEl.style.background = '';
-            errEl.style.color = '';
+        document.getElementById('btn-forgot-password').addEventListener('click', () => {
+            document.getElementById('auth-main-form').style.display = 'none';
+            document.getElementById('auth-forgot-form').style.display = 'block';
+            document.getElementById('forgot-message').style.display = 'none';
+            const typed = document.getElementById('auth-email').value.trim();
+            document.getElementById('forgot-email').value = typed;
+            document.getElementById('forgot-email').focus();
+        });
+    }
+
+    if (document.getElementById('btn-back-to-login')) {
+        document.getElementById('btn-back-to-login').addEventListener('click', () => {
+            document.getElementById('auth-forgot-form').style.display = 'none';
+            document.getElementById('auth-main-form').style.display = 'block';
+        });
+    }
+
+    if (document.getElementById('btn-send-reset')) {
+        const sendReset = async () => {
+            const btn = document.getElementById('btn-send-reset');
+            const msgEl = document.getElementById('forgot-message');
+            const email = document.getElementById('forgot-email').value.trim();
+            const show = (text, ok) => {
+                msgEl.innerText = text;
+                msgEl.style.display = 'block';
+                msgEl.style.background = ok ? '#E8F5E9' : '';
+                msgEl.style.color = ok ? '#1B5E20' : '';
+            };
             if (!email) {
-                showAuthError('Vul eerst je e-mailadres in, dan sturen we je een herstellink.');
+                show('Vul je e-mailadres in.', false);
                 return;
             }
             btn.disabled = true;
@@ -2009,18 +2032,17 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const redirectTo = window.location.origin + window.location.pathname;
                 const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
-                if (error) {
-                    showAuthError(error.message);
-                } else {
-                    showAuthError('Woef! We hebben een herstellink gemaild naar ' + email + '. Check ook je spam 🐾');
-                    errEl.style.background = '#E8F5E9';
-                    errEl.style.color = '#1B5E20';
-                }
+                if (error) show(error.message, false);
+                else show('Woef! We hebben een herstellink gemaild naar ' + email + '. Check ook je spam 🐾', true);
             } catch (e) {
-                showAuthError('Er ging iets mis: ' + (e.message || e));
+                show('Er ging iets mis: ' + (e.message || e), false);
             }
             btn.disabled = false;
-            btn.innerText = 'Wachtwoord vergeten?';
+            btn.innerText = '📧 Stuur herstellink';
+        };
+        document.getElementById('btn-send-reset').addEventListener('click', sendReset);
+        document.getElementById('forgot-email').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendReset();
         });
     }
 

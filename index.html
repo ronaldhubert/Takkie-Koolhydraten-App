@@ -680,6 +680,14 @@
             <button type="button" id="btn-forgot-password" style="background: none; border: none; text-decoration: underline; font-weight: 700; cursor: pointer; color: #666; font-family: inherit;">Wachtwoord vergeten?</button>
         </div>
 
+        <div class="auth-form" id="auth-forgot-form" style="display: none;">
+            <p style="font-weight: 700;">Wachtwoord vergeten? Geen zorgen 🐾<br><span style="font-weight: 600; color: #666;">Vul je e-mailadres in, dan mailen we je een link.</span></p>
+            <div id="forgot-message" class="auth-error" style="display: none;"></div>
+            <input type="email" id="forgot-email" placeholder="Jouw e-mailadres">
+            <button class="btn btn-primary" id="btn-send-reset" style="margin-bottom: 12px; background-color: var(--takkie-red);">📧 Stuur herstellink</button>
+            <button type="button" id="btn-back-to-login" style="background: none; border: none; text-decoration: underline; font-weight: 700; cursor: pointer; color: #666; font-family: inherit;">← Terug naar inloggen</button>
+        </div>
+
         <div class="auth-form" id="auth-recovery-form" style="display: none;">
             <p style="font-weight: 700;">Kies een nieuw wachtwoord 🐾</p>
             <div id="recovery-error-message" class="auth-error" style="display: none;"></div>
@@ -1231,7 +1239,7 @@
     </div>
 </div>
 
-<script src="app.js?v=20261116"></script>
+<script src="app.js?v=20261116b"></script>
 
 </body>
 </html>
