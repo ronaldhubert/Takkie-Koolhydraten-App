@@ -129,9 +129,21 @@ async function getGeminiApiKey() {
 // ==========================================
 // AUTHENTICATIE LOGICA
 // ==========================================
+let passwordRecoveryMode = /type=recovery/.test(window.location.hash || '');
+
+function showRecoveryForm() {
+    passwordRecoveryMode = true;
+    document.getElementById('auth-container').style.display = 'flex';
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('auth-main-form').style.display = 'none';
+    document.getElementById('auth-recovery-form').style.display = 'block';
+}
+
 async function checkUser() {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (session) {
+    if (passwordRecoveryMode && session) {
+        showRecoveryForm();
+    } else if (session) {
         currentUser = session.user;
         showApp();
         await loadUserData();
@@ -140,6 +152,11 @@ async function checkUser() {
     }
 
     window.supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+        if (_event === 'PASSWORD_RECOVERY') {
+            showRecoveryForm();
+            return;
+        }
+        if (passwordRecoveryMode) return;
         if (session) {
             const isDifferentUser = !currentUser || currentUser.id !== session.user.id;
             currentUser = session.user;
@@ -1973,6 +1990,47 @@ document.addEventListener("DOMContentLoaded", () => {
             const { error } = await window.supabaseClient.auth.signUp({ email, password });
             if (error) showAuthError(error.message);
             else alert("Account aangemaakt! Bevestig je e-mail (indien nodig) of je bent direct ingelogd.");
+        });
+    }
+
+    if (document.getElementById('btn-forgot-password')) {
+        document.getElementById('btn-forgot-password').addEventListener('click', async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            if (!email) {
+                showAuthError('Vul eerst je e-mailadres in, dan sturen we je een herstellink.');
+                return;
+            }
+            const redirectTo = window.location.origin + window.location.pathname;
+            const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+            if (error) showAuthError(error.message);
+            else alert('Woef! Als dit e-mailadres bekend is, hebben we een link gestuurd om een nieuw wachtwoord te kiezen. Check ook je spam 🐾');
+        });
+    }
+
+    if (document.getElementById('btn-save-new-password')) {
+        document.getElementById('btn-save-new-password').addEventListener('click', async () => {
+            const p1 = document.getElementById('new-password').value;
+            const p2 = document.getElementById('new-password-repeat').value;
+            const errEl = document.getElementById('recovery-error-message');
+            errEl.style.display = 'none';
+            if (p1.length < 6) {
+                errEl.innerText = 'Kies een wachtwoord van minimaal 6 tekens.';
+                errEl.style.display = 'block';
+                return;
+            }
+            if (p1 !== p2) {
+                errEl.innerText = 'De twee wachtwoorden zijn niet hetzelfde.';
+                errEl.style.display = 'block';
+                return;
+            }
+            const { error } = await window.supabaseClient.auth.updateUser({ password: p1 });
+            if (error) {
+                errEl.innerText = error.message;
+                errEl.style.display = 'block';
+                return;
+            }
+            alert('Gelukt! Je nieuwe wachtwoord is opgeslagen 🐶');
+            window.location.href = window.location.origin + window.location.pathname;
         });
     }
 

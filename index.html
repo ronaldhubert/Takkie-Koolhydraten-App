@@ -669,7 +669,7 @@
         <h2 style="margin: 4px 0 0 0; color: var(--text-main); font-size: 1.2rem;">Liefdevolle Keto Tracker</h2>
         <p style="margin-top: 16px; font-weight: 600; color: #666;">Welkom terug, lief mens! Laten we inloggen om je dagboekje te openen.</p>
         
-        <div class="auth-form">
+        <div class="auth-form" id="auth-main-form">
             <div id="auth-error-message" class="auth-error" style="display: none;"></div>
             
             <input type="email" id="auth-email" placeholder="Jouw e-mailadres">
@@ -677,6 +677,15 @@
             
             <button class="btn btn-primary" id="btn-login" style="margin-bottom: 12px; background-color: var(--takkie-red);">🐶 Inloggen</button>
             <button class="btn btn-secondary" id="btn-register" style="margin-bottom: 12px; background-color: var(--accent-yellow);">✨ Nieuw Account Maken</button>
+            <button type="button" id="btn-forgot-password" style="background: none; border: none; text-decoration: underline; font-weight: 700; cursor: pointer; color: #666; font-family: inherit;">Wachtwoord vergeten?</button>
+        </div>
+
+        <div class="auth-form" id="auth-recovery-form" style="display: none;">
+            <p style="font-weight: 700;">Kies een nieuw wachtwoord 🐾</p>
+            <div id="recovery-error-message" class="auth-error" style="display: none;"></div>
+            <input type="password" id="new-password" placeholder="Nieuw wachtwoord (min. 6 tekens)">
+            <input type="password" id="new-password-repeat" placeholder="Herhaal nieuw wachtwoord">
+            <button class="btn btn-primary" id="btn-save-new-password" style="background-color: var(--takkie-red);">💾 Wachtwoord opslaan</button>
         </div>
     </div>
 
