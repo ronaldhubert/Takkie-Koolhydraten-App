@@ -2632,7 +2632,24 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 // LOGBOEK: WEKEN > DAGEN > DAGDETAILS
 // ==========================================
-const historyState = { view: 'weeks', pageOffset: 0, weekStart: null, day: null };
+const historyState = { view: 'weeks', pageOffset: 0, weekStart: null, day: null, metric: 'carbs' };
+const HISTORY_METRICS = {
+    carbs: { label: 'Koolhydraten', short: 'KH', unit: 'g' },
+    protein: { label: 'Eiwit', short: 'Eiwit', unit: 'g' },
+    fat: { label: 'Vet', short: 'Vet', unit: 'g' },
+    kcal: { label: 'Calorieën', short: 'kcal', unit: ' kcal' }
+};
+function metricGoal() {
+    return appState.goals[historyState.metric] || 1;
+}
+function renderMetricPicker() {
+    const el = document.getElementById('history-metric');
+    if (!el) return;
+    el.innerHTML = Object.keys(HISTORY_METRICS).map(k => {
+        const active = historyState.metric === k;
+        return `<button type="button" class="hist-metric-btn${active ? ' active' : ''}" data-hist-metric="${k}">${HISTORY_METRICS[k].label}</button>`;
+    }).join('');
+}
 const HISTORY_WEEKS_PER_PAGE = 3;
 const DAY_NAMES_SHORT = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const MONTH_NAMES_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -2706,7 +2723,8 @@ function summarizeDay(meals, dateStr) {
 
 function buildBarChart(items) {
     // items: [{ label, sublabel, value, extra, action, highlight }]
-    const goal = appState.goals.kcal || 2000;
+    const goal = metricGoal();
+    const unit = HISTORY_METRICS[historyState.metric].unit;
     const max = Math.max(goal * 1.15, ...items.map(i => i.value), 1);
     const goalPct = Math.min(100, (goal / max) * 100);
     const bars = items.map(i => {
@@ -2726,7 +2744,7 @@ function buildBarChart(items) {
     return `
         <div class="hist-chart">
             <div class="hist-cols">${bars}</div>
-            <div style="font-size:0.7rem; color:#888; text-align:center; margin-top:4px;">Kcal · stippellijn = dagdoel (${goal})</div>
+            <div style="font-size:0.7rem; color:#888; text-align:center; margin-top:4px;">${HISTORY_METRICS[historyState.metric].label} · stippellijn = dagdoel (${goal}${unit})</div>
         </div>`;
 }
 
@@ -2734,6 +2752,7 @@ async function renderHistory() {
     const navEl = document.getElementById('history-nav');
     const contentEl = document.getElementById('history-content');
     if (!navEl || !contentEl || !currentUser) return;
+    renderMetricPicker();
 
     contentEl.innerHTML = '<p style="color:#666;">Even laden... 🐾</p>';
     const thisMonday = getMondayOf(new Date());
@@ -2751,14 +2770,16 @@ async function renderHistory() {
             const days = [];
             for (let d = 0; d < 7; d++) days.push(summarizeDay(data.meals, formatDateLocal(addDays(ws, d))));
             const logged = days.filter(d => d.count > 0);
+            const m = historyState.metric;
             const avgKcal = logged.length ? Math.round(logged.reduce((s, d) => s + d.kcal, 0) / logged.length) : 0;
             const avgCarbs = logged.length ? Math.round(logged.reduce((s, d) => s + d.carbs, 0) / logged.length) : 0;
+            const avgMetric = logged.length ? Math.round(logged.reduce((s, d) => s + d[m], 0) / logged.length) : 0;
             const isThis = formatDateLocal(ws) === formatDateLocal(thisMonday);
             return {
                 label: `Week ${getISOWeekNumber(ws)}`,
                 sublabel: `${shortDateLabel(ws)} – ${shortDateLabel(addDays(ws, 6))}`,
-                value: avgKcal,
-                extra: logged.length ? `${avgCarbs}g KH · ${logged.length}/7 dgn` : 'niets gelogd',
+                value: avgMetric,
+                extra: logged.length ? `${m === 'kcal' ? avgCarbs + 'g KH' : avgKcal + ' kcal'} · ${logged.length}/7 dgn` : 'niets gelogd',
                 action: `data-hist-week="${formatDateLocal(ws)}"`,
                 highlight: isThis
             };
@@ -2783,8 +2804,8 @@ async function renderHistory() {
             items.push({
                 label: DAY_NAMES_SHORT[dayObj.getDay()],
                 sublabel: shortDateLabel(dayObj),
-                value: s.kcal,
-                extra: s.count ? `${s.carbs}g KH` : '–',
+                value: s[historyState.metric],
+                extra: s.count ? (historyState.metric === 'kcal' ? `${s.carbs}g KH` : `${s.kcal} kcal`) : '–',
                 action: `data-hist-day="${dateStr}"`,
                 highlight: dateStr === todayStr
             });
@@ -2826,6 +2847,12 @@ async function renderHistory() {
 }
 
 document.addEventListener('click', (e) => {
+    const mt = e.target.closest('[data-hist-metric]');
+    if (mt && document.getElementById('history-widget') && document.getElementById('history-widget').contains(mt)) {
+        historyState.metric = mt.getAttribute('data-hist-metric');
+        renderHistory();
+        return;
+    }
     const t = e.target.closest('[data-hist-week], [data-hist-day], [data-hist-prev], [data-hist-next], [data-hist-back-weeks], [data-hist-back-days]');
     if (!t || !document.getElementById('history-widget') || !document.getElementById('history-widget').contains(t)) return;
     if (t.hasAttribute('data-hist-week')) {
