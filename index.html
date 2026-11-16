@@ -658,6 +658,23 @@
             font-weight: 700;
             margin-bottom: 4px;
         }
+        .hist-cols { display: flex; gap: 8px; align-items: stretch; }
+        .hist-col { flex: 1; min-width: 0; background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; color: inherit; display: flex; flex-direction: column; align-items: center; }
+        .hist-value { font-weight: 700; font-size: 0.8rem; height: 18px; }
+        .hist-bar-area { position: relative; width: 100%; height: 130px; border-bottom: 3px solid var(--border-color); display: flex; align-items: flex-end; justify-content: center; }
+        .hist-bar { width: 70%; background: var(--accent-yellow); border: 2px solid var(--border-color); border-bottom: none; border-radius: 8px 8px 0 0; box-sizing: border-box; }
+        .hist-bar-over { background: #FFB3B3; }
+        .hist-bar-today { background: #A8E6A1; }
+        .hist-goal-tick { position: absolute; left: 0; right: 0; border-top: 2px dashed #999; pointer-events: none; }
+        .hist-label { font-weight: 700; font-size: 0.8rem; margin-top: 4px; }
+        .hist-sublabel { font-size: 0.65rem; color: #666; }
+        .hist-extra { font-size: 0.65rem; color: #444; text-align: center; }
+        .hist-col:active .hist-bar { transform: scaleY(0.97); }
+        .hist-nav-btn { margin: 0; padding: 6px 10px; font-size: 0.8rem; background-color: var(--accent-yellow); width: auto; }
+        .hist-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; font-size: 0.8rem; }
+        .hist-summary > div { background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 6px 2px; }
+        .hist-summary span { font-size: 0.65rem; color: #555; }
+        .hist-meal { background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -939,6 +956,12 @@
                 </label>
 
                 <button class="btn btn-primary" id="btn-save-meal" style="width: 100%;">Liefdevol Bewaren (+10 pt)</button>
+            </div>
+
+            <div class="widget" id="history-widget">
+                <h3>📊 Mijn Logboek</h3>
+                <div id="history-nav" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;"></div>
+                <div id="history-content"></div>
             </div>
         </div>
 
@@ -1239,7 +1262,7 @@
     </div>
 </div>
 
-<script src="app.js?v=20261116b"></script>
+<script src="app.js?v=20261116c"></script>
 
 </body>
 </html>
