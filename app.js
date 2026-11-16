@@ -1995,15 +1995,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (document.getElementById('btn-forgot-password')) {
         document.getElementById('btn-forgot-password').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-forgot-password');
+            const errEl = document.getElementById('auth-error-message');
             const email = document.getElementById('auth-email').value.trim();
+            errEl.style.background = '';
+            errEl.style.color = '';
             if (!email) {
                 showAuthError('Vul eerst je e-mailadres in, dan sturen we je een herstellink.');
                 return;
             }
-            const redirectTo = window.location.origin + window.location.pathname;
-            const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
-            if (error) showAuthError(error.message);
-            else alert('Woef! Als dit e-mailadres bekend is, hebben we een link gestuurd om een nieuw wachtwoord te kiezen. Check ook je spam 🐾');
+            btn.disabled = true;
+            btn.innerText = 'Even geduld...';
+            try {
+                const redirectTo = window.location.origin + window.location.pathname;
+                const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+                if (error) {
+                    showAuthError(error.message);
+                } else {
+                    showAuthError('Woef! We hebben een herstellink gemaild naar ' + email + '. Check ook je spam 🐾');
+                    errEl.style.background = '#E8F5E9';
+                    errEl.style.color = '#1B5E20';
+                }
+            } catch (e) {
+                showAuthError('Er ging iets mis: ' + (e.message || e));
+            }
+            btn.disabled = false;
+            btn.innerText = 'Wachtwoord vergeten?';
         });
     }
 
