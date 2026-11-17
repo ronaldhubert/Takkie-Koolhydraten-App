@@ -1123,12 +1123,55 @@ function showTeamNotification(title, body) {
     }
 }
 
+function getMemberName(userId) {
+    const mem = (appState.teamMembers || []).find(x => x.id === userId);
+    return mem ? mem.displayName : 'clublid';
+}
+
+window.openDirectMessage = function(recipientId) {
+    const old = document.getElementById('dm-overlay');
+    if (old) old.remove();
+    const name = getMemberName(recipientId);
+    const overlay = document.createElement('div');
+    overlay.id = 'dm-overlay';
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;';
+    overlay.innerHTML = `
+        <div style="background:#fff; border:3px solid var(--border-color); border-radius:18px; padding:16px; width:100%; max-width:380px;">
+            <h3 style="margin:0 0 8px 0;">✉️ Bericht aan ${escapeHtml(name)}</h3>
+            <p style="margin:0 0 8px 0; font-size:0.8rem; color:#666;">Alleen jij en ${escapeHtml(name)} zien dit bericht. Het geeft een melding.</p>
+            <textarea id="dm-text" rows="3" maxlength="300" placeholder="Typ een lief berichtje..." style="width:100%; box-sizing:border-box; font-family:inherit; padding:8px; border:2px solid var(--border-color); border-radius:10px;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+                <button type="button" class="btn" id="dm-cancel" style="flex:1; background:#eee;">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="dm-send" style="flex:1; background-color: var(--takkie-red);">Versturen</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    const textEl = document.getElementById('dm-text');
+    textEl.focus();
+    document.getElementById('dm-cancel').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('dm-send').addEventListener('click', async () => {
+        const text = textEl.value.trim();
+        if (!text) return;
+        const sendBtn = document.getElementById('dm-send');
+        sendBtn.disabled = true;
+        const ok = await sendTeamMessage('text', text, null, null, recipientId);
+        if (ok === false) {
+            sendBtn.disabled = false;
+            return;
+        }
+        overlay.remove();
+    });
+};
+
 function notifyNewTeamMessage(msg) {
     if (!msg || (currentUser && msg.user_id === currentUser.id)) return;
+    if (msg.recipient_id && msg.recipient_id !== (currentUser && currentUser.id)) return;
     const teamTabActive = document.getElementById('tab-team') &&
         document.getElementById('tab-team').classList.contains('active');
     if (!document.hidden && teamTabActive) return;
-    const title = msg.msg_type === 'system' ? '🐾 Takkie & Siep' : `💬 ${msg.sender_name || 'Clubje'}`;
+    let title = msg.msg_type === 'system' ? '🐾 Takkie & Siep' : `💬 ${msg.sender_name || 'Clubje'}`;
+    if (msg.recipient_id) title = `💌 Privébericht van ${msg.sender_name || 'een clublid'}`;
     showTeamNotification(title, msg.content || 'Nieuw berichtje!');
 }
 
@@ -1309,7 +1352,7 @@ async function loadTeamData() {
     updateSosBannerAndBadge();
 }
 
-async function sendTeamMessage(msgType, content, recipePayload = null, overridePet = null) {
+async function sendTeamMessage(msgType, content, recipePayload = null, overridePet = null, recipientId = null) {
     if (!currentUser || !appState.teamId) return;
     const text = (content || '').trim();
     if (!text) return;
@@ -1323,12 +1366,17 @@ async function sendTeamMessage(msgType, content, recipePayload = null, overrideP
         content: text,
         recipe_payload: recipePayload
     };
+    if (recipientId) newMsg.recipient_id = recipientId;
 
-    const { data: inserted } = await window.supabaseClient
+    const { data: inserted, error: sendError } = await window.supabaseClient
         .from('team_messages')
         .insert([newMsg])
         .select()
         .single();
+    if (sendError && recipientId) {
+        alert('Het privébericht kon niet worden verstuurd. Heb je supabase-direct-messages.sql al uitgevoerd in Supabase? (' + sendError.message + ')');
+        return false;
+    }
 
     if (inserted) {
         const exists = appState.teamMessages.some(m => m.id === inserted.id);
@@ -1476,6 +1524,7 @@ function renderTeamCoopDashboard() {
                         </div>
                         <div style="font-size: 0.75rem; color: var(--takkie-red); font-weight: 700;">${escapeHtml(lvl)}</div>
                         <div style="font-size: 0.78rem; color: #333; margin-top: 2px;">${escapeHtml(m.statusText)}</div>
+                        ${m.id !== currentUser.id ? `<button type="button" class="btn" style="margin: 6px 0 0; padding: 4px 10px; font-size: 0.75rem; background: white; width: auto;" onclick="openDirectMessage('${m.id}')">✉️ Stuur bericht</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -1538,11 +1587,15 @@ function renderTeamChat() {
             </div>`;
         }
 
-        return `<div class="chat-msg ${isMine ? 'mine' : ''}">
+        const privateLabel = m.recipient_id
+            ? `<div style="font-size:0.68rem; font-weight:700; color:var(--takkie-red);">🔒 ${isMine ? 'Privé aan ' + escapeHtml(getMemberName(m.recipient_id)) : 'Privé voor jou'}</div>`
+            : '';
+        return `<div class="chat-msg ${isMine ? 'mine' : ''}"${m.recipient_id ? ' style="border-style: dashed;"' : ''}>
             <div class="chat-msg-header">
                 <span>${petIcon} ${escapeHtml(m.sender_name)}</span>
                 <span>${timeStr}</span>
             </div>
+            ${privateLabel}
             <div>${escapeHtml(m.content)}</div>
         </div>`;
     }).join('');
