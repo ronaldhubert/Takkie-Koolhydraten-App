@@ -415,7 +415,15 @@ async function saveMeal(type, name, carbs, fat, protein) {
     renderApp();
     if (appState.teamId) {
         refreshTeamMembersCoop();
+        if (isShareLogsEnabled()) {
+            const kcal = Math.round((Number(carbs) || 0) * 4 + (Number(protein) || 0) * 4 + (Number(fat) || 0) * 9);
+            sendTeamMessage('system', `📝 ${getDefaultDisplayName()} heeft gelogd: ${type} ${name} (${kcal} kcal)`, null, appState.petChoice);
+        }
     }
+}
+
+function isShareLogsEnabled() {
+    return localStorage.getItem('takkie_share_logs') !== '0';
 }
 
 async function saveRecipe(name, carbs, fat, protein, kcal, ingredients, prep) {
@@ -2555,6 +2563,14 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (_e) {
                 prompt("Kopieer deze uitnodigingscode:", code);
             }
+        });
+    }
+
+    if (document.getElementById('setting-share-logs')) {
+        const shareBox = document.getElementById('setting-share-logs');
+        shareBox.checked = isShareLogsEnabled();
+        shareBox.addEventListener('change', () => {
+            localStorage.setItem('takkie_share_logs', shareBox.checked ? '1' : '0');
         });
     }
 
