@@ -16,6 +16,10 @@ webpush.setVapidDetails(
 
 Deno.serve(async (req) => {
   try {
+    const secret = Deno.env.get("WEBHOOK_SECRET");
+    if (secret && req.headers.get("x-webhook-secret") !== secret) {
+      return new Response("niet toegestaan", { status: 401 });
+    }
     const payload = await req.json();
     const msg = payload.record;
     if (!msg || payload.type !== "INSERT") {
