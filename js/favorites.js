@@ -97,23 +97,93 @@ async function saveEditedFavorite() {
 
     const newType = document.getElementById('edit-fav-type').value;
     const newName = document.getElementById('edit-fav-name').value.trim();
-    const newCarbs = parseInt(document.getElementById('edit-fav-carbs').value, 10) || 0;
-    const newFat = parseInt(document.getElementById('edit-fav-fat').value, 10) || 0;
-    const newProtein = parseInt(document.getElementById('edit-fav-protein').value, 10) || 0;
+    let newCarbs = parseInt(document.getElementById('edit-fav-carbs').value, 10) || 0;
+    let newFat = parseInt(document.getElementById('edit-fav-fat').value, 10) || 0;
+    let newProtein = parseInt(document.getElementById('edit-fav-protein').value, 10) || 0;
 
     if (!newName) {
         showInlineMessage('btn-update-favorite', "Vul alsjeblieft een naam voor je favoriet in!", 'error');
         return;
     }
 
-    const oldName = fav.name;
-    const oldType = fav.type;
+    const oldName = (fav.name || '').trim();
+    const oldType = fav.type || 'meal';
+    const oldCarbs = Number(fav.carbs) || 0;
+    const oldFat = Number(fav.fat) || 0;
+    const oldProtein = Number(fav.protein) || 0;
+
+    // Als de naam van de favoriet is aangepast maar de macro-velden nog op de oude waarden staan, herbereken macro's automatisch
+    if (
+        newName.toLowerCase() !== oldName.toLowerCase() &&
+        newCarbs === oldCarbs &&
+        newFat === oldFat &&
+        newProtein === oldProtein
+    ) {
+        await analyzeNutritionWithAI(
+            newName,
+            newType === 'drink' ? 'drink' : 'meal',
+            'edit-fav-carbs',
+            'edit-fav-fat',
+            'edit-fav-protein',
+            'ai-edit-fav-feedback',
+            document.getElementById('btn-update-favorite')
+        );
+        newCarbs = parseInt(document.getElementById('edit-fav-carbs').value, 10) || 0;
+        newFat = parseInt(document.getElementById('edit-fav-fat').value, 10) || 0;
+        newProtein = parseInt(document.getElementById('edit-fav-protein').value, 10) || 0;
+    }
 
     fav.type = newType;
     fav.name = newName;
     fav.carbs = newCarbs;
     fav.fat = newFat;
     fav.protein = newProtein;
+
+    // Werk ook vandaag gelogde items die bij deze favoriet horen bij met de nieuwe macronutriënten
+    for (const m of (appState.meals || [])) {
+        const isDrinkMeal = (m.type || '').includes('Drank');
+        const mRawName = (m.name || '').trim();
+        const amtMatch = isDrinkMeal ? mRawName.match(/^(\d+)\s*x\s+(.+)$/i) : null;
+        const glasses = amtMatch ? Math.max(1, parseInt(amtMatch[1], 10)) : 1;
+        const mCleanName = (amtMatch ? amtMatch[2] : mRawName).trim();
+
+        if (mCleanName.toLowerCase() === oldName.toLowerCase()) {
+            const updatedMealName = isDrinkMeal ? `${glasses}x ${newName}` : newName;
+            const updatedCarbs = newCarbs * glasses;
+            const updatedFat = newFat * glasses;
+            const updatedProtein = newProtein * glasses;
+            m.name = updatedMealName;
+            m.carbs = updatedCarbs;
+            m.fat = updatedFat;
+            m.protein = updatedProtein;
+
+            if (m.id) {
+                await window.supabaseClient
+                    .from('meals')
+                    .update({ name: updatedMealName, carbs: updatedCarbs, fat: updatedFat, protein: updatedProtein })
+                    .eq('id', m.id);
+            }
+        }
+    }
+
+    // Werk ook het invulformulier bij als deze favoriet daar geselecteerd stond
+    if (newType === 'meal' && document.getElementById('new-meal-name')) {
+        const curInput = document.getElementById('new-meal-name').value.trim();
+        if (!curInput || curInput.toLowerCase() === oldName.toLowerCase()) {
+            document.getElementById('new-meal-name').value = newName;
+            document.getElementById('new-meal-carbs').value = newCarbs;
+            document.getElementById('new-meal-fat').value = newFat;
+            document.getElementById('new-meal-protein').value = newProtein;
+        }
+    } else if (newType === 'drink' && document.getElementById('drink-name')) {
+        const curInput = document.getElementById('drink-name').value.trim();
+        if (!curInput || curInput.toLowerCase() === oldName.toLowerCase()) {
+            document.getElementById('drink-name').value = newName;
+            document.getElementById('drink-carbs').value = newCarbs;
+            document.getElementById('drink-fat').value = newFat;
+            document.getElementById('drink-protein').value = newProtein;
+        }
+    }
 
     renderApp();
 

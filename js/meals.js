@@ -76,12 +76,13 @@ window.openEditMeal = function(idx) {
 async function saveEditedMeal() {
     if (editingMealIndex === null || !appState.meals[editingMealIndex]) return;
     const meal = appState.meals[editingMealIndex];
+    const oldFavInfo = getMealFavoriteInfo(meal);
 
     const newType = document.getElementById('edit-meal-type').value;
     let newName = document.getElementById('edit-meal-name').value.trim();
-    const newCarbs = parseInt(document.getElementById('edit-meal-carbs').value, 10) || 0;
-    const newFat = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
-    const newProtein = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
+    let newCarbs = parseInt(document.getElementById('edit-meal-carbs').value, 10) || 0;
+    let newFat = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
+    let newProtein = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
 
     if (!newName) {
         showInlineMessage('btn-update-meal', "Vul alsjeblieft een naam in!", 'error');
@@ -92,10 +93,36 @@ async function saveEditedMeal() {
     const newAmount = isDrink
         ? Math.max(1, parseInt(document.getElementById('edit-meal-amount')?.value, 10) || 1)
         : 1;
+    const cleanNewName = newName.replace(/^(\d+)\s*x\s+/i, '').trim();
+
+    // Als de naam is gewijzigd maar de macro's nog op de oude waarden staan, herbereken macro's automatisch
+    if (
+        cleanNewName.toLowerCase() !== oldFavInfo.cleanName.toLowerCase() &&
+        newCarbs === (Number(meal.carbs) || 0) &&
+        newFat === (Number(meal.fat) || 0) &&
+        newProtein === (Number(meal.protein) || 0)
+    ) {
+        await analyzeNutritionWithAI(
+            cleanNewName,
+            isDrink ? 'drink' : 'meal',
+            'edit-meal-carbs',
+            'edit-meal-fat',
+            'edit-meal-protein',
+            'ai-edit-meal-feedback',
+            document.getElementById('btn-update-meal')
+        );
+        const c1 = parseInt(document.getElementById('edit-meal-carbs').value, 10) || 0;
+        const f1 = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
+        const p1 = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
+        newCarbs = isDrink ? c1 * newAmount : c1;
+        newFat = isDrink ? f1 * newAmount : f1;
+        newProtein = isDrink ? p1 * newAmount : p1;
+    }
 
     if (isDrink) {
-        const cleanDrinkName = newName.replace(/^(\d+)\s*x\s+/i, '');
-        newName = `${newAmount}x ${cleanDrinkName}`;
+        newName = `${newAmount}x ${cleanNewName}`;
+    } else {
+        newName = cleanNewName;
     }
 
     const oldName = meal.name;
@@ -106,6 +133,32 @@ async function saveEditedMeal() {
     meal.carbs = newCarbs;
     meal.fat = newFat;
     meal.protein = newProtein;
+
+    // Als dit item ook in de favorieten staat, werk dan ook de favoriet en zijn macronutriënten bij
+    if (oldFavInfo.favIdx !== -1 && appState.savedItems[oldFavInfo.favIdx]) {
+        const fav = appState.savedItems[oldFavInfo.favIdx];
+        const prevFavName = fav.name;
+        const prevFavType = fav.type;
+        fav.type = isDrink ? 'drink' : 'meal';
+        fav.name = cleanNewName;
+        fav.carbs = Math.round(newCarbs / newAmount);
+        fav.fat = Math.round(newFat / newAmount);
+        fav.protein = Math.round(newProtein / newAmount);
+
+        if (fav.id) {
+            await window.supabaseClient
+                .from('saved_items')
+                .update({ type: fav.type, name: fav.name, carbs: fav.carbs, fat: fav.fat, protein: fav.protein })
+                .eq('id', fav.id);
+        } else if (currentUser) {
+            await window.supabaseClient
+                .from('saved_items')
+                .update({ type: fav.type, name: fav.name, carbs: fav.carbs, fat: fav.fat, protein: fav.protein })
+                .eq('user_id', currentUser.id)
+                .eq('name', prevFavName)
+                .eq('type', prevFavType);
+        }
+    }
 
     if (isDrink && newAmount !== editingDrinkOriginalAmount) {
         const nextWater = Math.max(0, Math.min(8, appState.water + (newAmount - editingDrinkOriginalAmount)));

@@ -217,25 +217,23 @@ function renderApp() {
         updateSlidersLive();
     }
 
-    // Update favorieten dropdowns & beheeroverzicht
+    // Update favorieten dropdowns & beheeroverzicht (alfabetisch: eerst maaltijden, dan drankjes)
     let mealOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
     let drinkOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
     let quickFavOptions = "<option value=''>⭐ Favoriet</option>";
     let favManageHtml = '';
 
-    appState.savedItems.forEach((item, idx) => {
+    const indexedFavs = (appState.savedItems || []).map((item, idx) => ({ item, idx }));
+    const sortByName = (a, b) => (a.item.name || '').localeCompare(b.item.name || '', 'nl', { sensitivity: 'base' });
+    const mealFavs = indexedFavs.filter(x => x.item.type !== 'drink').sort(sortByName);
+    const drinkFavs = indexedFavs.filter(x => x.item.type === 'drink').sort(sortByName);
+
+    const renderFavManageRow = ({ item, idx }) => {
         const ic = Number(item.carbs) || 0;
         const ifat = Number(item.fat) || 0;
         const ip = Number(item.protein) || 0;
-        const opt = "<option value='" + idx + "'>" + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
-        if (item.type === 'meal') mealOptions += opt;
-        else if (item.type === 'drink') drinkOptions += opt;
-
-        const quickIcon = item.type === 'drink' ? '🥤' : '🍽️';
-        quickFavOptions += "<option value='" + idx + "'>" + quickIcon + " " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
-
         const badgeLabel = item.type === 'drink' ? '🥤 Drank' : '🍽️ Maaltijd';
-        favManageHtml += "<div class='meal-item'>" +
+        return "<div class='meal-item'>" +
             "<div style='flex-grow:1;'><strong>" + badgeLabel + "</strong><br>" + escapeHtml(item.name) + "</div>" +
             "<div style='text-align: right; font-size: 0.8rem;'>" +
             "<span style='color:var(--takkie-red); font-weight:700;'>" + ic + "g</span> | " +
@@ -244,6 +242,27 @@ function renderApp() {
             "<button onclick='openEditFavorite(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
             "<button onclick='deleteFavorite(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
+    };
+
+    mealFavs.forEach(({ item, idx }) => {
+        const ic = Number(item.carbs) || 0;
+        mealOptions += "<option value='" + idx + "'>" + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
+        quickFavOptions += "<option value='" + idx + "'>🍽️ " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
+        favManageHtml += renderFavManageRow({ item, idx });
+    });
+
+    if (mealFavs.length > 0) {
+        quickFavOptions += "<option value='' disabled>──────────────────</option>";
+    }
+    if (mealFavs.length > 0 && drinkFavs.length > 0) {
+        favManageHtml += "<hr style='border: 0; border-top: 3px solid var(--border-color); margin: 14px 0;'>";
+    }
+
+    drinkFavs.forEach(({ item, idx }) => {
+        const ic = Number(item.carbs) || 0;
+        drinkOptions += "<option value='" + idx + "'>" + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
+        quickFavOptions += "<option value='" + idx + "'>🥤 " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
+        favManageHtml += renderFavManageRow({ item, idx });
     });
 
     if (appState.savedItems.length === 0) {
