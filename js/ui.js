@@ -15,7 +15,7 @@ function switchTab(tabId) {
     if (tabId === 'home' || tabId === 'quotes') {
         getRandomQuote();
     }
-    if (tabId === 'log') {
+    if (tabId === 'history') {
         renderHistory();
     }
     if (tabId === 'team') {
@@ -28,8 +28,7 @@ function switchTab(tabId) {
 
     let navTabId = tabId;
     if (tabId === 'recipe-detail' || tabId === 'add-recipe' || tabId === 'edit-recipe') navTabId = 'recipes';
-    if (tabId === 'log-drink' || tabId === 'favorites' || tabId === 'edit-favorite') navTabId = 'log';
-    if (tabId === 'edit-meal') navTabId = 'home';
+    if (tabId === 'log' || tabId === 'log-drink' || tabId === 'edit-meal' || tabId === 'favorites' || tabId === 'edit-favorite') navTabId = 'home';
 
     const navBtn = document.querySelector(".nav-item[data-tab='" + navTabId + "']");
     if (navBtn) navBtn.classList.add('active');
@@ -290,6 +289,18 @@ function initNavEvents() {
 
     if (document.getElementById('nav-drink')) {
         document.getElementById('nav-drink').addEventListener('click', () => switchTab('log-drink'));
+    }
+
+    if (document.getElementById('btn-home-goto-history')) {
+        document.getElementById('btn-home-goto-history').addEventListener('click', () => switchTab('history'));
+    }
+
+    if (document.getElementById('btn-back-from-log')) {
+        document.getElementById('btn-back-from-log').addEventListener('click', () => switchTab('home'));
+    }
+
+    if (document.getElementById('btn-back-from-drink')) {
+        document.getElementById('btn-back-from-drink').addEventListener('click', () => switchTab('home'));
     }
 
     if (document.getElementById('btn-favorite')) {

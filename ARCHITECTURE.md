@@ -92,7 +92,7 @@ De volgorde is zoals in `index.html`. Bestanden zijn aaneengesloten stukken van 
 
 ## Tabbladen in `index.html`
 
-Elk tabblad is een `<div id="tab-...">`. `switchTab('naam')` in `js/ui.js` toont `#tab-naam`. De tabbladen: `home`, `recipes`, `recipe-detail`, `add-recipe`, `edit-recipe`, `log`, `log-drink`, `edit-meal`, `favorites`, `edit-favorite`, `team`, `quotes`, `profile`. De opmerkingen `<!-- TAB ... -->` in de HTML markeren het begin van elk tabblad.
+Elk tabblad is een `<div id="tab-...">`. `switchTab('naam')` in `js/ui.js` toont `#tab-naam`. De tabbladen: `home`, `recipes`, `recipe-detail`, `add-recipe`, `edit-recipe`, `log`, `log-drink`, `edit-meal`, `favorites`, `edit-favorite`, `history`, `team`, `quotes`, `profile`. De opmerkingen `<!-- TAB ... -->` in de HTML markeren het begin van elk tabblad.
 
 `renderApp()` in `js/ui.js` tekent het hoofdscherm opnieuw vanuit `appState`. Roep het aan na een wijziging in `appState`.
 

@@ -12,15 +12,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261120i">
-    <link rel="stylesheet" href="css/auth.css?v=20261120i">
-    <link rel="stylesheet" href="css/layout.css?v=20261120i">
-    <link rel="stylesheet" href="css/pets.css?v=20261120i">
-    <link rel="stylesheet" href="css/widgets.css?v=20261120i">
-    <link rel="stylesheet" href="css/cards.css?v=20261120i">
-    <link rel="stylesheet" href="css/components.css?v=20261120i">
-    <link rel="stylesheet" href="css/team.css?v=20261120i">
-    <link rel="stylesheet" href="css/history.css?v=20261120i">
+    <link rel="stylesheet" href="css/base.css?v=20261120j">
+    <link rel="stylesheet" href="css/auth.css?v=20261120j">
+    <link rel="stylesheet" href="css/layout.css?v=20261120j">
+    <link rel="stylesheet" href="css/pets.css?v=20261120j">
+    <link rel="stylesheet" href="css/widgets.css?v=20261120j">
+    <link rel="stylesheet" href="css/cards.css?v=20261120j">
+    <link rel="stylesheet" href="css/components.css?v=20261120j">
+    <link rel="stylesheet" href="css/team.css?v=20261120j">
+    <link rel="stylesheet" href="css/history.css?v=20261120j">
 </head>
 <body>
 
@@ -78,7 +78,7 @@
         <button class="nav-item" data-tab="recipes"><span>📖</span>Recepten</button>
         <button class="nav-item" data-tab="team" style="position: relative;"><span>🐾</span>Clubje<i id="nav-team-badge" class="nav-badge" style="display:none;">!</i></button>
         <button class="nav-item" data-tab="quotes"><span>❤️</span>Quotes</button>
-        <button class="nav-item" data-tab="log"><span>➕</span>Log</button>
+        <button class="nav-item" data-tab="history"><span>📊</span>Logboek</button>
         <button class="nav-item" data-tab="profile"><span>⚙️</span>Profiel</button>
     </nav>
 
@@ -115,7 +115,10 @@
             </div>
 
             <div class="widget">
-                <h3>📖 Vandaag Loggen</h3>
+                <h3>
+                    <span>📖 Vandaag Loggen</span>
+                    <button type="button" class="btn btn-auto" id="btn-home-goto-history" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow);">📊 Logboek</button>
+                </h3>
                 <div id="meal-list"></div>
 
                 <div class="btn-grid">
@@ -265,6 +268,7 @@
 
         <!-- TAB 3: MAALTIJD TOEVOEGEN -->
         <div id="tab-log" class="tab-content">
+            <button type="button" class="btn btn-back" id="btn-back-from-log">⬅️ Terug naar Home</button>
             <div class="widget">
                 <h3>➕ Maaltijd Toevoegen</h3>
                 
@@ -304,7 +308,10 @@
 
                 <button class="btn btn-primary" id="btn-save-meal" style="width: 100%;">Liefdevol Bewaren (+10 pt)</button>
             </div>
+        </div>
 
+        <!-- TAB 3F: MIJN LOGBOEK (WEKEN / DAGEN / DETAILS) -->
+        <div id="tab-history" class="tab-content">
             <div class="widget" id="history-widget">
                 <h3>📊 Mijn Logboek</h3>
                 <div id="history-metric" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;"></div>
@@ -315,6 +322,7 @@
 
         <!-- TAB 3B: DRANK TOEVOEGEN -->
         <div id="tab-log-drink" class="tab-content">
+            <button type="button" class="btn btn-back" id="btn-back-from-drink">⬅️ Terug naar Home</button>
             <div class="widget" style="background-color: #E3F2FD;">
                 <h3>🥤 Drankje Loggen</h3>
 
@@ -618,21 +626,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261120i"></script>
-<script src="js/quotes.js?v=20261120i"></script>
-<script src="js/utils.js?v=20261120i"></script>
-<script src="js/auth.js?v=20261120i"></script>
-<script src="js/data.js?v=20261120i"></script>
-<script src="js/meals.js?v=20261120i"></script>
-<script src="js/favorites.js?v=20261120i"></script>
-<script src="js/ai.js?v=20261120i"></script>
-<script src="js/recipes.js?v=20261120i"></script>
-<script src="js/team.js?v=20261120i"></script>
-<script src="js/chat.js?v=20261120i"></script>
-<script src="js/notifications.js?v=20261120i"></script>
-<script src="js/history.js?v=20261120i"></script>
-<script src="js/ui.js?v=20261120i"></script>
-<script src="js/main.js?v=20261120i"></script>
+<script src="js/state.js?v=20261120j"></script>
+<script src="js/quotes.js?v=20261120j"></script>
+<script src="js/utils.js?v=20261120j"></script>
+<script src="js/auth.js?v=20261120j"></script>
+<script src="js/data.js?v=20261120j"></script>
+<script src="js/meals.js?v=20261120j"></script>
+<script src="js/favorites.js?v=20261120j"></script>
+<script src="js/ai.js?v=20261120j"></script>
+<script src="js/recipes.js?v=20261120j"></script>
+<script src="js/team.js?v=20261120j"></script>
+<script src="js/chat.js?v=20261120j"></script>
+<script src="js/notifications.js?v=20261120j"></script>
+<script src="js/history.js?v=20261120j"></script>
+<script src="js/ui.js?v=20261120j"></script>
+<script src="js/main.js?v=20261120j"></script>
 
 </body>
 </html>
