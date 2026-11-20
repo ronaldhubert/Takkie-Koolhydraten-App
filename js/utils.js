@@ -80,8 +80,7 @@ function showInlineMessage(targetOrId, message) {
     const anchor = resolveAnchorElement(targetOrId);
     if (!anchor || !anchor.parentNode) return;
 
-    const scope = anchor.closest('.widget, .auth-form') || anchor.parentElement || document;
-    clearInlineMessages(scope);
+    clearInlineMessages();
 
     const insertAfterEl = findInsertTarget(anchor);
     if (!insertAfterEl || !insertAfterEl.parentNode) return;
@@ -89,9 +88,28 @@ function showInlineMessage(targetOrId, message) {
     const box = document.createElement('div');
     box.className = 'inline-notice';
     box.innerText = message;
+    box._anchor = anchor;
+    box._createdAt = Date.now();
 
     insertAfterEl.insertAdjacentElement('afterend', box);
 }
+
+// Verwijder rode meldingen (.inline-notice) zodra de gebruiker op een ander UI-element klikt of focust.
+// Bevestigingsvragen (.inline-confirm) met Ja/Annuleren blijven gewoon staan.
+document.addEventListener('pointerdown', (e) => {
+    document.querySelectorAll('.inline-notice').forEach(box => {
+        if (box.contains(e.target)) return;
+        box.remove();
+    });
+}, true);
+
+document.addEventListener('focusin', (e) => {
+    document.querySelectorAll('.inline-notice').forEach(box => {
+        if (box._anchor && box._anchor.contains(e.target) && (Date.now() - (box._createdAt || 0) < 150)) return;
+        if (box.contains(e.target)) return;
+        box.remove();
+    });
+}, true);
 
 function showInlineConfirm(targetOrId, questionText, onConfirm, confirmLabel = 'Ja, verwijderen') {
     const anchor = resolveAnchorElement(targetOrId);
