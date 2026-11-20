@@ -5,6 +5,69 @@
 // ==========================================
 // FAVORIETEN BEHEREN, WIJZIGEN & VERWIJDEREN
 // ==========================================
+function getMealFavoriteInfo(meal) {
+    const isDrink = (meal?.type || '').includes('Drank');
+    const favType = isDrink ? 'drink' : 'meal';
+    const rawName = (meal?.name || '').trim();
+    const amountMatch = isDrink ? rawName.match(/^(\d+)\s*x\s+(.+)$/i) : null;
+    const glasses = amountMatch ? Math.max(1, parseInt(amountMatch[1], 10)) : 1;
+    const cleanName = (amountMatch ? amountMatch[2] : rawName).trim();
+    const favIdx = (appState.savedItems || []).findIndex(
+        f => (f.type || 'meal') === favType && (f.name || '').trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    return {
+        favIdx,
+        favType,
+        cleanName,
+        carbs: Math.round((Number(meal?.carbs) || 0) / glasses),
+        fat: Math.round((Number(meal?.fat) || 0) / glasses),
+        protein: Math.round((Number(meal?.protein) || 0) / glasses)
+    };
+}
+
+window.toggleMealFavorite = async function(mealIdx) {
+    const meal = appState.meals[mealIdx];
+    if (!meal || !currentUser) return;
+    const info = getMealFavoriteInfo(meal);
+    if (!info.cleanName) return;
+
+    if (info.favIdx !== -1) {
+        const removed = appState.savedItems[info.favIdx];
+        appState.savedItems.splice(info.favIdx, 1);
+        renderApp();
+        if (removed && removed.id) {
+            await window.supabaseClient.from('saved_items').delete().eq('id', removed.id);
+        } else {
+            await window.supabaseClient
+                .from('saved_items')
+                .delete()
+                .eq('user_id', currentUser.id)
+                .eq('name', removed.name)
+                .eq('type', removed.type);
+        }
+    } else {
+        const fav = {
+            user_id: currentUser.id,
+            type: info.favType,
+            name: info.cleanName,
+            carbs: info.carbs,
+            fat: info.fat,
+            protein: info.protein
+        };
+        appState.savedItems.push(fav);
+        renderApp();
+        const { data: insertedFav } = await window.supabaseClient
+            .from('saved_items')
+            .insert([fav])
+            .select()
+            .single();
+        if (insertedFav) {
+            const idx = appState.savedItems.indexOf(fav);
+            if (idx !== -1) appState.savedItems[idx] = insertedFav;
+        }
+    }
+};
+
 function openFavoritesManager(fromTab) {
     previousTabBeforeFavorites = fromTab || 'home';
     renderApp();

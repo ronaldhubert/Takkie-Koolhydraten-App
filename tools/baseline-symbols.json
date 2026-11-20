@@ -44,6 +44,8 @@
   "window.deleteMeal",
   "initMealEvents",
   "initLogEvents",
+  "getMealFavoriteInfo",
+  "window.toggleMealFavorite",
   "openFavoritesManager",
   "window.openEditFavorite",
   "saveEditedFavorite",

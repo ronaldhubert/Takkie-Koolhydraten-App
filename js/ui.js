@@ -145,12 +145,17 @@ function renderApp() {
         const mf = Number(m.fat) || 0;
         const mp = Number(m.protein) || 0;
         tc += mc; tf += mf; tp += mp;
+        const favInfo = getMealFavoriteInfo(m);
+        const isFav = favInfo.favIdx !== -1;
+        const heartIcon = isFav ? '❤️' : '🤍';
+        const heartTitle = isFav ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten';
         html += "<div class='meal-item'>" +
             "<div style='flex-grow:1;'><strong>" + escapeHtml(m.type) + "</strong><br>" + escapeHtml(m.name) + "</div>" +
             "<div style='text-align: right; font-size: 0.8rem;'>" +
             "<span style='color:var(--takkie-red); font-weight:700;'>" + mc + "g</span> | " +
             "<span style='color:#B2530C; font-weight:700;'>" + mf + "g</span> | " +
             "<span style='color:#1b4332; font-weight:700;'>" + mp + "g</span><br>" +
+            "<button onclick='toggleMealFavorite(" + idx + ")' title='" + heartTitle + "' style='background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0; margin-top:4px; margin-right:8px; vertical-align:middle;'>" + heartIcon + "</button>" +
             "<button onclick='openEditMeal(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
             "<button onclick='deleteMeal(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
