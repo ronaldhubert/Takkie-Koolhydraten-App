@@ -25,7 +25,7 @@
 
 .btn-primary { background-color: var(--accent-green); color: var(--text-main); grid-column: span 2; }
 .btn-ai { background-color: var(--accent-yellow); grid-column: span 2; }
-.btn-drink { background-color: #E3F2FD; }
+.btn-drink { background-color: var(--accent-green); color: var(--text-main); }
 .btn-back { background-color: var(--accent-yellow); width: 100%; margin-bottom: 12px; }
 .btn-quote { background-color: #FFD166; width: 100%; margin-top: 12px; }
 .btn-auto { background-color: #E3F2FD; font-size: 0.8rem; padding: 6px; margin-bottom: 10px; }
@@ -91,6 +91,24 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
 }
 .checkbox-group .checkbox-label:has(input:checked) {
     background-color: var(--bubble-bg);
+}
+.ingredient-remove-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #999;
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.ingredient-remove-btn:hover,
+.ingredient-remove-btn:active {
+    color: var(--takkie-red);
+    background-color: #FFEEEE;
 }
 
 /* TEAMS & HUISKAMER CHAT STYLING */

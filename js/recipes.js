@@ -126,6 +126,36 @@ function initRecipeEvents() {
         document.getElementById('btn-add-recipe').addEventListener('click', () => switchTab('add-recipe'));
     }
 
+    function removeIngredientByName(name, labelEl) {
+        if (labelEl) labelEl.remove();
+        try {
+            const customList = JSON.parse(localStorage.getItem('takkie_custom_ingredients') || '[]');
+            const filtered = customList.filter(x => x.toLowerCase() !== name.toLowerCase());
+            localStorage.setItem('takkie_custom_ingredients', JSON.stringify(filtered));
+
+            const removedList = JSON.parse(localStorage.getItem('takkie_removed_ingredients') || '[]');
+            if (!removedList.some(x => x.toLowerCase() === name.toLowerCase())) {
+                removedList.push(name);
+                localStorage.setItem('takkie_removed_ingredients', JSON.stringify(removedList));
+            }
+        } catch (_e) {}
+    }
+
+    function attachRemoveButtonToLabel(label, name) {
+        if (!label || label.querySelector('.ingredient-remove-btn')) return;
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'ingredient-remove-btn';
+        delBtn.title = `${name} verwijderen`;
+        delBtn.innerText = '✕';
+        delBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            removeIngredientByName(name, label);
+        });
+        label.appendChild(delBtn);
+    }
+
     function appendCustomIngredientCard(name, isChecked = true) {
         const container = document.getElementById('fridge-ingredients');
         if (!container || !name) return;
@@ -143,8 +173,27 @@ function initRecipeEvents() {
         cb.checked = isChecked;
         label.appendChild(cb);
         label.appendChild(document.createTextNode(' 🥗 ' + name));
+        attachRemoveButtonToLabel(label, name);
         container.appendChild(label);
     }
+
+    // Voeg verwijderknopjes toe aan standaard-ingrediënten en verberg eerder verwijderde
+    try {
+        const removedIngs = JSON.parse(localStorage.getItem('takkie_removed_ingredients') || '[]');
+        const container = document.getElementById('fridge-ingredients');
+        if (container) {
+            Array.from(container.querySelectorAll('label.checkbox-label')).forEach(label => {
+                const cb = label.querySelector('input[type="checkbox"]');
+                if (!cb) return;
+                const val = cb.value || '';
+                if (Array.isArray(removedIngs) && removedIngs.some(x => x.toLowerCase() === val.toLowerCase())) {
+                    label.remove();
+                } else {
+                    attachRemoveButtonToLabel(label, val);
+                }
+            });
+        }
+    } catch (_e) {}
 
     // Laad eerder toegevoegde eigen ingrediënten uit localStorage
     try {
@@ -167,6 +216,9 @@ function initRecipeEvents() {
                     list.push(part);
                     localStorage.setItem('takkie_custom_ingredients', JSON.stringify(list));
                 }
+                const removedList = JSON.parse(localStorage.getItem('takkie_removed_ingredients') || '[]');
+                const nextRemoved = removedList.filter(x => x.toLowerCase() !== part.toLowerCase());
+                localStorage.setItem('takkie_removed_ingredients', JSON.stringify(nextRemoved));
             } catch (_e) {}
         });
         inputEl.value = '';
