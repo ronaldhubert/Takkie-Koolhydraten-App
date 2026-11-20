@@ -44,16 +44,19 @@ input, select, textarea {
 
 select.btn {
     margin-bottom: 0;
-    padding: 12px 8px;
+    padding: 12px 10px;
     border-radius: 14px;
     background-color: white;
     box-shadow: 3px 3px 0px var(--border-color);
     font-weight: 700;
-    text-align: center;
-    text-align-last: center;
+    text-align: left;
+    text-align-last: left;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+select.btn option {
+    text-align: left;
 }
 
 input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
