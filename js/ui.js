@@ -220,6 +220,7 @@ function renderApp() {
     // Update favorieten dropdowns & beheeroverzicht
     let mealOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
     let drinkOptions = "<option value=''>-- Geen favoriet geselecteerd --</option>";
+    let quickFavOptions = "<option value=''>⭐ Favoriet</option>";
     let favManageHtml = '';
 
     appState.savedItems.forEach((item, idx) => {
@@ -229,6 +230,9 @@ function renderApp() {
         const opt = "<option value='" + idx + "'>" + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
         if (item.type === 'meal') mealOptions += opt;
         else if (item.type === 'drink') drinkOptions += opt;
+
+        const quickIcon = item.type === 'drink' ? '🥤' : '🍽️';
+        quickFavOptions += "<option value='" + idx + "'>" + quickIcon + " " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
 
         const badgeLabel = item.type === 'drink' ? '🥤 Drank' : '🍽️ Maaltijd';
         favManageHtml += "<div class='meal-item'>" +
@@ -243,9 +247,11 @@ function renderApp() {
     });
 
     if (appState.savedItems.length === 0) {
-        favManageHtml = "<p style='text-align:center; color:#666; font-size:0.85rem;'>Je hebt nog geen favorieten opgeslagen. Vink bij het loggen van een maaltijd of drankje <b>💖 Sla op in mijn favorieten</b> aan!</p>";
+        quickFavOptions += "<option value='' disabled>Nog geen favorieten</option>";
+        favManageHtml = "<p style='text-align:center; color:#666; font-size:0.85rem;'>Je hebt nog geen favorieten opgeslagen. Klik op het hartje 🤍 bij een gelogde maaltijd of vink <b>💖 Sla op in mijn favorieten</b> aan!</p>";
     }
 
+    if (document.getElementById('btn-favorite')) document.getElementById('btn-favorite').innerHTML = quickFavOptions;
     if (document.getElementById('favorite-meals-select')) document.getElementById('favorite-meals-select').innerHTML = mealOptions;
     if (document.getElementById('favorite-drinks-select')) document.getElementById('favorite-drinks-select').innerHTML = drinkOptions;
     if (document.getElementById('favorites-manage-list')) document.getElementById('favorites-manage-list').innerHTML = favManageHtml;
@@ -268,10 +274,30 @@ function initNavEvents() {
     }
 
     if (document.getElementById('btn-favorite')) {
-        document.getElementById('btn-favorite').addEventListener('click', () => {
-            switchTab('log');
-            const favSelect = document.getElementById('favorite-meals-select');
-            if (favSelect) favSelect.focus();
+        document.getElementById('btn-favorite').addEventListener('change', async (e) => {
+            const val = e.target.value;
+            e.target.value = '';
+            if (val === '') return;
+            const item = appState.savedItems[parseInt(val, 10)];
+            if (!item) return;
+
+            const c = Number(item.carbs) || 0;
+            const f = Number(item.fat) || 0;
+            const p = Number(item.protein) || 0;
+
+            if (item.type === 'drink') {
+                await saveMeal('🥤 Drank', '1x ' + item.name, c, f, p);
+                await updateWater(Math.min(8, appState.water + 1));
+                await addPoints(5);
+            } else {
+                const hour = new Date().getHours();
+                let mealType = '⚡ Snack';
+                if (hour >= 5 && hour < 11) mealType = '🍳 Ontbijt';
+                else if (hour >= 11 && hour < 16) mealType = '🥗 Lunch';
+                else if (hour >= 16 && hour < 21) mealType = '🍲 Avondeten';
+                await saveMeal(mealType, item.name, c, f, p);
+                await addPoints(10);
+            }
         });
     }
 
