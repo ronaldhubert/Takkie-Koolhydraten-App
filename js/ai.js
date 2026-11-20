@@ -90,14 +90,11 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     const description = (inputName || '').trim();
     const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
     if (!description) {
-        if (fbEl) {
-            fbEl.style.display = 'block';
-            fbEl.innerText = "🐾 Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!";
-        } else {
-            showInlineMessage(btnEl, "Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!", 'error');
-        }
+        if (fbEl) fbEl.style.display = 'none';
+        showInlineMessage(btnEl, "Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!");
         return;
     }
+    if (btnEl) clearInlineMessages(btnEl.closest('.widget'));
     const originalBtnText = btnEl ? btnEl.innerText : '';
     if (btnEl) {
         btnEl.disabled = true;

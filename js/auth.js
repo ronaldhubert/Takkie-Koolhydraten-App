@@ -63,12 +63,8 @@ function showApp() {
     getRandomQuote();
 }
 
-function showAuthError(msg) {
-    const errEl = document.getElementById('auth-error-message');
-    if (errEl) {
-        errEl.innerText = msg;
-        errEl.style.display = 'block';
-    }
+function showAuthError(msg, targetId = 'btn-login') {
+    showInlineMessage(targetId, msg);
 }
 
 function initAuthEvents() {
@@ -77,7 +73,7 @@ function initAuthEvents() {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) showAuthError(error.message);
+            if (error) showInlineMessage('btn-login', error.message);
         });
     }
 
@@ -85,25 +81,18 @@ function initAuthEvents() {
         document.getElementById('btn-register').addEventListener('click', async () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
-            const errEl = document.getElementById('auth-error-message');
-            if (errEl) {
-                errEl.style.background = '';
-                errEl.style.color = '';
-            }
             const { error } = await window.supabaseClient.auth.signUp({ email, password });
             if (error) {
-                showAuthError(error.message);
-            } else if (errEl) {
-                errEl.innerText = 'Woef! Account aangemaakt! Bevestig je e-mail (indien nodig) of je bent direct ingelogd. 🐾';
-                errEl.style.background = '#E8F5E9';
-                errEl.style.color = '#1B5E20';
-                errEl.style.display = 'block';
+                showInlineMessage('btn-register', error.message);
+            } else {
+                showInlineMessage('btn-register', 'Account aangemaakt! Bevestig je e-mail (indien nodig) of je bent direct ingelogd.');
             }
         });
     }
 
     if (document.getElementById('btn-forgot-password')) {
         document.getElementById('btn-forgot-password').addEventListener('click', () => {
+            clearInlineMessages();
             document.getElementById('auth-main-form').style.display = 'none';
             document.getElementById('auth-forgot-form').style.display = 'block';
             document.getElementById('forgot-message').style.display = 'none';
@@ -115,6 +104,7 @@ function initAuthEvents() {
 
     if (document.getElementById('btn-back-to-login')) {
         document.getElementById('btn-back-to-login').addEventListener('click', () => {
+            clearInlineMessages();
             document.getElementById('auth-forgot-form').style.display = 'none';
             document.getElementById('auth-main-form').style.display = 'block';
         });
@@ -123,16 +113,9 @@ function initAuthEvents() {
     if (document.getElementById('btn-send-reset')) {
         const sendReset = async () => {
             const btn = document.getElementById('btn-send-reset');
-            const msgEl = document.getElementById('forgot-message');
             const email = document.getElementById('forgot-email').value.trim();
-            const show = (text, ok) => {
-                msgEl.innerText = text;
-                msgEl.style.display = 'block';
-                msgEl.style.background = ok ? '#E8F5E9' : '';
-                msgEl.style.color = ok ? '#1B5E20' : '';
-            };
             if (!email) {
-                show('Vul je e-mailadres in.', false);
+                showInlineMessage('btn-send-reset', 'Vul je e-mailadres in.');
                 return;
             }
             btn.disabled = true;
@@ -140,10 +123,10 @@ function initAuthEvents() {
             try {
                 const redirectTo = window.location.origin + window.location.pathname;
                 const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
-                if (error) show(error.message, false);
-                else show('Woef! We hebben een herstellink gemaild naar ' + email + '. Check ook je spam 🐾', true);
+                if (error) showInlineMessage('btn-send-reset', error.message);
+                else showInlineMessage('btn-send-reset', 'Woef! We hebben een herstellink gemaild naar ' + email + '. Check ook je spam.');
             } catch (e) {
-                show('Er ging iets mis: ' + (e.message || e), false);
+                showInlineMessage('btn-send-reset', 'Er ging iets mis: ' + (e.message || e));
             }
             btn.disabled = false;
             btn.innerText = '📧 Stuur herstellink';
@@ -158,30 +141,20 @@ function initAuthEvents() {
         document.getElementById('btn-save-new-password').addEventListener('click', async () => {
             const p1 = document.getElementById('new-password').value;
             const p2 = document.getElementById('new-password-repeat').value;
-            const errEl = document.getElementById('recovery-error-message');
-            errEl.style.display = 'none';
             if (p1.length < 6) {
-                errEl.innerText = 'Kies een wachtwoord van minimaal 6 tekens.';
-                errEl.style.display = 'block';
+                showInlineMessage('btn-save-new-password', 'Kies een wachtwoord van minimaal 6 tekens.');
                 return;
             }
             if (p1 !== p2) {
-                errEl.innerText = 'De twee wachtwoorden zijn niet hetzelfde.';
-                errEl.style.display = 'block';
+                showInlineMessage('btn-save-new-password', 'De twee wachtwoorden zijn niet hetzelfde.');
                 return;
             }
             const { error } = await window.supabaseClient.auth.updateUser({ password: p1 });
             if (error) {
-                errEl.style.background = '';
-                errEl.style.color = '';
-                errEl.innerText = error.message;
-                errEl.style.display = 'block';
+                showInlineMessage('btn-save-new-password', error.message);
                 return;
             }
-            errEl.innerText = 'Gelukt! Je nieuwe wachtwoord is opgeslagen 🐶';
-            errEl.style.background = '#E8F5E9';
-            errEl.style.color = '#1B5E20';
-            errEl.style.display = 'block';
+            showInlineMessage('btn-save-new-password', 'Gelukt! Je nieuwe wachtwoord is opgeslagen.');
             setTimeout(() => {
                 window.location.href = window.location.origin + window.location.pathname;
             }, 1200);

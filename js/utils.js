@@ -47,55 +47,70 @@ function resolveAnchorElement(targetOrId) {
     return targetOrId;
 }
 
-function showInlineMessage(targetOrId, message, type = 'info', durationMs = 5000) {
+function findInsertTarget(anchor) {
+    if (!anchor) return null;
+    // Als de knop in een 2-koloms .btn-grid zit: plaats na de 2e knop van die rij zodat de rij-indeling heel blijft
+    const grid = anchor.closest('.btn-grid');
+    if (grid) {
+        const btns = Array.from(grid.querySelectorAll(':scope > .btn'));
+        const idx = btns.indexOf(anchor);
+        if (idx !== -1) {
+            const rowEndBtn = (idx % 2 === 0 && idx + 1 < btns.length) ? btns[idx + 1] : btns[idx];
+            return rowEndBtn;
+        }
+        return grid;
+    }
+    // Als de knop in een lijst-item of kaartje zit
+    const card = anchor.closest('.meal-item, .recipe-card, .member-card');
+    if (card) return card;
+    // Als de knop in een horizontale flex-rij zit
+    const parent = anchor.parentElement;
+    if (parent && parent.style && parent.style.display === 'flex' && parent.style.flexDirection !== 'column') {
+        return parent;
+    }
+    return anchor;
+}
+
+function clearInlineMessages(scopeEl) {
+    const root = scopeEl || document;
+    root.querySelectorAll('.inline-notice').forEach(el => el.remove());
+}
+
+function showInlineMessage(targetOrId, message) {
     const anchor = resolveAnchorElement(targetOrId);
     if (!anchor || !anchor.parentNode) return;
 
-    const container = anchor.closest('.meal-item, .recipe-card, .member-card') || anchor;
-    const next = container.nextElementSibling;
-    if (next && next.classList && next.classList.contains('inline-notice')) {
-        next.remove();
-    }
+    const scope = anchor.closest('.widget, .auth-form') || anchor.parentElement || document;
+    clearInlineMessages(scope);
+
+    const insertAfterEl = findInsertTarget(anchor);
+    if (!insertAfterEl || !insertAfterEl.parentNode) return;
 
     const box = document.createElement('div');
-    box.className = `inline-notice inline-notice-${type}`;
-    const icon = type === 'error' ? '🐾' : type === 'success' ? '✅' : '🐶';
-    box.innerHTML = `<span style="flex:1;">${icon} ${escapeHtml(message)}</span><button type="button" class="inline-notice-close" aria-label="Sluiten">✕</button>`;
-    box.querySelector('.inline-notice-close').addEventListener('click', (e) => {
-        e.stopPropagation();
-        box.remove();
-    });
+    box.className = 'inline-notice';
+    box.innerText = message;
 
-    container.insertAdjacentElement('afterend', box);
-    if (box.scrollIntoView) {
-        try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_e) {}
-    }
-
-    if (durationMs > 0) {
-        setTimeout(() => {
-            if (box.parentNode) box.remove();
-        }, durationMs);
-    }
+    insertAfterEl.insertAdjacentElement('afterend', box);
 }
 
 function showInlineConfirm(targetOrId, questionText, onConfirm, confirmLabel = 'Ja, verwijderen') {
     const anchor = resolveAnchorElement(targetOrId);
     if (!anchor || !anchor.parentNode) return;
 
-    const container = anchor.closest('.meal-item, .recipe-card, .member-card') || anchor;
-    const next = container.nextElementSibling;
-    if (next && next.classList && next.classList.contains('inline-confirm')) {
-        next.remove();
-    }
+    const scope = anchor.closest('.widget, .auth-form') || anchor.parentElement || document;
+    scope.querySelectorAll('.inline-confirm').forEach(el => el.remove());
+
+    const insertAfterEl = findInsertTarget(anchor);
+    if (!insertAfterEl || !insertAfterEl.parentNode) return;
 
     const box = document.createElement('div');
     box.className = 'inline-confirm';
     box.innerHTML = `
-        <div class="inline-confirm-text">🐾 ${escapeHtml(questionText)}</div>
-        <div class="inline-confirm-actions">
+        <span>${escapeHtml(questionText)}</span>
+        <span class="inline-confirm-actions">
             <button type="button" class="btn-inline-yes">${escapeHtml(confirmLabel)}</button>
             <button type="button" class="btn-inline-no">Annuleren</button>
-        </div>
+        </span>
     `;
     box.addEventListener('click', (e) => e.stopPropagation());
     box.querySelector('.btn-inline-yes').addEventListener('click', async (e) => {
@@ -108,8 +123,5 @@ function showInlineConfirm(targetOrId, questionText, onConfirm, confirmLabel = '
         box.remove();
     });
 
-    container.insertAdjacentElement('afterend', box);
-    if (box.scrollIntoView) {
-        try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_e) {}
-    }
+    insertAfterEl.insertAdjacentElement('afterend', box);
 }

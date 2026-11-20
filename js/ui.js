@@ -6,6 +6,7 @@
 // UI EN EVENTS
 // ==========================================
 function switchTab(tabId) {
+    clearInlineMessages();
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const targetTab = document.getElementById('tab-' + tabId);
