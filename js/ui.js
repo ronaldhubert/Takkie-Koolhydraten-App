@@ -38,24 +38,31 @@ function switchTab(tabId) {
 let lastQuoteIndex = -1;
 let lastShownPet = 'siepie';
 function getRandomQuote() {
-    let idx = Math.floor(Math.random() * motivationalQuotes.length);
-    if (motivationalQuotes.length > 1 && idx === lastQuoteIndex) {
-        idx = (idx + 1) % motivationalQuotes.length;
+    // Wissel elke keer strikt af tussen Takkie en Siepie
+    const pet = (lastShownPet === 'takkie') ? 'siepie' : 'takkie';
+    lastShownPet = pet;
+
+    const matchingIndices = motivationalQuotes
+        .map((item, i) => ({ item, i }))
+        .filter(({ item, i }) => {
+            if (motivationalQuotes.length > 1 && i === lastQuoteIndex) return false;
+            const author = item.author || '';
+            if (pet === 'takkie') return author.includes('Takkie');
+            return author.includes('Siep');
+        })
+        .map(x => x.i);
+
+    let idx;
+    if (matchingIndices.length > 0) {
+        idx = matchingIndices[Math.floor(Math.random() * matchingIndices.length)];
+    } else {
+        idx = Math.floor(Math.random() * motivationalQuotes.length);
+        if (motivationalQuotes.length > 1 && idx === lastQuoteIndex) {
+            idx = (idx + 1) % motivationalQuotes.length;
+        }
     }
     lastQuoteIndex = idx;
     const q = motivationalQuotes[idx];
-
-    // Kies precies 1 dier (Takkie of Siepie) passend bij de quote of afwisselend
-    let pet = 'takkie';
-    const author = q.author || '';
-    if (author.includes('Siep') && !author.includes('Takkie')) {
-        pet = 'siepie';
-    } else if (author.includes('Takkie') && !author.includes('Siep')) {
-        pet = 'takkie';
-    } else {
-        pet = (lastShownPet === 'takkie') ? 'siepie' : 'takkie';
-    }
-    lastShownPet = pet;
 
     const avatarClass = (pet === 'siepie') ? 'siep-avatar' : 'takkie-avatar';
     const homeAvatar = document.getElementById('home-pet-avatar');

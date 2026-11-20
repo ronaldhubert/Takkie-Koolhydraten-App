@@ -24,14 +24,14 @@
 .takkie-avatar {
     width: 84px;
     height: 52px;
-    background: url('takkie.png') no-repeat center / contain;
+    background: url('../takkie.png') no-repeat center / contain;
     position: relative;
 }
 
 .siep-avatar {
     width: 78px;
     height: 56px;
-    background: url('siepie.png') no-repeat center / contain;
+    background: url('../siepie.png') no-repeat center / contain;
     position: relative;
 }
 
