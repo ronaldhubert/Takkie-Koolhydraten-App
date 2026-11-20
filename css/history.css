@@ -1,21 +1,294 @@
-/* Logboek met grafieken (weken, dagen, dagdetails). */
+/* Logboek met grafieken (weken, dagen, dagdetails) en PDF-export in Fiep Westendorp-stijl. */
 
-.hist-metric-btn { font-family: inherit; font-weight: 700; font-size: 0.78rem; padding: 6px 10px; border: 2px solid var(--border-color); border-radius: 999px; background: #fff; cursor: pointer; }
-.hist-metric-btn.active { background: var(--accent-yellow); }
-.hist-cols { display: flex; gap: 8px; align-items: stretch; }
-.hist-col { flex: 1; min-width: 0; background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; color: inherit; display: flex; flex-direction: column; align-items: center; }
-.hist-value { font-weight: 700; font-size: 0.8rem; height: 18px; }
-.hist-bar-area { position: relative; width: 100%; height: 130px; border-bottom: 3px solid var(--border-color); display: flex; align-items: flex-end; justify-content: center; }
-.hist-bar { width: 70%; background: var(--accent-yellow); border: 2px solid var(--border-color); border-bottom: none; border-radius: 8px 8px 0 0; box-sizing: border-box; }
-.hist-bar-over { background: #FFB3B3; }
-.hist-bar-today { background: #A8E6A1; }
-.hist-goal-tick { position: absolute; left: 0; right: 0; border-top: 2px dashed #999; pointer-events: none; }
-.hist-label { font-weight: 700; font-size: 0.8rem; margin-top: 4px; }
-.hist-sublabel { font-size: 0.65rem; color: #666; }
-.hist-extra { font-size: 0.65rem; color: #444; text-align: center; }
-.hist-col:active .hist-bar { transform: scaleY(0.97); }
-.hist-nav-btn { margin: 0; padding: 6px 10px; font-size: 0.8rem; background-color: var(--accent-yellow); width: auto; }
-.hist-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; font-size: 0.8rem; }
-.hist-summary > div { background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 6px 2px; }
-.hist-summary span { font-size: 0.65rem; color: #555; }
-.hist-meal { background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; }
+.hist-metric-btn {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 6px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px var(--border-color);
+    transition: transform 0.1s, box-shadow 0.1s, background-color 0.15s;
+}
+.hist-metric-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px var(--border-color);
+}
+.hist-metric-btn.active {
+    background: var(--accent-yellow);
+}
+
+.hist-chart {
+    background: #FFFDF9;
+    border: 3px solid var(--border-color);
+    border-radius: 16px;
+    padding: 14px 10px 10px 10px;
+    box-shadow: 3px 3px 0px var(--border-color);
+    margin-bottom: 14px;
+}
+
+.hist-cols {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.hist-col {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    padding: 4px 2px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background-color 0.12s;
+}
+.hist-col:hover {
+    background-color: rgba(255, 209, 102, 0.2);
+}
+
+.hist-value {
+    font-weight: 700;
+    font-size: 0.8rem;
+    height: 20px;
+    color: var(--text-main);
+}
+
+.hist-bar-area {
+    position: relative;
+    width: 100%;
+    height: 135px;
+    border-bottom: 3px solid var(--border-color);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.hist-bar {
+    width: 72%;
+    max-width: 44px;
+    background: var(--accent-green);
+    border: 2px solid var(--border-color);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    box-sizing: border-box;
+    box-shadow: 2px 0px 0px var(--border-color);
+    transition: height 0.2s ease, transform 0.1s;
+}
+.hist-bar-carbs { background: var(--accent-green); }
+.hist-bar-protein { background: #52B788; }
+.hist-bar-fat { background: var(--accent-fat); }
+.hist-bar-kcal { background: #B388EB; }
+.hist-bar-over { background: #FF8A8A !important; }
+.hist-bar-today {
+    outline: 2px dashed var(--takkie-red);
+    outline-offset: 2px;
+}
+
+.hist-goal-tick {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 2px dashed var(--takkie-red);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.hist-chart-legend {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: #555;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px dashed #ccc;
+}
+.hist-goal-pill {
+    display: inline-block;
+    background: #FFEEEE;
+    color: var(--takkie-red);
+    border: 1.5px solid var(--border-color);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-weight: 700;
+    font-size: 0.7rem;
+}
+
+.hist-label {
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-top: 6px;
+}
+.hist-sublabel {
+    font-size: 0.66rem;
+    color: #555;
+}
+.hist-extra {
+    font-size: 0.65rem;
+    color: #333;
+    font-weight: 600;
+    text-align: center;
+}
+.hist-col:active .hist-bar {
+    transform: scaleY(0.96);
+}
+.hist-nav-btn {
+    margin: 0;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    background-color: var(--accent-yellow);
+    width: auto;
+}
+
+/* Overzichtelijke week- en dagkaartjes onder de grafiek */
+.hist-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.hist-card {
+    background: var(--bubble-bg);
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-shadow: 3px 3px 0px var(--border-color);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.hist-card:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px var(--border-color);
+}
+.hist-card.hist-card-highlight {
+    background: #FFF9E6;
+}
+.hist-card.hist-card-empty {
+    background: #FAFAFA;
+    opacity: 0.82;
+}
+
+.hist-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.hist-card-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text-main);
+}
+.hist-card-meta {
+    font-size: 0.74rem;
+    font-weight: 700;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 999px;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+
+.hist-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.hist-macro-pill {
+    display: inline-block;
+    font-size: 0.73rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    background: white;
+}
+.hist-pill-carb { background: #FFD166; }
+.hist-pill-fat { background: #F4A261; color: white; }
+.hist-pill-prot { background: #2a9d8f; color: white; }
+.hist-pill-kcal { background: #9b5de5; color: white; }
+.hist-pill-water { background: #E3F2FD; }
+
+/* Dagdetails */
+.hist-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.hist-summary-tile {
+    background: #FFFDF9;
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 8px 10px;
+    box-shadow: 2px 2px 0px var(--border-color);
+}
+.hist-summary-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.hist-summary-bar {
+    height: 10px;
+    background: #eee;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.hist-summary-fill {
+    height: 100%;
+    border-radius: 6px;
+}
+
+.hist-water-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #E3F2FD;
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: 2px 2px 0px var(--border-color);
+    margin-bottom: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.hist-meal {
+    background: var(--bubble-bg);
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 2px 2px 0px var(--border-color);
+}
+.hist-meal-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}

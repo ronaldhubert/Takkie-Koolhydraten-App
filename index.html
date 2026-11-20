@@ -9,18 +9,20 @@
     <title>Takkie & Siep's Liefdevolle Keto Tracker</title>
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- html2pdf CDN voor PDF-export van het logboek -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261120k">
-    <link rel="stylesheet" href="css/auth.css?v=20261120k">
-    <link rel="stylesheet" href="css/layout.css?v=20261120k">
-    <link rel="stylesheet" href="css/pets.css?v=20261120k">
-    <link rel="stylesheet" href="css/widgets.css?v=20261120k">
-    <link rel="stylesheet" href="css/cards.css?v=20261120k">
-    <link rel="stylesheet" href="css/components.css?v=20261120k">
-    <link rel="stylesheet" href="css/team.css?v=20261120k">
-    <link rel="stylesheet" href="css/history.css?v=20261120k">
+    <link rel="stylesheet" href="css/base.css?v=20261120l">
+    <link rel="stylesheet" href="css/auth.css?v=20261120l">
+    <link rel="stylesheet" href="css/layout.css?v=20261120l">
+    <link rel="stylesheet" href="css/pets.css?v=20261120l">
+    <link rel="stylesheet" href="css/widgets.css?v=20261120l">
+    <link rel="stylesheet" href="css/cards.css?v=20261120l">
+    <link rel="stylesheet" href="css/components.css?v=20261120l">
+    <link rel="stylesheet" href="css/team.css?v=20261120l">
+    <link rel="stylesheet" href="css/history.css?v=20261120l">
 </head>
 <body>
 
@@ -313,9 +315,12 @@
         <!-- TAB 3F: MIJN LOGBOEK (WEKEN / DAGEN / DETAILS) -->
         <div id="tab-history" class="tab-content">
             <div class="widget" id="history-widget">
-                <h3>📊 Mijn Logboek</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <h3 style="margin: 0;">📊 Mijn Logboek</h3>
+                    <button type="button" class="btn btn-auto" id="btn-export-history-pdf" style="margin: 0; padding: 6px 12px; font-size: 0.8rem; background-color: var(--accent-yellow); width: auto;">📄 Exporteer PDF</button>
+                </div>
                 <div id="history-metric" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;"></div>
-                <div id="history-nav" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;"></div>
+                <div id="history-nav" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px;"></div>
                 <div id="history-content"></div>
             </div>
         </div>
@@ -626,21 +631,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261120k"></script>
-<script src="js/quotes.js?v=20261120k"></script>
-<script src="js/utils.js?v=20261120k"></script>
-<script src="js/auth.js?v=20261120k"></script>
-<script src="js/data.js?v=20261120k"></script>
-<script src="js/meals.js?v=20261120k"></script>
-<script src="js/favorites.js?v=20261120k"></script>
-<script src="js/ai.js?v=20261120k"></script>
-<script src="js/recipes.js?v=20261120k"></script>
-<script src="js/team.js?v=20261120k"></script>
-<script src="js/chat.js?v=20261120k"></script>
-<script src="js/notifications.js?v=20261120k"></script>
-<script src="js/history.js?v=20261120k"></script>
-<script src="js/ui.js?v=20261120k"></script>
-<script src="js/main.js?v=20261120k"></script>
+<script src="js/state.js?v=20261120l"></script>
+<script src="js/quotes.js?v=20261120l"></script>
+<script src="js/utils.js?v=20261120l"></script>
+<script src="js/auth.js?v=20261120l"></script>
+<script src="js/data.js?v=20261120l"></script>
+<script src="js/meals.js?v=20261120l"></script>
+<script src="js/favorites.js?v=20261120l"></script>
+<script src="js/ai.js?v=20261120l"></script>
+<script src="js/recipes.js?v=20261120l"></script>
+<script src="js/team.js?v=20261120l"></script>
+<script src="js/chat.js?v=20261120l"></script>
+<script src="js/notifications.js?v=20261120l"></script>
+<script src="js/history.js?v=20261120l"></script>
+<script src="js/ui.js?v=20261120l"></script>
+<script src="js/main.js?v=20261120l"></script>
 
 </body>
 </html>

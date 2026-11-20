@@ -1,16 +1,16 @@
-// Logboek met grafieken: weken, dagen en dagdetails.
+// Logboek met grafieken: weken, dagen, dagdetails en PDF-export.
 // Klassiek script (geen module): deelt globale functies en variabelen met de andere bestanden in js/.
 // Zie ARCHITECTURE.md voor de laadvolgorde.
 
 // ==========================================
-// LOGBOEK: WEKEN > DAGEN > DAGDETAILS
+// LOGBOEK: WEKEN > DAGEN > DAGDETAILS + PDF
 // ==========================================
 const historyState = { view: 'weeks', pageOffset: 0, weekStart: null, day: null, metric: 'carbs' };
 const HISTORY_METRICS = {
-    carbs: { label: 'Koolhydraten', short: 'KH', unit: 'g' },
-    protein: { label: 'Eiwit', short: 'Eiwit', unit: 'g' },
-    fat: { label: 'Vet', short: 'Vet', unit: 'g' },
-    kcal: { label: 'Calorieën', short: 'kcal', unit: ' kcal' }
+    carbs: { label: 'Koolhydraten', short: 'KH', unit: 'g', icon: '🥑' },
+    protein: { label: 'Eiwit', short: 'Eiwit', unit: 'g', icon: '🥩' },
+    fat: { label: 'Vet', short: 'Vet', unit: 'g', icon: '🧈' },
+    kcal: { label: 'Calorieën', short: 'kcal', unit: ' kcal', icon: '⚡' }
 };
 function metricGoal() {
     return appState.goals[historyState.metric] || 1;
@@ -20,11 +20,13 @@ function renderMetricPicker() {
     if (!el) return;
     el.innerHTML = Object.keys(HISTORY_METRICS).map(k => {
         const active = historyState.metric === k;
-        return `<button type="button" class="hist-metric-btn${active ? ' active' : ''}" data-hist-metric="${k}">${HISTORY_METRICS[k].label}</button>`;
+        const m = HISTORY_METRICS[k];
+        return `<button type="button" class="hist-metric-btn${active ? ' active' : ''}" data-hist-metric="${k}">${m.icon} ${m.label}</button>`;
     }).join('');
 }
 const HISTORY_WEEKS_PER_PAGE = 3;
 const DAY_NAMES_SHORT = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+const DAY_NAMES_FULL = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
 const MONTH_NAMES_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
 function mealKcal(m) {
@@ -95,19 +97,21 @@ function summarizeDay(meals, dateStr) {
 }
 
 function buildBarChart(items) {
-    // items: [{ label, sublabel, value, extra, action, highlight }]
+    const metricKey = historyState.metric;
+    const metricInfo = HISTORY_METRICS[metricKey];
     const goal = metricGoal();
-    const unit = HISTORY_METRICS[historyState.metric].unit;
+    const unit = metricInfo.unit;
     const max = Math.max(goal * 1.15, ...items.map(i => i.value), 1);
     const goalPct = Math.min(100, (goal / max) * 100);
     const bars = items.map(i => {
-        const h = Math.max(i.value > 0 ? 4 : 0, (i.value / max) * 100);
-        const over = i.value > goal ? ' hist-bar-over' : '';
+        const h = Math.max(i.value > 0 ? 6 : 0, (i.value / max) * 100);
+        const isOver = (metricKey === 'carbs' || metricKey === 'kcal') && i.value > goal;
+        const overClass = isOver ? ' hist-bar-over' : '';
         return `
             <button type="button" class="hist-col" ${i.action}>
                 <div class="hist-value">${i.value > 0 ? i.value : '–'}</div>
                 <div class="hist-bar-area"><div class="hist-goal-tick" style="bottom: ${goalPct}%;"></div>
-                    <div class="hist-bar${over}${i.highlight ? ' hist-bar-today' : ''}" style="height: ${h}%;"></div>
+                    <div class="hist-bar hist-bar-${metricKey}${overClass}${i.highlight ? ' hist-bar-today' : ''}" style="height: ${h}%;"></div>
                 </div>
                 <div class="hist-label">${i.label}</div>
                 <div class="hist-sublabel">${i.sublabel}</div>
@@ -117,7 +121,10 @@ function buildBarChart(items) {
     return `
         <div class="hist-chart">
             <div class="hist-cols">${bars}</div>
-            <div style="font-size:0.7rem; color:#888; text-align:center; margin-top:4px;">${HISTORY_METRICS[historyState.metric].label} · stippellijn = dagdoel (${goal}${unit})</div>
+            <div class="hist-chart-legend">
+                <span>${metricInfo.icon} <strong>${metricInfo.label}</strong> (${unit.trim()})</span>
+                <span class="hist-goal-pill">🎯 Dagdoel: ${goal}${unit}</span>
+            </div>
         </div>`;
 }
 
@@ -127,7 +134,7 @@ async function renderHistory() {
     if (!navEl || !contentEl || !currentUser) return;
     renderMetricPicker();
 
-    contentEl.innerHTML = '<p style="color:#666;">Even laden... 🐾</p>';
+    contentEl.innerHTML = '<p style="color:#666;">Even snuffelen in je logboek... 🐾</p>';
     const thisMonday = getMondayOf(new Date());
     const todayStr = getTodayString();
 
@@ -139,55 +146,125 @@ async function renderHistory() {
         const rangeEnd = formatDateLocal(addDays(weekStarts[weekStarts.length - 1], 6));
         const data = await fetchHistoryRange(rangeStart, rangeEnd);
 
-        const items = weekStarts.map(ws => {
+        const weekSummaries = weekStarts.map(ws => {
+            const wsStr = formatDateLocal(ws);
             const days = [];
-            for (let d = 0; d < 7; d++) days.push(summarizeDay(data.meals, formatDateLocal(addDays(ws, d))));
+            let totalWater = 0;
+            for (let d = 0; d < 7; d++) {
+                const ds = formatDateLocal(addDays(ws, d));
+                days.push(summarizeDay(data.meals, ds));
+                totalWater += (data.water[ds] || 0);
+            }
             const logged = days.filter(d => d.count > 0);
-            const m = historyState.metric;
             const avgKcal = logged.length ? Math.round(logged.reduce((s, d) => s + d.kcal, 0) / logged.length) : 0;
             const avgCarbs = logged.length ? Math.round(logged.reduce((s, d) => s + d.carbs, 0) / logged.length) : 0;
+            const avgFat = logged.length ? Math.round(logged.reduce((s, d) => s + d.fat, 0) / logged.length) : 0;
+            const avgProt = logged.length ? Math.round(logged.reduce((s, d) => s + d.protein, 0) / logged.length) : 0;
+            const m = historyState.metric;
             const avgMetric = logged.length ? Math.round(logged.reduce((s, d) => s + d[m], 0) / logged.length) : 0;
-            const isThis = formatDateLocal(ws) === formatDateLocal(thisMonday);
+            const isThis = wsStr === formatDateLocal(thisMonday);
             return {
-                label: `Week ${getISOWeekNumber(ws)}`,
-                sublabel: `${shortDateLabel(ws)} – ${shortDateLabel(addDays(ws, 6))}`,
-                value: avgMetric,
-                extra: logged.length ? `${m === 'kcal' ? avgCarbs + 'g KH' : avgKcal + ' kcal'} · ${logged.length}/7 dgn` : 'niets gelogd',
-                action: `data-hist-week="${formatDateLocal(ws)}"`,
-                highlight: isThis
+                ws,
+                wsStr,
+                weekNum: getISOWeekNumber(ws),
+                rangeLabel: `${shortDateLabel(ws)} – ${shortDateLabel(addDays(ws, 6))}`,
+                loggedDays: logged.length,
+                avgKcal,
+                avgCarbs,
+                avgFat,
+                avgProt,
+                avgMetric,
+                totalWater,
+                isThis
             };
         });
 
+        const chartItems = weekSummaries.map(w => ({
+            label: `Week ${w.weekNum}`,
+            sublabel: w.rangeLabel,
+            value: w.avgMetric,
+            extra: w.loggedDays ? `${w.loggedDays}/7 dgn` : 'leeg',
+            action: `data-hist-week="${w.wsStr}"`,
+            highlight: w.isThis
+        }));
+
+        const weekCardsHtml = [...weekSummaries].reverse().map(w => `
+            <button type="button" class="hist-card${w.isThis ? ' hist-card-highlight' : ''}${w.loggedDays === 0 ? ' hist-card-empty' : ''}" data-hist-week="${w.wsStr}">
+                <div class="hist-card-header">
+                    <span class="hist-card-title">📅 Week ${w.weekNum} <span style="font-weight:500; font-size:0.8rem; color:#555;">(${w.rangeLabel})</span></span>
+                    <span class="hist-card-meta">${w.loggedDays}/7 dgn 👉</span>
+                </div>
+                ${w.loggedDays > 0 ? `
+                    <div class="hist-badge-row">
+                        <span class="hist-macro-pill hist-pill-carb">Gem. ${w.avgCarbs}g KH</span>
+                        <span class="hist-macro-pill hist-pill-fat">${w.avgFat}g Vet</span>
+                        <span class="hist-macro-pill hist-pill-prot">${w.avgProt}g Eiwit</span>
+                        <span class="hist-macro-pill hist-pill-kcal">${w.avgKcal} kcal</span>
+                        <span class="hist-macro-pill hist-pill-water">💧 ${w.totalWater} glazen</span>
+                    </div>
+                ` : `<div style="font-size:0.78rem; color:#666;">Nog geen maaltijden gelogd in deze week.</div>`}
+            </button>
+        `).join('');
+
         navEl.innerHTML = `
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-prev>← Eerder</button>
-            <span style="font-weight:700; font-size:0.85rem; text-align:center;">Gemiddeld per dag</span>
+            <span style="font-weight:700; font-size:0.85rem; text-align:center;">Gemiddeld per dag (3 weken)</span>
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-next ${historyState.pageOffset === 0 ? 'disabled style="opacity:0.4;"' : ''}>Later →</button>`;
-        contentEl.innerHTML = buildBarChart(items) + '<p style="font-size:0.8rem; color:#666; margin:8px 0 0;">Tik op een week om de dagen te zien.</p>';
+        contentEl.innerHTML = `
+            ${buildBarChart(chartItems)}
+            <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Overzicht per week (tik voor alle dagen):</div>
+            <div class="hist-cards-list">${weekCardsHtml}</div>`;
         return;
     }
 
     if (historyState.view === 'days') {
         const ws = parseLocalDate(historyState.weekStart);
         const data = await fetchHistoryRange(historyState.weekStart, formatDateLocal(addDays(ws, 6)));
-        const items = [];
+        const chartItems = [];
+        const dayRows = [];
         for (let d = 0; d < 7; d++) {
             const dayObj = addDays(ws, d);
             const dateStr = formatDateLocal(dayObj);
             const s = summarizeDay(data.meals, dateStr);
-            items.push({
+            const water = data.water[dateStr] || 0;
+            const isToday = dateStr === todayStr;
+            chartItems.push({
                 label: DAY_NAMES_SHORT[dayObj.getDay()],
                 sublabel: shortDateLabel(dayObj),
                 value: s[historyState.metric],
-                extra: s.count ? (historyState.metric === 'kcal' ? `${s.carbs}g KH` : `${s.kcal} kcal`) : '–',
+                extra: s.count ? `${s.count}x` : '–',
                 action: `data-hist-day="${dateStr}"`,
-                highlight: dateStr === todayStr
+                highlight: isToday
             });
+            dayRows.push({ dayObj, dateStr, s, water, isToday });
         }
+
+        const dayCardsHtml = dayRows.map(({ dayObj, dateStr, s, water, isToday }) => `
+            <button type="button" class="hist-card${isToday ? ' hist-card-highlight' : ''}${s.count === 0 && water === 0 ? ' hist-card-empty' : ''}" data-hist-day="${dateStr}">
+                <div class="hist-card-header">
+                    <span class="hist-card-title">${DAY_NAMES_FULL[dayObj.getDay()]} ${shortDateLabel(dayObj)}${isToday ? ' <span style="color:var(--takkie-red);">(Vandaag)</span>' : ''}</span>
+                    <span class="hist-card-meta">${s.count} hapje(s) 👉</span>
+                </div>
+                ${s.count > 0 || water > 0 ? `
+                    <div class="hist-badge-row">
+                        <span class="hist-macro-pill hist-pill-carb">${s.carbs}g KH</span>
+                        <span class="hist-macro-pill hist-pill-fat">${s.fat}g Vet</span>
+                        <span class="hist-macro-pill hist-pill-prot">${s.protein}g Eiwit</span>
+                        <span class="hist-macro-pill hist-pill-kcal">${s.kcal} kcal</span>
+                        <span class="hist-macro-pill hist-pill-water">💧 ${water}/8</span>
+                    </div>
+                ` : `<div style="font-size:0.78rem; color:#666;">Geen hapjes of water gelogd.</div>`}
+            </button>
+        `).join('');
+
         navEl.innerHTML = `
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-back-weeks>← Weken</button>
             <span style="font-weight:700; font-size:0.85rem; text-align:center;">Week ${getISOWeekNumber(ws)}<br><span style="font-weight:500;">${shortDateLabel(ws)} – ${shortDateLabel(addDays(ws, 6))}</span></span>
             <span style="width:70px;"></span>`;
-        contentEl.innerHTML = buildBarChart(items) + '<p style="font-size:0.8rem; color:#666; margin:8px 0 0;">Tik op een dag voor de details.</p>';
+        contentEl.innerHTML = `
+            ${buildBarChart(chartItems)}
+            <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Dagen in Week ${getISOWeekNumber(ws)} (tik voor alle maaltijden):</div>
+            <div class="hist-cards-list">${dayCardsHtml}</div>`;
         return;
     }
 
@@ -199,27 +276,245 @@ async function renderHistory() {
     const goals = appState.goals;
     navEl.innerHTML = `
         <button type="button" class="btn btn-auto hist-nav-btn" data-hist-back-days>← Week</button>
-        <span style="font-weight:700; font-size:0.85rem; text-align:center;">${DAY_NAMES_SHORT[dayObj.getDay()]} ${shortDateLabel(dayObj)}</span>
+        <span style="font-weight:700; font-size:0.9rem; text-align:center;">${DAY_NAMES_FULL[dayObj.getDay()]} ${shortDateLabel(dayObj)}</span>
         <span style="width:70px;"></span>`;
+
+    const makeTile = (title, val, goal, unit, color) => {
+        const pct = Math.min(100, Math.round((val / Math.max(1, goal)) * 100));
+        return `
+            <div class="hist-summary-tile">
+                <div class="hist-summary-top">
+                    <span>${title}</span>
+                    <span style="color:${color};">${val}${unit} <span style="color:#666; font-weight:500;">/ ${goal}${unit}</span></span>
+                </div>
+                <div class="hist-summary-bar">
+                    <div class="hist-summary-fill" style="width:${pct}%; background:${color};"></div>
+                </div>
+            </div>`;
+    };
+
+    let waterDots = '';
+    for (let i = 1; i <= 8; i++) {
+        waterDots += `<span style="opacity:${i <= water ? '1' : '0.25'};">💧</span>`;
+    }
+
     const mealsHtml = s.meals.length
         ? s.meals.map(m => `
             <div class="hist-meal">
-                <div style="font-weight:700;">${escapeHtml(m.type || '')} ${escapeHtml(m.name || '')}</div>
-                <div style="font-size:0.8rem; color:#555;">${Number(m.carbs) || 0}g KH · ${Number(m.fat) || 0}g Vet · ${Number(m.protein) || 0}g Eiwit · ${mealKcal(m)} kcal</div>
+                <div class="hist-meal-top">
+                    <span>${escapeHtml(m.type || '🍽️')} — ${escapeHtml(m.name || '')}</span>
+                </div>
+                <div class="hist-badge-row">
+                    <span class="hist-macro-pill hist-pill-carb">${Number(m.carbs) || 0}g KH</span>
+                    <span class="hist-macro-pill hist-pill-fat">${Number(m.fat) || 0}g Vet</span>
+                    <span class="hist-macro-pill hist-pill-prot">${Number(m.protein) || 0}g Eiwit</span>
+                    <span class="hist-macro-pill hist-pill-kcal">${mealKcal(m)} kcal</span>
+                </div>
             </div>`).join('')
-        : '<p style="color:#666;">Geen maaltijden gelogd op deze dag.</p>';
+        : '<p style="color:#666; text-align:center;">Geen maaltijden of drankjes gelogd op deze dag.</p>';
+
     contentEl.innerHTML = `
         <div class="hist-summary">
-            <div><strong>${s.kcal}</strong><br><span>kcal / ${goals.kcal}</span></div>
-            <div><strong>${s.carbs}g</strong><br><span>KH / ${goals.carbs}</span></div>
-            <div><strong>${s.fat}g</strong><br><span>Vet / ${goals.fat}</span></div>
-            <div><strong>${s.protein}g</strong><br><span>Eiwit / ${goals.protein}</span></div>
+            ${makeTile('🥑 Koolhydraten', s.carbs, goals.carbs, 'g', 'var(--takkie-red)')}
+            ${makeTile('🧈 Vetten', s.fat, goals.fat, 'g', '#B2530C')}
+            ${makeTile('🥩 Eiwitten', s.protein, goals.protein, 'g', '#1b4332')}
+            ${makeTile('⚡ Calorieën', s.kcal, goals.kcal, '', '#5a189a')}
         </div>
-        <p style="margin:8px 0;">💧 <strong>${water}</strong> / 8 glazen water</p>
+        <div class="hist-water-box">
+            <span>Takkie & Siep's Drinkbak: <strong>${water} / 8 glazen</strong></span>
+            <span>${waterDots}</span>
+        </div>
+        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">🍽️ Gelogde hapjes & drankjes (${s.meals.length}):</div>
         ${mealsHtml}`;
 }
 
+async function exportHistoryToPdf() {
+    if (!currentUser) return;
+    const btn = document.getElementById('btn-export-history-pdf');
+    const origText = btn ? btn.innerText : '📄 Exporteer PDF';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = '🐾 PDF maken...';
+    }
+
+    try {
+        const thisMonday = getMondayOf(new Date());
+        let startStr, endStr, periodTitle, fileSlug;
+
+        if (historyState.view === 'day' && historyState.day) {
+            startStr = historyState.day;
+            endStr = historyState.day;
+            const dObj = parseLocalDate(historyState.day);
+            periodTitle = `${DAY_NAMES_FULL[dObj.getDay()]} ${shortDateLabel(dObj)} ${dObj.getFullYear()}`;
+            fileSlug = historyState.day;
+        } else if (historyState.view === 'days' && historyState.weekStart) {
+            const ws = parseLocalDate(historyState.weekStart);
+            const we = addDays(ws, 6);
+            startStr = formatDateLocal(ws);
+            endStr = formatDateLocal(we);
+            periodTitle = `Week ${getISOWeekNumber(ws)} (${shortDateLabel(ws)} – ${shortDateLabel(we)} ${we.getFullYear()})`;
+            fileSlug = `week-${getISOWeekNumber(ws)}-${startStr}`;
+        } else {
+            const newestStart = addDays(thisMonday, -7 * historyState.pageOffset * HISTORY_WEEKS_PER_PAGE);
+            const oldestStart = addDays(newestStart, -7 * (HISTORY_WEEKS_PER_PAGE - 1));
+            const newestEnd = addDays(newestStart, 6);
+            startStr = formatDateLocal(oldestStart);
+            endStr = formatDateLocal(newestEnd);
+            periodTitle = `Week ${getISOWeekNumber(oldestStart)} t/m Week ${getISOWeekNumber(newestStart)} (${shortDateLabel(oldestStart)} – ${shortDateLabel(newestEnd)} ${newestEnd.getFullYear()})`;
+            fileSlug = `${startStr}-tm-${endStr}`;
+        }
+
+        const data = await fetchHistoryRange(startStr, endStr);
+        const startObj = parseLocalDate(startStr);
+        const endObj = parseLocalDate(endStr);
+        const totalDays = Math.round((endObj - startObj) / 86400000) + 1;
+
+        const allDaySummaries = [];
+        for (let i = 0; i < totalDays; i++) {
+            const dObj = addDays(startObj, i);
+            const ds = formatDateLocal(dObj);
+            const s = summarizeDay(data.meals, ds);
+            const water = data.water[ds] || 0;
+            allDaySummaries.push({ dObj, ds, s, water });
+        }
+
+        const loggedDays = allDaySummaries.filter(x => x.s.count > 0 || x.water > 0);
+        const mealLoggedDays = allDaySummaries.filter(x => x.s.count > 0);
+        const avgCarbs = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.carbs, 0) / mealLoggedDays.length) : 0;
+        const avgFat = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.fat, 0) / mealLoggedDays.length) : 0;
+        const avgProt = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.protein, 0) / mealLoggedDays.length) : 0;
+        const avgKcal = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.kcal, 0) / mealLoggedDays.length) : 0;
+        const totalWater = allDaySummaries.reduce((a, b) => a + b.water, 0);
+
+        const userName = appState.displayName || getDefaultDisplayName();
+        const goals = appState.goals;
+
+        const daysToRender = (totalDays === 1 || loggedDays.length === 0) ? allDaySummaries : loggedDays;
+        const daysHtml = daysToRender.map(({ dObj, s, water }) => {
+            const mealsRows = s.meals.length
+                ? s.meals.map(m => `
+                    <tr>
+                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; font-weight:700;">${escapeHtml(m.type || '🍽️')}</td>
+                        <td style="padding:6px 8px; border-bottom:1px solid #ddd;">${escapeHtml(m.name || '')}</td>
+                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; color:#E63946; font-weight:700;">${Number(m.carbs) || 0}g</td>
+                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; color:#B2530C; font-weight:700;">${Number(m.fat) || 0}g</td>
+                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; color:#1b4332; font-weight:700;">${Number(m.protein) || 0}g</td>
+                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; font-weight:700;">${mealKcal(m)}</td>
+                    </tr>`).join('')
+                : `<tr><td colspan="6" style="padding:8px; color:#666; text-align:center;">Geen maaltijden gelogd op deze dag.</td></tr>`;
+
+            return `
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:12px 14px; margin-bottom:12px; page-break-inside:avoid;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:2px solid #1A1A1A; padding-bottom:6px; margin-bottom:8px;">
+                        <div style="font-size:15px; font-weight:700;">📅 ${DAY_NAMES_FULL[dObj.getDay()]} ${shortDateLabel(dObj)} ${dObj.getFullYear()}</div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:12px; font-weight:700;">
+                            <span style="background:#FFD166; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.carbs}g / ${goals.carbs}g KH</span>
+                            <span style="background:#F4A261; color:#fff; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.fat}g Vet</span>
+                            <span style="background:#2a9d8f; color:#fff; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.protein}g Eiwit</span>
+                            <span style="background:#9b5de5; color:#fff; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.kcal} kcal</span>
+                            <span style="background:#E3F2FD; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">💧 ${water}/8 glazen</span>
+                        </div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead>
+                            <tr style="background:#F1FAEE; text-align:left;">
+                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A;">Moment</th>
+                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A;">Maaltijd / Drankje</th>
+                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">KH</th>
+                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">Vet</th>
+                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">Eiwit</th>
+                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">Kcal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${mealsRows}</tbody>
+                    </table>
+                </div>`;
+        }).join('');
+
+        const reportHtml = `
+            <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:18px; box-sizing:border-box;">
+                <div style="background:#F1FAEE; border:4px solid #1A1A1A; border-radius:20px; padding:16px 18px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
+                    <div>
+                        <div style="color:#E63946; font-size:22px; font-weight:700; margin-bottom:2px;">🐾 Takkie & Siep's Keto Logboek</div>
+                        <div style="font-size:14px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
+                        <div style="font-size:12px; color:#555; margin-top:4px;">Dagdoelen: ${goals.carbs}g KH • ${goals.fat}g Vet • ${goals.protein}g Eiwit • ${goals.kcal} kcal • 8 glazen water</div>
+                    </div>
+                    <img src="takkie.png" alt="Takkie" style="height:54px; width:auto;">
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px; text-align:center;">
+                    <div style="background:#FFF9E6; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
+                        <div style="font-size:11px; color:#555; font-weight:600;">Gelogde dagen</div>
+                        <div style="font-size:17px; font-weight:700;">${mealLoggedDays.length} / ${totalDays}</div>
+                    </div>
+                    <div style="background:#FFD166; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
+                        <div style="font-size:11px; color:#1A1A1A; font-weight:600;">Gem. KH / dag</div>
+                        <div style="font-size:17px; font-weight:700;">${avgCarbs}g</div>
+                    </div>
+                    <div style="background:#F4A261; color:#fff; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
+                        <div style="font-size:11px; font-weight:600;">Gem. Vet / dag</div>
+                        <div style="font-size:17px; font-weight:700;">${avgFat}g</div>
+                    </div>
+                    <div style="background:#2a9d8f; color:#fff; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
+                        <div style="font-size:11px; font-weight:600;">Gem. Eiwit / dag</div>
+                        <div style="font-size:17px; font-weight:700;">${avgProt}g</div>
+                    </div>
+                    <div style="background:#E3F2FD; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
+                        <div style="font-size:11px; color:#555; font-weight:600;">Gem. Kcal & Water</div>
+                        <div style="font-size:14px; font-weight:700;">${avgKcal} kcal • 💧${totalWater}</div>
+                    </div>
+                </div>
+
+                ${daysHtml}
+
+                <div style="text-align:center; font-size:11px; color:#666; margin-top:10px;">
+                    🐾 Met liefde gemaakt in Takkie & Siep's Keto Tracker — "Elke kleine stap telt!"
+                </div>
+            </div>`;
+
+        if (typeof window.html2pdf === 'function') {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = reportHtml;
+            document.body.appendChild(wrapper);
+            try {
+                await window.html2pdf()
+                    .set({
+                        margin: [8, 8, 8, 8],
+                        filename: `Takkie-Siep-Logboek-${fileSlug}.pdf`,
+                        image: { type: 'jpeg', quality: 0.96 },
+                        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFDF9' },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    })
+                    .from(wrapper.firstElementChild)
+                    .save();
+            } finally {
+                wrapper.remove();
+            }
+        } else {
+            const printWin = window.open('', '_blank');
+            if (printWin) {
+                printWin.document.write(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Takkie & Siep Logboek</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap"></head><body style="margin:0; background:#FFFDF9;">${reportHtml}<script>window.onload=()=>{setTimeout(()=>window.print(),300);};<\/script></body></html>`);
+                printWin.document.close();
+            } else {
+                showInlineMessage('btn-export-history-pdf', 'PDF-bibliotheek kon nog niet laden. Vernieuw de pagina en probeer het opnieuw.');
+            }
+        }
+    } catch (e) {
+        showInlineMessage('btn-export-history-pdf', 'Exporteren naar PDF mislukte: ' + (e.message || e));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = origText;
+        }
+    }
+}
+
 document.addEventListener('click', (e) => {
+    const pdfBtn = e.target.closest('#btn-export-history-pdf');
+    if (pdfBtn) {
+        exportHistoryToPdf();
+        return;
+    }
     const mt = e.target.closest('[data-hist-metric]');
     if (mt && document.getElementById('history-widget') && document.getElementById('history-widget').contains(mt)) {
         historyState.metric = mt.getAttribute('data-hist-metric');
