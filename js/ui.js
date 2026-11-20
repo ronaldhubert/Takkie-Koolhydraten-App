@@ -151,7 +151,7 @@ function renderApp() {
             "<span style='color:#B2530C; font-weight:700;'>" + mf + "g</span> | " +
             "<span style='color:#1b4332; font-weight:700;'>" + mp + "g</span><br>" +
             "<button onclick='openEditMeal(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
-            "<button onclick='deleteMeal(" + idx + ")' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
+            "<button onclick='deleteMeal(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
     });
     if (appState.meals.length === 0) {
@@ -232,7 +232,7 @@ function renderApp() {
             "<span style='color:#B2530C; font-weight:700;'>" + ifat + "g</span> | " +
             "<span style='color:#1b4332; font-weight:700;'>" + ip + "g</span><br>" +
             "<button onclick='openEditFavorite(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
-            "<button onclick='deleteFavorite(" + idx + ")' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
+            "<button onclick='deleteFavorite(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
     });
 

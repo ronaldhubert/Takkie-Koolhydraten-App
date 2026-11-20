@@ -7,31 +7,34 @@ function getMemberName(userId) {
     return mem ? mem.displayName : 'clublid';
 }
 
-window.openDirectMessage = function(recipientId) {
-    const old = document.getElementById('dm-overlay');
+window.openDirectMessage = function(recipientId, btnEl = null) {
+    const old = document.getElementById('dm-inline-box');
     if (old) old.remove();
     const name = getMemberName(recipientId);
-    const overlay = document.createElement('div');
-    overlay.id = 'dm-overlay';
-    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;';
-    overlay.innerHTML = `
-        <div style="background:#fff; border:3px solid var(--border-color); border-radius:18px; padding:16px; width:100%; max-width:380px;">
-            <h3 style="margin:0 0 8px 0;">✉️ Bericht aan ${escapeHtml(name)}</h3>
-            <p style="margin:0 0 8px 0; font-size:0.8rem; color:#666;">Alleen jij en ${escapeHtml(name)} zien dit bericht. Het geeft een melding.</p>
-            <textarea id="dm-text" rows="3" maxlength="300" placeholder="Typ een lief berichtje..." style="width:100%; box-sizing:border-box; font-family:inherit; padding:8px; border:2px solid var(--border-color); border-radius:10px;"></textarea>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-                <button type="button" class="btn" id="dm-cancel" style="flex:1; background:#eee;">Annuleren</button>
-                <button type="button" class="btn btn-primary" id="dm-send" style="flex:1; background-color: var(--takkie-red);">Versturen</button>
-            </div>
+    const anchor = (btnEl && btnEl.closest('.member-card')) || btnEl || document.getElementById('team-members-list');
+    if (!anchor || !anchor.parentNode) return;
+
+    const box = document.createElement('div');
+    box.id = 'dm-inline-box';
+    box.style.cssText = 'background:#FFF9E6; border:2px solid var(--border-color); border-radius:14px; padding:12px; margin:8px 0; box-shadow:2px 2px 0px var(--border-color);';
+    box.innerHTML = `
+        <div style="font-weight:700; font-size:0.88rem; margin-bottom:4px;">✉️ Privébericht aan ${escapeHtml(name)}</div>
+        <div style="font-size:0.76rem; color:#666; margin-bottom:8px;">Alleen jij en ${escapeHtml(name)} zien dit bericht in de Huiskamer.</div>
+        <textarea id="dm-text" rows="2" maxlength="300" placeholder="Typ een lief berichtje..." style="width:100%; box-sizing:border-box; font-family:inherit; padding:8px; margin-bottom:8px; border:2px solid var(--border-color); border-radius:10px;"></textarea>
+        <div style="display:flex; gap:8px;">
+            <button type="button" class="btn" id="dm-cancel" style="flex:1; padding:8px; background:#eee;">Annuleren</button>
+            <button type="button" class="btn" id="dm-send" style="flex:1; padding:8px; background-color: var(--accent-green);">🐾 Versturen</button>
         </div>`;
-    document.body.appendChild(overlay);
+    anchor.insertAdjacentElement('afterend', box);
     const textEl = document.getElementById('dm-text');
     textEl.focus();
-    document.getElementById('dm-cancel').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('dm-cancel').addEventListener('click', () => box.remove());
     document.getElementById('dm-send').addEventListener('click', async () => {
         const text = textEl.value.trim();
-        if (!text) return;
+        if (!text) {
+            showInlineMessage('dm-send', 'Typ eerst een lief berichtje!', 'error');
+            return;
+        }
         const sendBtn = document.getElementById('dm-send');
         sendBtn.disabled = true;
         const ok = await sendTeamMessage('text', text, null, null, recipientId);
@@ -39,7 +42,8 @@ window.openDirectMessage = function(recipientId) {
             sendBtn.disabled = false;
             return;
         }
-        overlay.remove();
+        box.remove();
+        showInlineMessage(anchor, `Privébericht verstuurd aan ${name}!`, 'success');
     });
 };
 
@@ -103,7 +107,7 @@ async function sendTeamMessage(msgType, content, recipePayload = null, overrideP
         .select()
         .single();
     if (sendError && recipientId) {
-        alert('Het privébericht kon niet worden verstuurd. Heb je supabase-direct-messages.sql al uitgevoerd in Supabase? (' + sendError.message + ')');
+        showInlineMessage('dm-send', 'Het privébericht kon niet worden verstuurd. Heb je supabase-direct-messages.sql al uitgevoerd in Supabase? (' + sendError.message + ')', 'error', 8000);
         return false;
     }
 
@@ -124,8 +128,8 @@ async function sendTeamMessage(msgType, content, recipePayload = null, overrideP
 window.shareRecipeWithTeam = async function(recipeIdx, evt = null) {
     if (evt) evt.stopPropagation();
     if (!appState.teamId) {
-        alert("Je zit nog niet in een clubje! Ga naar het tabblad '🐾 Clubje' om een clubje te maken of lid te worden.");
         switchTab('team');
+        showInlineMessage('btn-create-team', "Je zit nog niet in een clubje! Maak hieronder een clubje aan of word lid met een code.", 'info', 7000);
         return;
     }
     const r = appState.recipes[recipeIdx];
@@ -147,11 +151,11 @@ window.shareRecipeWithTeam = async function(recipeIdx, evt = null) {
         payload
     );
 
-    alert(`Woef! "${r.name}" staat nu in Takkie & Siep's Huiskamer voor je hele clubje!`);
     switchTab('team');
+    showInlineMessage('team-chat-list', `Woef! "${r.name}" staat nu in Takkie & Siep's Huiskamer voor je hele clubje!`, 'success');
 };
 
-window.addSharedRecipeToMine = async function(msgIdx) {
+window.addSharedRecipeToMine = async function(msgIdx, btnEl = null) {
     const msg = appState.teamMessages[msgIdx];
     if (!msg || !msg.recipe_payload) return;
     const rp = msg.recipe_payload;
@@ -184,7 +188,7 @@ window.addSharedRecipeToMine = async function(msgIdx) {
         renderApp();
     }
 
-    alert(`💖 "${rp.name}" is toegevoegd aan jouw favorieten én je receptenboek!`);
+    showInlineMessage(btnEl || 'team-shared-recipes-list', `💖 "${rp.name}" is toegevoegd aan jouw favorieten én je receptenboek!`, 'success');
 };
 
 window.sendHugToSosSender = async function(senderName) {
@@ -267,7 +271,7 @@ function renderTeamChat() {
                 <span class="shared-recipe-badge">🐾 Gedeeld Club-Recept</span>
                 <div style="font-size: 0.9rem; margin: 2px 0;">📖 ${escapeHtml(rp.name)}</div>
                 <div style="font-size: 0.75rem; color: #444; margin-bottom: 6px;">${escapeHtml(rp.carbs)} • ${escapeHtml(rp.fat)} • ${escapeHtml(rp.protein)}</div>
-                <button onclick="addSharedRecipeToMine(${idx})" class="btn" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-yellow);">💖 Voeg toe aan mijn favorieten</button>
+                <button onclick="addSharedRecipeToMine(${idx}, this)" class="btn" style="padding: 5px 10px; font-size: 0.75rem; background: var(--accent-yellow);">💖 Voeg toe aan mijn favorieten</button>
             </div>`;
         }
 
@@ -308,7 +312,7 @@ function renderSharedRecipesList() {
                 <div class="recipe-title">${escapeHtml(rp.name)}</div>
                 <div class="recipe-macros">${escapeHtml(rp.carbs)} • ${escapeHtml(rp.fat)} • ${escapeHtml(rp.protein)} • ${escapeHtml(rp.kcal)}</div>
             </div>
-            <button onclick="addSharedRecipeToMine(${idx})" class="btn" style="padding: 6px 10px; font-size: 0.75rem; background: var(--accent-yellow); flex-shrink: 0;">💖 + Favoriet</button>
+            <button onclick="addSharedRecipeToMine(${idx}, this)" class="btn" style="padding: 6px 10px; font-size: 0.75rem; background: var(--accent-yellow); flex-shrink: 0;">💖 + Favoriet</button>
         </div>`;
     }).join('');
 }

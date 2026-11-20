@@ -29,7 +29,7 @@ async function createTeam() {
     if (!currentUser) return;
     const teamName = (document.getElementById('new-team-name')?.value || '').trim();
     if (!teamName) {
-        alert("Geef jullie nieuwe clubje eerst een gezellige naam (bijv. Keto Kanjers)!");
+        showInlineMessage('btn-create-team', "Geef jullie nieuwe clubje eerst een gezellige naam (bijv. Keto Kanjers)!", 'error');
         return;
     }
 
@@ -45,7 +45,7 @@ async function createTeam() {
         .single();
 
     if (error || !createdTeam) {
-        alert("Kon het clubje nog niet aanmaken in Supabase. Controleer of je supabase-teams-setup.sql hebt uitgevoerd in de Supabase SQL Editor!\n\nDetails: " + (error?.message || 'Onbekende fout'));
+        showInlineMessage('btn-create-team', "Kon het clubje nog niet aanmaken in Supabase. Controleer of je supabase-teams-setup.sql hebt uitgevoerd in de Supabase SQL Editor! (" + (error?.message || 'Onbekende fout') + ")", 'error', 8000);
         return;
     }
 
@@ -73,7 +73,7 @@ async function joinTeamByCode() {
     if (!currentUser) return;
     const rawCode = (document.getElementById('join-team-code')?.value || '').trim().toUpperCase();
     if (!rawCode) {
-        alert("Vul de 6-karakter uitnodigingscode van het clubje in (bijv. TK-4821)!");
+        showInlineMessage('btn-join-team', "Vul de 6-karakter uitnodigingscode van het clubje in (bijv. TK-4821)!", 'error');
         return;
     }
 
@@ -88,11 +88,11 @@ async function joinTeamByCode() {
         .maybeSingle();
 
     if (error) {
-        alert("Kon niet zoeken naar het clubje. Controleer of supabase-teams-setup.sql is uitgevoerd in Supabase!\n\nDetails: " + error.message);
+        showInlineMessage('btn-join-team', "Kon niet zoeken naar het clubje. Controleer of supabase-teams-setup.sql is uitgevoerd in Supabase! (" + error.message + ")", 'error', 8000);
         return;
     }
     if (!foundTeam) {
-        alert(`Geen clubje gevonden met code "${rawCode}". Controleer de code even bij je maatje!`);
+        showInlineMessage('btn-join-team', `Geen clubje gevonden met code "${rawCode}". Controleer de code even bij je maatje!`, 'error');
         return;
     }
 
@@ -118,32 +118,32 @@ async function joinTeamByCode() {
 
 async function leaveTeam() {
     if (!currentUser || !appState.teamId) return;
-    if (!confirm("Weet je zeker dat je dit clubje vriendelijk wilt verlaten?")) return;
+    showInlineConfirm('btn-leave-team', "Weet je zeker dat je dit clubje vriendelijk wilt verlaten?", async () => {
+        await sendTeamMessage(
+            'system',
+            `🐾 ${getDefaultDisplayName()} heeft het clubje verlaten. Tot snel weer!`,
+            null,
+            appState.petChoice
+        );
 
-    await sendTeamMessage(
-        'system',
-        `🐾 ${getDefaultDisplayName()} heeft het clubje verlaten. Tot snel weer!`,
-        null,
-        appState.petChoice
-    );
+        if (teamRealtimeChannel) {
+            window.supabaseClient.removeChannel(teamRealtimeChannel);
+            teamRealtimeChannel = null;
+        }
 
-    if (teamRealtimeChannel) {
-        window.supabaseClient.removeChannel(teamRealtimeChannel);
-        teamRealtimeChannel = null;
-    }
+        appState.teamId = null;
+        appState.team = null;
+        appState.teamMembers = [];
+        appState.teamMessages = [];
+        appState.teamStreak = 0;
 
-    appState.teamId = null;
-    appState.team = null;
-    appState.teamMembers = [];
-    appState.teamMessages = [];
-    appState.teamStreak = 0;
+        await window.supabaseClient
+            .from('profiles')
+            .update({ team_id: null })
+            .eq('id', currentUser.id);
 
-    await window.supabaseClient
-        .from('profiles')
-        .update({ team_id: null })
-        .eq('id', currentUser.id);
-
-    renderApp();
+        renderApp();
+    }, 'Ja, verlaten');
 }
 
 async function refreshTeamMembersCoop() {
@@ -322,7 +322,7 @@ function renderTeamCoopDashboard() {
                         </div>
                         <div style="font-size: 0.75rem; color: var(--takkie-red); font-weight: 700;">${escapeHtml(lvl)}</div>
                         <div style="font-size: 0.78rem; color: #333; margin-top: 2px;">${escapeHtml(m.statusText)}</div>
-                        ${m.id !== currentUser.id ? `<button type="button" class="btn" style="margin: 6px 0 0; padding: 4px 10px; font-size: 0.75rem; background: white; width: auto;" onclick="openDirectMessage('${m.id}')">✉️ Stuur bericht</button>` : ''}
+                        ${m.id !== currentUser.id ? `<button type="button" class="btn" style="margin: 6px 0 0; padding: 4px 10px; font-size: 0.75rem; background: white; width: auto;" onclick="openDirectMessage('${m.id}', this)">✉️ Stuur bericht</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -392,9 +392,9 @@ function initTeamEvents() {
             if (!code) return;
             try {
                 await navigator.clipboard.writeText(code);
-                alert(`Code ${code} is gekopieerd! Stuur 'm naar je maatje.`);
+                showInlineMessage('btn-copy-team-code', `Code ${code} is gekopieerd! Stuur 'm naar je maatje.`, 'success');
             } catch (_e) {
-                prompt("Kopieer deze uitnodigingscode:", code);
+                showInlineMessage('btn-copy-team-code', `Uitnodigingscode: ${code} (houd de code ingedrukt om te kopiëren)`, 'info', 8000);
             }
         });
     }
@@ -405,7 +405,7 @@ function initTeamEvents() {
             const petVal = document.getElementById('active-member-pet')?.value;
             await saveMemberIdentity(nameVal, petVal);
             await refreshTeamMembersCoop();
-            alert("Woef! Je naam en icoontje in het clubje zijn bijgewerkt.");
+            showInlineMessage('btn-save-member-settings', "Woef! Je naam en icoontje in het clubje zijn bijgewerkt.", 'success');
         });
     }
 }

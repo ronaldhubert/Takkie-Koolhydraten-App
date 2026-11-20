@@ -55,7 +55,10 @@ async function saveEditedRecipe() {
     const newIngredients = document.getElementById('edit-recipe-ingredients').value.trim();
     const newPrep = document.getElementById('edit-recipe-prep').value.trim();
 
-    if (!newName) return alert("Geef je recept nog even een leuke naam!");
+    if (!newName) {
+        showInlineMessage('btn-update-recipe', "Geef je recept nog even een leuke naam!", 'error');
+        return;
+    }
 
     const oldName = r.name;
     const updatedFields = {
@@ -93,23 +96,24 @@ window.deleteRecipe = async function(index, evt = null) {
     if (evt) evt.stopPropagation();
     const r = appState.recipes[index];
     if (!r) return;
-    if (!confirm(`Weet je zeker dat je het recept "${r.name}" wilt verwijderen?`)) return;
+    const anchor = (evt && (evt.currentTarget || evt.target)) || document.getElementById('btn-delete-recipe-detail') || document.getElementById('recipe-list');
+    showInlineConfirm(anchor, `Weet je zeker dat je het recept "${r.name}" wilt verwijderen?`, async () => {
+        appState.recipes.splice(index, 1);
+        if (currentRecipeIndex === index) currentRecipeIndex = null;
+        renderApp();
 
-    appState.recipes.splice(index, 1);
-    if (currentRecipeIndex === index) currentRecipeIndex = null;
-    renderApp();
+        if (r.id) {
+            await window.supabaseClient.from('recipes').delete().eq('id', r.id);
+        } else if (currentUser) {
+            await window.supabaseClient
+                .from('recipes')
+                .delete()
+                .eq('user_id', currentUser.id)
+                .eq('name', r.name);
+        }
 
-    if (r.id) {
-        await window.supabaseClient.from('recipes').delete().eq('id', r.id);
-    } else if (currentUser) {
-        await window.supabaseClient
-            .from('recipes')
-            .delete()
-            .eq('user_id', currentUser.id)
-            .eq('name', r.name);
-    }
-
-    switchTab('recipes');
+        switchTab('recipes');
+    });
 };
 
 function initRecipeEvents() {
@@ -243,7 +247,7 @@ function initRecipeEvents() {
             const checked = Array.from(document.querySelectorAll('#fridge-ingredients input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
             if (checked.length === 0) {
-                alert("Vink eerst één of meer lekkere ingrediënten aan (of typ een eigen ingrediënt)!");
+                showInlineMessage('btn-generate-ai', "Vink eerst één of meer lekkere ingrediënten aan (of typ een eigen ingrediënt)!", 'error');
                 return;
             }
             const btn = e.currentTarget;
@@ -287,7 +291,10 @@ function initRecipeEvents() {
             const ingredients = document.getElementById('recipe-ingredients').value.trim();
             const prep = document.getElementById('recipe-prep').value.trim();
 
-            if (!name) return alert("Geef je recept nog even een leuke naam!");
+            if (!name) {
+                showInlineMessage('btn-save-recipe', "Geef je recept nog even een leuke naam!", 'error');
+                return;
+            }
 
             const newIdx = await saveRecipe(name, carbs, fat, protein, kcal, ingredients, prep);
             await addPoints(15);

@@ -70,7 +70,7 @@ async function subscribeToPush() {
 
 async function enableNotifications() {
     if (!('Notification' in window)) {
-        alert('Deze browser ondersteunt geen meldingen. Op een iPhone werkt dit alleen als je de app eerst op het beginscherm zet (Deel → Zet op beginscherm) en vanaf dat icoon opent.');
+        showInlineMessage('btn-enable-notifications', 'Deze browser ondersteunt geen meldingen. Op een iPhone werkt dit alleen als je de app eerst op het beginscherm zet (Deel → Zet op beginscherm) en vanaf dat icoon opent.', 'info', 8000);
         return;
     }
     await Notification.requestPermission();

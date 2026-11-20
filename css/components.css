@@ -111,4 +111,74 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
     background-color: #FFEEEE;
 }
 
+.inline-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 10px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    box-shadow: 2px 2px 0px var(--border-color);
+    background-color: #FFF9E6;
+    color: var(--text-main);
+}
+.inline-notice-success {
+    background-color: #E8F5E9;
+    color: #1B5E20;
+}
+.inline-notice-error {
+    background-color: #FFEEEE;
+    color: var(--takkie-red);
+}
+.inline-notice-close {
+    background: none;
+    border: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: inherit;
+    padding: 0 4px;
+}
+
+.inline-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 0;
+    padding: 10px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background-color: #FFF9E6;
+    box-shadow: 2px 2px 0px var(--border-color);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+.inline-confirm-actions {
+    display: flex;
+    gap: 6px;
+}
+.btn-inline-yes,
+.btn-inline-no {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.btn-inline-yes {
+    background-color: var(--takkie-red);
+    color: white;
+}
+.btn-inline-no {
+    background-color: white;
+    color: var(--text-main);
+}
+
 /* TEAMS & HUISKAMER CHAT STYLING */

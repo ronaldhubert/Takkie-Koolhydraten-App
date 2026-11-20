@@ -38,7 +38,10 @@ async function saveEditedFavorite() {
     const newFat = parseInt(document.getElementById('edit-fav-fat').value, 10) || 0;
     const newProtein = parseInt(document.getElementById('edit-fav-protein').value, 10) || 0;
 
-    if (!newName) return alert("Vul alsjeblieft een naam voor je favoriet in!");
+    if (!newName) {
+        showInlineMessage('btn-update-favorite', "Vul alsjeblieft een naam voor je favoriet in!", 'error');
+        return;
+    }
 
     const oldName = fav.name;
     const oldType = fav.type;
@@ -69,24 +72,25 @@ async function saveEditedFavorite() {
     switchTab('favorites');
 }
 
-window.deleteFavorite = async function(idx) {
+window.deleteFavorite = async function(idx, btnEl = null) {
     const fav = appState.savedItems[idx];
     if (!fav) return;
-    if (!confirm(`Weet je zeker dat je favoriet "${fav.name}" wilt verwijderen?`)) return;
+    const anchor = btnEl || document.getElementById('favorites-manage-list');
+    showInlineConfirm(anchor, `Weet je zeker dat je favoriet "${fav.name}" wilt verwijderen?`, async () => {
+        appState.savedItems.splice(idx, 1);
+        renderApp();
 
-    appState.savedItems.splice(idx, 1);
-    renderApp();
-
-    if (fav.id) {
-        await window.supabaseClient.from('saved_items').delete().eq('id', fav.id);
-    } else if (currentUser) {
-        await window.supabaseClient
-            .from('saved_items')
-            .delete()
-            .eq('user_id', currentUser.id)
-            .eq('name', fav.name)
-            .eq('type', fav.type);
-    }
+        if (fav.id) {
+            await window.supabaseClient.from('saved_items').delete().eq('id', fav.id);
+        } else if (currentUser) {
+            await window.supabaseClient
+                .from('saved_items')
+                .delete()
+                .eq('user_id', currentUser.id)
+                .eq('name', fav.name)
+                .eq('type', fav.type);
+        }
+    });
 };
 
 function initFavoriteEvents() {

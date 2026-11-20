@@ -266,7 +266,10 @@ async function repeatYesterdayMeals() {
         .eq('date', yesterday);
 
     if (!yesterdayMeals || yesterdayMeals.length === 0) {
-        alert("Woef! We vonden geen gelogde hapjes van gisteren. Voeg vandaag lekker iets nieuws toe!");
+        const msg = "Woef! We vonden geen gelogde hapjes van gisteren. Voeg vandaag lekker iets nieuws toe!";
+        const speechEl = document.getElementById('takkie-speech');
+        if (speechEl) speechEl.innerText = `"${msg}"`;
+        showInlineMessage('btn-repeat', msg, 'info');
         return;
     }
 

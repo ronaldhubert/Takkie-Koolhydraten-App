@@ -83,7 +83,10 @@ async function saveEditedMeal() {
     const newFat = parseInt(document.getElementById('edit-meal-fat').value, 10) || 0;
     const newProtein = parseInt(document.getElementById('edit-meal-protein').value, 10) || 0;
 
-    if (!newName) return alert("Vul alsjeblieft een naam in!");
+    if (!newName) {
+        showInlineMessage('btn-update-meal', "Vul alsjeblieft een naam in!", 'error');
+        return;
+    }
 
     const isDrink = newType.includes('Drank');
     const newAmount = isDrink
@@ -130,8 +133,9 @@ async function saveEditedMeal() {
     switchTab('home');
 }
 
-window.deleteMeal = async function(idx) {
-    if (confirm("Weet je zeker dat je dit hapje wilt vergeten?")) {
+window.deleteMeal = async function(idx, btnEl = null) {
+    const anchor = btnEl || document.getElementById('meal-list');
+    showInlineConfirm(anchor, "Weet je zeker dat je dit hapje wilt vergeten?", async () => {
         const mealToDel = appState.meals[idx];
         appState.meals.splice(idx, 1);
         renderApp();
@@ -140,7 +144,7 @@ window.deleteMeal = async function(idx) {
             await calculateStreak();
             renderApp();
         }
-    }
+    });
 };
 
 function initMealEvents() {
@@ -244,7 +248,10 @@ function initLogEvents() {
             const c = parseInt(document.getElementById('new-meal-carbs').value, 10) || 0;
             const f = parseInt(document.getElementById('new-meal-fat').value, 10) || 0;
             const p = parseInt(document.getElementById('new-meal-protein').value, 10) || 0;
-            if (!n) return alert("Vul alsjeblieft een maaltijdnaam in!");
+            if (!n) {
+                showInlineMessage('btn-save-meal', "Vul alsjeblieft een maaltijdnaam in!", 'error');
+                return;
+            }
 
             await saveMeal(t, n, c, f, p);
             await addPoints(10);
@@ -271,7 +278,10 @@ function initLogEvents() {
             const c = parseInt(document.getElementById('drink-carbs').value, 10) || 0;
             const f = parseInt(document.getElementById('drink-fat').value, 10) || 0;
             const p = parseInt(document.getElementById('drink-protein').value, 10) || 0;
-            if (!n) return alert("Vul even in wat je drinkt!");
+            if (!n) {
+                showInlineMessage('btn-save-drink', "Vul even in wat je drinkt!", 'error');
+                return;
+            }
 
             await saveMeal('🥤 Drank', a + "x " + n, c * a, f * a, p * a);
             await updateWater(Math.min(8, appState.water + a));

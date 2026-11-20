@@ -85,9 +85,20 @@ function initAuthEvents() {
         document.getElementById('btn-register').addEventListener('click', async () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
+            const errEl = document.getElementById('auth-error-message');
+            if (errEl) {
+                errEl.style.background = '';
+                errEl.style.color = '';
+            }
             const { error } = await window.supabaseClient.auth.signUp({ email, password });
-            if (error) showAuthError(error.message);
-            else alert("Account aangemaakt! Bevestig je e-mail (indien nodig) of je bent direct ingelogd.");
+            if (error) {
+                showAuthError(error.message);
+            } else if (errEl) {
+                errEl.innerText = 'Woef! Account aangemaakt! Bevestig je e-mail (indien nodig) of je bent direct ingelogd. 🐾';
+                errEl.style.background = '#E8F5E9';
+                errEl.style.color = '#1B5E20';
+                errEl.style.display = 'block';
+            }
         });
     }
 
@@ -161,12 +172,19 @@ function initAuthEvents() {
             }
             const { error } = await window.supabaseClient.auth.updateUser({ password: p1 });
             if (error) {
+                errEl.style.background = '';
+                errEl.style.color = '';
                 errEl.innerText = error.message;
                 errEl.style.display = 'block';
                 return;
             }
-            alert('Gelukt! Je nieuwe wachtwoord is opgeslagen 🐶');
-            window.location.href = window.location.origin + window.location.pathname;
+            errEl.innerText = 'Gelukt! Je nieuwe wachtwoord is opgeslagen 🐶';
+            errEl.style.background = '#E8F5E9';
+            errEl.style.color = '#1B5E20';
+            errEl.style.display = 'block';
+            setTimeout(() => {
+                window.location.href = window.location.origin + window.location.pathname;
+            }, 1200);
         });
     }
 

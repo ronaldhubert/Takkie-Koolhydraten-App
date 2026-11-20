@@ -88,12 +88,16 @@ async function callGeminiJson(promptText) {
 
 async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, proteinId, feedbackId, btnEl) {
     const description = (inputName || '').trim();
+    const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
     if (!description) {
-        alert("Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!");
+        if (fbEl) {
+            fbEl.style.display = 'block';
+            fbEl.innerText = "🐾 Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!";
+        } else {
+            showInlineMessage(btnEl, "Typ eerst even wat je eet of drinkt, dan rekenen Takkie & Siep de macro's voor je uit!", 'error');
+        }
         return;
     }
-
-    const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
     const originalBtnText = btnEl ? btnEl.innerText : '';
     if (btnEl) {
         btnEl.disabled = true;
