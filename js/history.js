@@ -340,23 +340,31 @@ async function exportHistoryToPdf() {
     try {
         const thisMonday = getMondayOf(new Date());
         let startStr, endStr, periodTitle, fileSlug;
+        let weekStarts = [];
 
         if (historyState.view === 'day' && historyState.day) {
-            startStr = historyState.day;
-            endStr = historyState.day;
             const dObj = parseLocalDate(historyState.day);
-            periodTitle = `${DAY_NAMES_FULL[dObj.getDay()]} ${shortDateLabel(dObj)} ${dObj.getFullYear()}`;
+            const ws = getMondayOf(dObj);
+            const we = addDays(ws, 6);
+            weekStarts = [ws];
+            startStr = formatDateLocal(ws);
+            endStr = formatDateLocal(we);
+            periodTitle = `Week ${getISOWeekNumber(ws)} & ${DAY_NAMES_FULL[dObj.getDay()]} ${shortDateLabel(dObj)} ${dObj.getFullYear()}`;
             fileSlug = historyState.day;
         } else if (historyState.view === 'days' && historyState.weekStart) {
             const ws = parseLocalDate(historyState.weekStart);
             const we = addDays(ws, 6);
+            weekStarts = [ws];
             startStr = formatDateLocal(ws);
             endStr = formatDateLocal(we);
             periodTitle = `Week ${getISOWeekNumber(ws)} (${shortDateLabel(ws)} – ${shortDateLabel(we)} ${we.getFullYear()})`;
             fileSlug = `week-${getISOWeekNumber(ws)}-${startStr}`;
         } else {
             const newestStart = addDays(thisMonday, -7 * historyState.pageOffset * HISTORY_WEEKS_PER_PAGE);
-            const oldestStart = addDays(newestStart, -7 * (HISTORY_WEEKS_PER_PAGE - 1));
+            for (let i = 0; i < HISTORY_WEEKS_PER_PAGE; i++) {
+                weekStarts.push(addDays(newestStart, -7 * i));
+            }
+            const oldestStart = weekStarts[weekStarts.length - 1];
             const newestEnd = addDays(newestStart, 6);
             startStr = formatDateLocal(oldestStart);
             endStr = formatDateLocal(newestEnd);
@@ -378,18 +386,139 @@ async function exportHistoryToPdf() {
             allDaySummaries.push({ dObj, ds, s, water });
         }
 
-        const loggedDays = allDaySummaries.filter(x => x.s.count > 0 || x.water > 0);
-        const mealLoggedDays = allDaySummaries.filter(x => x.s.count > 0);
-        const avgCarbs = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.carbs, 0) / mealLoggedDays.length) : 0;
-        const avgFat = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.fat, 0) / mealLoggedDays.length) : 0;
-        const avgProt = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.protein, 0) / mealLoggedDays.length) : 0;
-        const avgKcal = mealLoggedDays.length ? Math.round(mealLoggedDays.reduce((a, b) => a + b.s.kcal, 0) / mealLoggedDays.length) : 0;
-        const totalWater = allDaySummaries.reduce((a, b) => a + b.water, 0);
-
         const userName = appState.displayName || getDefaultDisplayName();
         const goals = appState.goals;
 
-        const daysToRender = (totalDays === 1 || loggedDays.length === 0) ? allDaySummaries : loggedDays;
+        // Hulpfuncties om te bepalen of een doel is gehaald
+        const checkGoal = (key, val) => {
+            if (key === 'carbs') return val <= goals.carbs;
+            if (key === 'fat') return val <= goals.fat;
+            if (key === 'protein') return val >= goals.protein;
+            if (key === 'kcal') return val <= goals.kcal;
+            if (key === 'water') return val >= 8;
+            return false;
+        };
+
+        const goalCell = (ok, label, hasData) => {
+            if (!hasData) {
+                return `<td style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center; background:#F5F5F5; color:#888;">–</td>`;
+            }
+            const bg = ok ? '#D8F3DC' : '#FFE5E5';
+            const fg = ok ? '#1B4332' : '#B71C1C';
+            const icon = ok ? '✅' : '❌';
+            return `<td style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center; background:${bg}; color:${fg}; font-weight:700;">${icon} ${label}</td>`;
+        };
+
+        const goalSummaryTile = (title, ruleText, avgText, ok, daysHit, daysTotal, hasData) => {
+            const bg = !hasData ? '#F5F5F5' : (ok ? '#D8F3DC' : '#FFE5E5');
+            const fg = !hasData ? '#666' : (ok ? '#1B4332' : '#B71C1C');
+            const statusText = !hasData ? 'Nog niet gelogd' : (ok ? '✅ DOEL GEHAALD' : '❌ NIET GEHAALD');
+            return `
+                <div style="background:${bg}; color:${fg}; border:2.5px solid #1A1A1A; border-radius:12px; padding:8px 6px; text-align:center;">
+                    <div style="font-size:11px; font-weight:700; color:#1A1A1A;">${title}</div>
+                    <div style="font-size:10px; color:#555; margin-bottom:3px;">Doel: ${ruleText}</div>
+                    <div style="font-size:14px; font-weight:700;">${avgText}</div>
+                    <div style="font-size:10px; font-weight:700; margin-top:2px;">${statusText}</div>
+                    <div style="font-size:10px; color:#333; margin-top:1px;">${daysHit}/${daysTotal} dgn gehaald</div>
+                </div>`;
+        };
+
+        // 1. Bouw het Weekoverzicht (bovenaan de PDF) waarin per doel direct zichtbaar is wat wel/niet is gehaald
+        const weeksOverviewHtml = weekStarts.map(ws => {
+            const we = addDays(ws, 6);
+            const weekDays = [];
+            for (let d = 0; d < 7; d++) {
+                const dObj = addDays(ws, d);
+                const ds = formatDateLocal(dObj);
+                const s = summarizeDay(data.meals, ds);
+                const water = data.water[ds] || 0;
+                weekDays.push({ dObj, ds, s, water });
+            }
+
+            const mealDays = weekDays.filter(x => x.s.count > 0);
+            const nMeals = mealDays.length;
+            const hasMeals = nMeals > 0;
+            const avgC = hasMeals ? Math.round(mealDays.reduce((a, b) => a + b.s.carbs, 0) / nMeals) : 0;
+            const avgP = hasMeals ? Math.round(mealDays.reduce((a, b) => a + b.s.protein, 0) / nMeals) : 0;
+            const avgF = hasMeals ? Math.round(mealDays.reduce((a, b) => a + b.s.fat, 0) / nMeals) : 0;
+            const avgK = hasMeals ? Math.round(mealDays.reduce((a, b) => a + b.s.kcal, 0) / nMeals) : 0;
+
+            const waterLoggedDays = weekDays.filter(x => x.s.count > 0 || x.water > 0);
+            const nWater = waterLoggedDays.length;
+            const avgW = nWater ? Math.round((waterLoggedDays.reduce((a, b) => a + b.water, 0) / nWater) * 10) / 10 : 0;
+
+            const hitsC = mealDays.filter(x => checkGoal('carbs', x.s.carbs)).length;
+            const hitsP = mealDays.filter(x => checkGoal('protein', x.s.protein)).length;
+            const hitsF = mealDays.filter(x => checkGoal('fat', x.s.fat)).length;
+            const hitsK = mealDays.filter(x => checkGoal('kcal', x.s.kcal)).length;
+            const hitsW = waterLoggedDays.filter(x => checkGoal('water', x.water)).length;
+
+            const dayRowsHtml = weekDays.map(({ dObj, ds, s, water }) => {
+                const hasDayMeals = s.count > 0;
+                const hasDayWater = s.count > 0 || water > 0;
+                const okC = hasDayMeals && checkGoal('carbs', s.carbs);
+                const okP = hasDayMeals && checkGoal('protein', s.protein);
+                const okF = hasDayMeals && checkGoal('fat', s.fat);
+                const okK = hasDayMeals && checkGoal('kcal', s.kcal);
+                const okW = hasDayWater && checkGoal('water', water);
+                const goalsMetCount = (okC ? 1 : 0) + (okP ? 1 : 0) + (okF ? 1 : 0) + (okK ? 1 : 0) + (okW ? 1 : 0);
+                const isSelectedDay = historyState.view === 'day' && historyState.day === ds;
+
+                return `
+                    <tr style="${isSelectedDay ? 'outline:2px solid #E63946;' : ''}">
+                        <td style="padding:5px 8px; border:1px solid #1A1A1A; font-weight:700; background:#FFFDF9;">
+                            ${DAY_NAMES_SHORT[dObj.getDay()].toUpperCase()} ${shortDateLabel(dObj)}
+                        </td>
+                        ${goalCell(okC, `${s.carbs}g`, hasDayMeals)}
+                        ${goalCell(okP, `${s.protein}g`, hasDayMeals)}
+                        ${goalCell(okF, `${s.fat}g`, hasDayMeals)}
+                        ${goalCell(okK, `${s.kcal}`, hasDayMeals)}
+                        ${goalCell(okW, `${water}/8`, hasDayWater)}
+                        <td style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center; font-weight:700; background:${!hasDayWater ? '#F5F5F5' : (goalsMetCount >= 4 ? '#D8F3DC' : '#FFF9E6')};">
+                            ${hasDayWater ? `${goalsMetCount}/5 ${goalsMetCount === 5 ? '⭐' : ''}` : '–'}
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            return `
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:18px; padding:12px 14px; margin-bottom:14px; page-break-inside:avoid;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                        <div style="font-size:16px; font-weight:700;">📊 Weekoverzicht — Week ${getISOWeekNumber(ws)} (${shortDateLabel(ws)} – ${shortDateLabel(we)})</div>
+                        <div style="font-size:11px; font-weight:700; background:#FFF9E6; border:2px solid #1A1A1A; border-radius:999px; padding:2px 10px;">
+                            ✅ Groen = doel gehaald • ❌ Rood = doel niet gehaald
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-bottom:10px;">
+                        ${goalSummaryTile('🥑 Koolhydraten', `max ${goals.carbs}g`, `Gem. ${avgC}g`, checkGoal('carbs', avgC), hitsC, nMeals || 7, hasMeals)}
+                        ${goalSummaryTile('🥩 Eiwitten', `min ${goals.protein}g`, `Gem. ${avgP}g`, checkGoal('protein', avgP), hitsP, nMeals || 7, hasMeals)}
+                        ${goalSummaryTile('🧈 Vetten', `max ${goals.fat}g`, `Gem. ${avgF}g`, checkGoal('fat', avgF), hitsF, nMeals || 7, hasMeals)}
+                        ${goalSummaryTile('⚡ Calorieën', `max ${goals.kcal}`, `Gem. ${avgK}`, checkGoal('kcal', avgK), hitsK, nMeals || 7, hasMeals)}
+                        ${goalSummaryTile('💧 Drinkbak', 'min 8 glazen', `Gem. ${avgW}/8`, checkGoal('water', avgW), hitsW, nWater || 7, nWater > 0)}
+                    </div>
+
+                    <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+                        <thead>
+                            <tr style="background:#FFD166;">
+                                <th style="padding:5px 8px; border:1px solid #1A1A1A; text-align:left;">Dag</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥑 KH (≤${goals.carbs}g)</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥩 Eiwit (≥${goals.protein}g)</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🧈 Vet (≤${goals.fat}g)</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">⚡ Kcal (≤${goals.kcal})</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">💧 Water (8)</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">Doelen</th>
+                            </tr>
+                        </thead>
+                        <tbody>${dayRowsHtml}</tbody>
+                    </table>
+                </div>`;
+        }).join('');
+
+        // 2. Gedetailleerde daglogboeken daaronder
+        const detailDaysSource = (historyState.view === 'day' && historyState.day)
+            ? allDaySummaries.filter(x => x.ds === historyState.day)
+            : allDaySummaries.filter(x => x.s.count > 0 || x.water > 0);
+        const daysToRender = detailDaysSource.length > 0 ? detailDaysSource : allDaySummaries;
         const daysHtml = daysToRender.map(({ dObj, s, water }) => {
             const mealsRows = s.meals.length
                 ? s.meals.map(m => `
@@ -437,34 +566,14 @@ async function exportHistoryToPdf() {
                     <div>
                         <div style="color:#E63946; font-size:22px; font-weight:700; margin-bottom:2px;">🐾 Takkie & Siep's Keto Logboek</div>
                         <div style="font-size:14px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
-                        <div style="font-size:12px; color:#555; margin-top:4px;">Dagdoelen: ${goals.carbs}g KH • ${goals.fat}g Vet • ${goals.protein}g Eiwit • ${goals.kcal} kcal • 8 glazen water</div>
+                        <div style="font-size:12px; color:#555; margin-top:4px;">Jouw dagdoelen: max ${goals.carbs}g KH • min ${goals.protein}g Eiwit • max ${goals.fat}g Vet • max ${goals.kcal} kcal • 8 glazen water</div>
                     </div>
                     <img src="takkie.png" alt="Takkie" style="height:54px; width:auto;">
                 </div>
 
-                <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px; text-align:center;">
-                    <div style="background:#FFF9E6; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
-                        <div style="font-size:11px; color:#555; font-weight:600;">Gelogde dagen</div>
-                        <div style="font-size:17px; font-weight:700;">${mealLoggedDays.length} / ${totalDays}</div>
-                    </div>
-                    <div style="background:#FFD166; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
-                        <div style="font-size:11px; color:#1A1A1A; font-weight:600;">Gem. KH / dag</div>
-                        <div style="font-size:17px; font-weight:700;">${avgCarbs}g</div>
-                    </div>
-                    <div style="background:#F4A261; color:#fff; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
-                        <div style="font-size:11px; font-weight:600;">Gem. Vet / dag</div>
-                        <div style="font-size:17px; font-weight:700;">${avgFat}g</div>
-                    </div>
-                    <div style="background:#2a9d8f; color:#fff; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
-                        <div style="font-size:11px; font-weight:600;">Gem. Eiwit / dag</div>
-                        <div style="font-size:17px; font-weight:700;">${avgProt}g</div>
-                    </div>
-                    <div style="background:#E3F2FD; border:3px solid #1A1A1A; border-radius:14px; padding:8px;">
-                        <div style="font-size:11px; color:#555; font-weight:600;">Gem. Kcal & Water</div>
-                        <div style="font-size:14px; font-weight:700;">${avgKcal} kcal • 💧${totalWater}</div>
-                    </div>
-                </div>
+                ${weeksOverviewHtml}
 
+                <div style="font-size:15px; font-weight:700; margin:16px 0 8px 0;">🍽️ Gedetailleerd Daglogboek (alle maaltijden & drankjes)</div>
                 ${daysHtml}
 
                 <div style="text-align:center; font-size:11px; color:#666; margin-top:10px;">
