@@ -373,19 +373,6 @@ async function exportHistoryToPdf() {
         }
 
         const data = await fetchHistoryRange(startStr, endStr);
-        const startObj = parseLocalDate(startStr);
-        const endObj = parseLocalDate(endStr);
-        const totalDays = Math.round((endObj - startObj) / 86400000) + 1;
-
-        const allDaySummaries = [];
-        for (let i = 0; i < totalDays; i++) {
-            const dObj = addDays(startObj, i);
-            const ds = formatDateLocal(dObj);
-            const s = summarizeDay(data.meals, ds);
-            const water = data.water[ds] || 0;
-            allDaySummaries.push({ dObj, ds, s, water });
-        }
-
         const userName = appState.displayName || getDefaultDisplayName();
         const goals = appState.goals;
 
@@ -514,52 +501,6 @@ async function exportHistoryToPdf() {
                 </div>`;
         }).join('');
 
-        // 2. Gedetailleerde daglogboeken daaronder
-        const detailDaysSource = (historyState.view === 'day' && historyState.day)
-            ? allDaySummaries.filter(x => x.ds === historyState.day)
-            : allDaySummaries.filter(x => x.s.count > 0 || x.water > 0);
-        const daysToRender = detailDaysSource.length > 0 ? detailDaysSource : allDaySummaries;
-        const daysHtml = daysToRender.map(({ dObj, s, water }) => {
-            const mealsRows = s.meals.length
-                ? s.meals.map(m => `
-                    <tr>
-                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; font-weight:700;">${escapeHtml(m.type || '🍽️')}</td>
-                        <td style="padding:6px 8px; border-bottom:1px solid #ddd;">${escapeHtml(m.name || '')}</td>
-                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; color:#E63946; font-weight:700;">${Number(m.carbs) || 0}g</td>
-                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; color:#B2530C; font-weight:700;">${Number(m.fat) || 0}g</td>
-                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; color:#1b4332; font-weight:700;">${Number(m.protein) || 0}g</td>
-                        <td style="padding:6px 8px; border-bottom:1px solid #ddd; text-align:right; font-weight:700;">${mealKcal(m)}</td>
-                    </tr>`).join('')
-                : `<tr><td colspan="6" style="padding:8px; color:#666; text-align:center;">Geen maaltijden gelogd op deze dag.</td></tr>`;
-
-            return `
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:12px 14px; margin-bottom:12px; page-break-inside:avoid;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:2px solid #1A1A1A; padding-bottom:6px; margin-bottom:8px;">
-                        <div style="font-size:15px; font-weight:700;">📅 ${DAY_NAMES_FULL[dObj.getDay()]} ${shortDateLabel(dObj)} ${dObj.getFullYear()}</div>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:12px; font-weight:700;">
-                            <span style="background:#FFD166; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.carbs}g / ${goals.carbs}g KH</span>
-                            <span style="background:#F4A261; color:#fff; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.fat}g Vet</span>
-                            <span style="background:#2a9d8f; color:#fff; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.protein}g Eiwit</span>
-                            <span style="background:#9b5de5; color:#fff; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">${s.kcal} kcal</span>
-                            <span style="background:#E3F2FD; border:2px solid #1A1A1A; border-radius:8px; padding:2px 8px;">💧 ${water}/8 glazen</span>
-                        </div>
-                    </div>
-                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                        <thead>
-                            <tr style="background:#F1FAEE; text-align:left;">
-                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A;">Moment</th>
-                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A;">Maaltijd / Drankje</th>
-                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">KH</th>
-                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">Vet</th>
-                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">Eiwit</th>
-                                <th style="padding:6px 8px; border-bottom:2px solid #1A1A1A; text-align:right;">Kcal</th>
-                            </tr>
-                        </thead>
-                        <tbody>${mealsRows}</tbody>
-                    </table>
-                </div>`;
-        }).join('');
-
         const reportHtml = `
             <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:18px; box-sizing:border-box;">
                 <div style="background:#F1FAEE; border:4px solid #1A1A1A; border-radius:20px; padding:16px 18px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
@@ -572,9 +513,6 @@ async function exportHistoryToPdf() {
                 </div>
 
                 ${weeksOverviewHtml}
-
-                <div style="font-size:15px; font-weight:700; margin:16px 0 8px 0;">🍽️ Gedetailleerd Daglogboek (alle maaltijden & drankjes)</div>
-                ${daysHtml}
 
                 <div style="text-align:center; font-size:11px; color:#666; margin-top:10px;">
                     🐾 Met liefde gemaakt in Takkie & Siep's Keto Tracker — "Elke kleine stap telt!"
