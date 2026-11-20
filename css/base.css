@@ -1,0 +1,45 @@
+/* Lettertype, kleurvariabelen, body en de telefoon-container. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+:root {
+    --bg-color: #FFFDF9;
+    --card-bg: #FFFFFF;
+    --text-main: #1A1A1A;
+    --border-color: #1A1A1A;
+    --takkie-red: #E63946;
+    --siep-blue: #1D3557;
+    --accent-yellow: #FFD166;
+    --accent-green: #06D6A0;
+    --accent-blue: #48CAE4;
+    --accent-fat: #F4A261;
+    --accent-protein: #2a9d8f;
+    --accent-kcal: #9b5de5;
+    --bubble-bg: #F1FAEE;
+}
+
+body {
+    font-family: 'Fredoka', cursive, sans-serif;
+    background-color: var(--bg-color);
+    background-image: radial-gradient(#1A1A1A 8px, transparent 9px);
+    background-size: 40px 40px;
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.phone-container {
+    width: 100%;
+    max-width: 420px;
+    min-height: 100vh;
+    background-color: var(--card-bg);
+    display: flex;
+    flex-direction: column;
+    border-left: 4px solid var(--border-color);
+    border-right: 4px solid var(--border-color);
+    box-shadow: 8px 0px 0px rgba(0,0,0,0.1);
+    position: relative;
+    display: none; /* Standaard verborgen tot we zijn ingelogd */
+}

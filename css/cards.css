@@ -1,0 +1,54 @@
+/* Lijstitems, receptkaarten en macro-badges. */
+
+.item-row, .meal-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 2px dashed var(--border-color);
+}
+
+.item-row:last-child, .meal-item:last-child { border-bottom: none; }
+.item-title { font-weight: 700; font-size: 0.9rem; }
+
+.recipe-card {
+    display: flex;
+    align-items: center;
+    background: var(--bubble-bg);
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 3px 3px 0px var(--border-color);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.recipe-card:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px var(--border-color);
+}
+
+.recipe-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.recipe-macros {
+    font-size: 0.78rem;
+    color: #444;
+    font-weight: 600;
+}
+
+.macro-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.badge-carb { font-size: 0.7rem; color: var(--takkie-red); background: #FFEEEE; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+.badge-fat { font-size: 0.7rem; color: #B2530C; background: #FDF0E5; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+.badge-protein { font-size: 0.7rem; color: #1b4332; background: #e8f5e9; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }
+.badge-kcal { font-size: 0.7rem; color: #5a189a; background: #f3e8ff; padding: 2px 5px; border: 2px solid var(--border-color); border-radius: 6px; font-weight: 700; }

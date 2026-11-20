@@ -1,0 +1,83 @@
+/* Header, bovennavigatie, contentgebied en tabbladen. */
+
+header {
+    background-color: var(--takkie-red);
+    border-bottom: 4px solid var(--border-color);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.profile-info h1 {
+    font-size: 1.1rem;
+    margin: 0 0 4px 0;
+    text-shadow: 2px 2px 0px var(--border-color);
+}
+
+.profile-info p {
+    font-size: 0.8rem;
+    margin: 0;
+    background: rgba(0,0,0,0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.streak-badge {
+    background-color: var(--accent-yellow);
+    color: var(--text-main);
+    border: 3px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: 3px 3px 0px var(--border-color);
+    transform: rotate(3deg);
+}
+
+/* Navigatiebalk bovenaan */
+.top-nav {
+    background-color: white;
+    border-bottom: 4px solid var(--border-color);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 4px;
+    box-shadow: 0px 4px 0px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav-item {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: 'Fredoka', cursive, sans-serif;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.nav-item span { display: block; font-size: 1.1rem; }
+.nav-item.active { background-color: var(--bubble-bg); color: var(--takkie-red); border: 2px solid var(--border-color); box-shadow: 2px 2px 0px var(--border-color); }
+
+.content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    padding-bottom: 40px;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Controlescript voor de code-indeling.
 //
-//   node tools/check.js --baseline app.js   (eenmalig: legt de functielijst van het oude app.js vast)
+//   node tools/check.js --baseline           (legt de huidige functielijst van js/*.js vast als referentie)
 //   node tools/check.js                      (controle na wijzigingen)
 //
 // Controleert:
@@ -41,10 +41,12 @@ function symbolsOf(src) {
 }
 
 if (process.argv[2] === '--baseline') {
-    const file = path.resolve(process.argv[3] || 'app.js');
-    const syms = symbolsOf(fs.readFileSync(file, 'utf8'));
+    // Zonder bestandsnaam: lees alle js/-bestanden. Met bestandsnaam: lees alleen dat bestand (bijv. een oud app.js).
+    const given = process.argv[3];
+    const files = given ? [path.resolve(given)] : JS_ORDER.map(f => path.join(ROOT, f)).filter(f => fs.existsSync(f));
+    const syms = [...new Set(files.flatMap(f => symbolsOf(fs.readFileSync(f, 'utf8'))))];
     fs.writeFileSync(BASELINE_FILE, JSON.stringify(syms, null, 2));
-    console.log(`Baseline opgeslagen: ${syms.length} symbolen uit ${file}`);
+    console.log(`Baseline opgeslagen: ${syms.length} symbolen uit ${files.length} bestand(en)`);
     process.exit(0);
 }
 
@@ -83,6 +85,12 @@ if (present.length === JS_ORDER.length) {
         fail('de <script>-tags in index.html komen niet overeen met JS_ORDER.\n  html: ' + tags.join(', ') + '\n  orde: ' + JS_ORDER.join(', '));
     }
 }
+
+// 3b. Alle gelinkte CSS-bestanden bestaan en er staat geen losse <style> meer in index.html
+for (const m of html.matchAll(/<link[^>]+href="(css\/[^"?]+)/g)) {
+    if (!fs.existsSync(path.join(ROOT, m[1]))) fail('CSS-bestand ontbreekt: ' + m[1]);
+}
+if (/<style[\s>]/.test(html)) console.warn('Let op: index.html bevat nog een <style>-blok; zet CSS liever in css/.');
 
 // 4. onclick-verwijzingen
 const allCode = present.map(f => sources[f]).join('\n') + '\n' + html;

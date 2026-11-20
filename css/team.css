@@ -1,0 +1,199 @@
+/* Clubje en chat: badges, SOS-banner, ledenkaarten, chatberichten, reacties. */
+
+@keyframes pawPop {
+    0% { transform: scale(0.6) rotate(-6deg); opacity: 0; }
+    70% { transform: scale(1.08) rotate(2deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes sosPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    background-color: var(--takkie-red);
+    color: white;
+    font-style: normal;
+    font-size: 0.65rem;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.sos-highlight-banner {
+    background-color: #FFE5EC;
+    border-bottom: 4px solid var(--border-color);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    animation: sosPulse 2s infinite ease-in-out;
+}
+
+.member-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bubble-bg);
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 3px 3px 0px var(--border-color);
+}
+
+.member-pet-icon {
+    width: 46px;
+    height: 34px;
+    object-fit: contain;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 3px;
+    flex-shrink: 0;
+}
+
+.chat-container {
+    background: #FAFAFA;
+    border: 3px solid var(--border-color);
+    border-radius: 14px;
+    padding: 10px;
+    height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+    box-shadow: inset 2px 2px 0px rgba(0,0,0,0.05);
+}
+
+.chat-msg {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    box-shadow: 2px 2px 0px var(--border-color);
+    max-width: 88%;
+    align-self: flex-start;
+}
+
+.chat-msg.mine {
+    background: var(--bubble-bg);
+    align-self: flex-end;
+}
+
+.chat-msg-header {
+    font-size: 0.72rem;
+    color: #555;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.chat-reaction-badge {
+    background: var(--accent-yellow);
+    border: 3px solid var(--border-color);
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 3px 3px 0px var(--border-color);
+    align-self: center;
+    text-align: center;
+    animation: pawPop 0.35s ease-out;
+}
+
+.chat-system-msg {
+    background: #FFF9E6;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+    align-self: center;
+    width: 92%;
+}
+
+.chat-sos-msg {
+    background: #FFE5EC;
+    border: 3px solid var(--takkie-red);
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    align-self: center;
+    width: 92%;
+    text-align: center;
+    box-shadow: 3px 3px 0px var(--border-color);
+    animation: pawPop 0.35s ease-out;
+}
+
+.reaction-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.btn-reaction {
+    background: #FFF9E6;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 7px 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: 'Fredoka', cursive, sans-serif;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px var(--border-color);
+    transition: transform 0.1s;
+}
+
+.btn-reaction:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px var(--border-color);
+}
+
+.btn-sos {
+    background-color: #FFE5EC;
+    color: var(--takkie-red);
+    border: 3px solid var(--border-color);
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: 'Fredoka', cursive, sans-serif;
+    cursor: pointer;
+    box-shadow: 3px 3px 0px var(--border-color);
+}
+
+.shared-recipe-badge {
+    display: inline-block;
+    background: var(--accent-yellow);
+    color: var(--text-main);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}

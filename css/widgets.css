@@ -1,0 +1,57 @@
+/* Widgets (kaders), voortgangsbalken en waterdruppels. */
+
+.widget {
+    background-color: white;
+    border: 4px solid var(--border-color);
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 5px 5px 0px var(--border-color);
+}
+
+.widget h3 {
+    font-size: 0.95rem;
+    margin: 0 0 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.progress-bar-bg {
+    background-color: #eee;
+    border: 3px solid var(--border-color);
+    height: 16px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.progress-bar-fill-carb { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.4s ease; background: linear-gradient(90deg, #06D6A0, #E63946); }
+.progress-bar-fill-fat { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.3s ease; background-color: var(--accent-fat); }
+.progress-bar-fill-protein { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.3s ease; background-color: var(--accent-protein); }
+.progress-bar-fill-kcal { height: 100%; width: 0%; border-right: 3px solid var(--border-color); transition: width 0.3s ease; background-color: var(--accent-kcal); }
+
+.water-dots {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.water-drop {
+    width: 28px;
+    height: 32px;
+    background-color: #E3F2FD;
+    border: 3px solid var(--border-color);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    box-shadow: 2px 2px 0px var(--border-color);
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.water-drop.filled { background-color: var(--accent-blue); }
