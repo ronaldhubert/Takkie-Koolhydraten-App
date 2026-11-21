@@ -329,6 +329,33 @@ function applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl) {
     }
 }
 
+function setAiLoadingState(btnEl, fbEl, loadingText) {
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.classList.add('btn-loading');
+        btnEl.innerHTML = `<span class="ai-spinner"></span> <span>⏳ AI-analyse bezig...</span>`;
+    }
+    if (fbEl) {
+        fbEl.style.display = 'block';
+        fbEl.innerHTML = `
+            <div class="ai-loading-box">
+                <div class="ai-loading-row">
+                    <span class="ai-spinner"></span>
+                    <span>🐾 ${escapeHtml(loadingText)}</span>
+                </div>
+                <div class="ai-loading-bar-track"><div class="ai-loading-bar-fill"></div></div>
+            </div>`;
+    }
+}
+
+function clearAiLoadingButton(btnEl, originalBtnHtml) {
+    if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.classList.remove('btn-loading');
+        btnEl.innerHTML = originalBtnHtml;
+    }
+}
+
 async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, proteinId, feedbackId, btnEl) {
     const description = (inputName || '').trim();
     const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
@@ -343,42 +370,25 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     const widgetEl = btnEl ? btnEl.closest('.widget') : null;
     const nameInputEl = widgetEl ? widgetEl.querySelector('input[type="text"]') : null;
 
-    const originalBtnText = btnEl ? btnEl.innerText : '';
-    if (btnEl) {
-        btnEl.disabled = true;
-        btnEl.innerText = '🐾 Takkie & Siep kijken mee...';
-    }
-    if (fbEl) {
-        fbEl.style.display = 'block';
-        fbEl.innerText = '🐶 Snuffel snuffel... even kijken of alles duidelijk is...';
-    }
+    const originalBtnHtml = btnEl ? btnEl.innerHTML : '';
+    setAiLoadingState(btnEl, fbEl, 'Snuffel snuffel... Takkie & Siep analyseren je invoer...');
 
     try {
         const assessment = await assessOrCalculateWithAI(description, contextType);
 
         if (assessment && assessment.complete === false && Array.isArray(assessment.questions) && assessment.questions.length > 0 && fbEl) {
-            if (btnEl) {
-                btnEl.disabled = false;
-                btnEl.innerText = originalBtnText;
-            }
+            clearAiLoadingButton(btnEl, originalBtnHtml);
 
             return await new Promise((resolve) => {
                 const runFinalCalculation = async (answersList) => {
-                    if (btnEl) {
-                        btnEl.disabled = true;
-                        btnEl.innerText = '🐾 Takkie & Siep rekenen met AI...';
-                    }
-                    fbEl.innerText = '🐶 Snuffel snuffel... macro\'s worden nu precies berekend...';
+                    setAiLoadingState(btnEl, fbEl, 'Takkie & Siep berekenen nu precies je macro\'s...');
                     try {
                         const finalResult = await calculateNutritionDirect(description, answersList, contextType);
                         applyNutritionResultToDom(finalResult, carbsId, fatId, proteinId, fbEl, answersList.length > 0 ? nameInputEl : null);
                     } catch (err2) {
                         applyFallbackToDom(description, err2, carbsId, fatId, proteinId, fbEl);
                     } finally {
-                        if (btnEl) {
-                            btnEl.disabled = false;
-                            btnEl.innerText = originalBtnText;
-                        }
+                        clearAiLoadingButton(btnEl, originalBtnHtml);
                         resolve();
                     }
                 };
@@ -397,10 +407,7 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     } catch (err) {
         applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl);
     } finally {
-        if (btnEl) {
-            btnEl.disabled = false;
-            btnEl.innerText = originalBtnText;
-        }
+        clearAiLoadingButton(btnEl, originalBtnHtml);
     }
 }
 

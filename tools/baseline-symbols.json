@@ -62,6 +62,8 @@
   "renderClarifyingDialog",
   "applyNutritionResultToDom",
   "applyFallbackToDom",
+  "setAiLoadingState",
+  "clearAiLoadingButton",
   "analyzeNutritionWithAI",
   "generateRecipeWithAI",
   "generateSmartRecipeFallback",
