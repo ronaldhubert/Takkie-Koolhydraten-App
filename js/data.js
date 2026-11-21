@@ -124,6 +124,14 @@ async function loadUserData() {
         .eq('date', today);
     appState.meals = mealsData || [];
 
+    const yesterday = getYesterdayString();
+    const { data: yesterdayMealsData } = await window.supabaseClient
+        .from('meals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('date', yesterday);
+    appState.yesterdayMeals = yesterdayMealsData || [];
+
     const { data: recipesData } = await window.supabaseClient
         .from('recipes')
         .select('*')

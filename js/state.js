@@ -16,6 +16,7 @@ let teamRealtimeChannel = null;
 let appState = {
     water: 0,
     meals: [],
+    yesterdayMeals: [],
     recipes: [],
     savedItems: [],
     goals: { carbs: 25, fat: 110, protein: 90, kcal: 2000 },

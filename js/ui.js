@@ -281,6 +281,32 @@ function renderApp() {
     if (document.getElementById('favorite-drinks-select')) document.getElementById('favorite-drinks-select').innerHTML = drinkOptions;
     if (document.getElementById('favorites-manage-list')) document.getElementById('favorites-manage-list').innerHTML = favManageHtml;
 
+    // Update "🔄 Gisteren" dropdown (alfabetisch: eerst maaltijden, dan drankjes)
+    let yesterdayOptions = "<option value=''>🔄 Gisteren</option>";
+    const indexedYesterday = (appState.yesterdayMeals || []).map((item, idx) => ({ item, idx }));
+    const yMeals = indexedYesterday.filter(x => !(x.item.type || '').includes('Drank')).sort(sortByName);
+    const yDrinks = indexedYesterday.filter(x => (x.item.type || '').includes('Drank')).sort(sortByName);
+
+    yMeals.forEach(({ item, idx }) => {
+        const ic = Number(item.carbs) || 0;
+        yesterdayOptions += "<option value='" + idx + "'>🍽️ " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
+    });
+    if (yMeals.length > 0 && yDrinks.length > 0) {
+        yesterdayOptions += "<option value='' disabled>──────────────────</option>";
+    }
+    yDrinks.forEach(({ item, idx }) => {
+        const ic = Number(item.carbs) || 0;
+        yesterdayOptions += "<option value='" + idx + "'>🥤 " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
+    });
+    if (indexedYesterday.length > 1) {
+        yesterdayOptions += "<option value='' disabled>──────────────────</option>";
+        yesterdayOptions += "<option value='all'>🔄 Alles van gisteren (" + indexedYesterday.length + ")</option>";
+    }
+    if (indexedYesterday.length === 0) {
+        yesterdayOptions += "<option value='' disabled>Geen hapjes van gisteren</option>";
+    }
+    if (document.getElementById('btn-repeat')) document.getElementById('btn-repeat').innerHTML = yesterdayOptions;
+
     renderTeamSection();
 }
 
@@ -339,7 +365,33 @@ function initNavEvents() {
     }
 
     if (document.getElementById('btn-repeat')) {
-        document.getElementById('btn-repeat').addEventListener('click', repeatYesterdayMeals);
+        document.getElementById('btn-repeat').addEventListener('change', async (e) => {
+            const val = e.target.value;
+            e.target.value = '';
+            if (val === '') return;
+            if (val === 'all') {
+                await repeatYesterdayMeals();
+                return;
+            }
+            const item = (appState.yesterdayMeals || [])[parseInt(val, 10)];
+            if (!item) return;
+
+            const c = Number(item.carbs) || 0;
+            const f = Number(item.fat) || 0;
+            const p = Number(item.protein) || 0;
+            const isDrink = (item.type || '').includes('Drank');
+
+            if (isDrink) {
+                const amtMatch = (item.name || '').match(/^(\d+)\s*x\s+/i);
+                const glasses = amtMatch ? Math.max(1, parseInt(amtMatch[1], 10)) : 1;
+                await saveMeal('🥤 Drank', item.name, c, f, p);
+                await updateWater(Math.min(8, appState.water + glasses));
+                await addPoints(5);
+            } else {
+                await saveMeal(item.type || '🍽️ Maaltijd', item.name, c, f, p);
+                await addPoints(10);
+            }
+        });
     }
 }
 
