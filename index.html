@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261121g">
-    <link rel="stylesheet" href="css/auth.css?v=20261121g">
-    <link rel="stylesheet" href="css/layout.css?v=20261121g">
-    <link rel="stylesheet" href="css/pets.css?v=20261121g">
-    <link rel="stylesheet" href="css/widgets.css?v=20261121g">
-    <link rel="stylesheet" href="css/cards.css?v=20261121g">
-    <link rel="stylesheet" href="css/components.css?v=20261121g">
-    <link rel="stylesheet" href="css/team.css?v=20261121g">
-    <link rel="stylesheet" href="css/history.css?v=20261121g">
+    <link rel="stylesheet" href="css/base.css?v=20261121h">
+    <link rel="stylesheet" href="css/auth.css?v=20261121h">
+    <link rel="stylesheet" href="css/layout.css?v=20261121h">
+    <link rel="stylesheet" href="css/pets.css?v=20261121h">
+    <link rel="stylesheet" href="css/widgets.css?v=20261121h">
+    <link rel="stylesheet" href="css/cards.css?v=20261121h">
+    <link rel="stylesheet" href="css/components.css?v=20261121h">
+    <link rel="stylesheet" href="css/team.css?v=20261121h">
+    <link rel="stylesheet" href="css/history.css?v=20261121h">
 </head>
 <body>
 
@@ -300,6 +300,11 @@
                 <input type="text" id="new-meal-name" placeholder="Bijv. 2 roereieren met 15g roomboter en spek">
                 <button class="btn btn-auto" id="btn-autofill-meal" style="width: 100%;">🤖 Analyseer macro's met AI</button>
                 <div id="ai-meal-feedback" style="display: none; font-size: 0.8rem; background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
+
+                <label class="checkbox-label" style="margin-bottom: 10px;">
+                    <input type="checkbox" id="save-favorite-meal"> 💖 Sla op in mijn favorieten
+                </label>
+                <button class="btn btn-primary" id="btn-save-meal" style="width: 100%; margin-bottom: 14px;">🍽️ Maaltijd Toevoegen (+10 pt)</button>
                 
                 <label>Type:</label>
                 <select id="new-meal-type">
@@ -317,12 +322,6 @@
 
                 <label>Eiwitten (gram):</label>
                 <input type="number" id="new-meal-protein" value="30" min="0">
-
-                <label class="checkbox-label" style="margin-bottom: 16px;">
-                    <input type="checkbox" id="save-favorite-meal"> 💖 Sla op in mijn favorieten
-                </label>
-
-                <button class="btn btn-primary" id="btn-save-meal" style="width: 100%;">Liefdevol Bewaren (+10 pt)</button>
             </div>
         </div>
 
@@ -358,6 +357,11 @@
                 <button class="btn btn-auto" id="btn-autofill-drink" style="width: 100%; background-color: var(--accent-yellow);">🤖 Analyseer macro's met AI</button>
                 <div id="ai-drink-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
 
+                <label class="checkbox-label" style="margin-bottom: 10px;">
+                    <input type="checkbox" id="save-favorite-drink"> 💖 Sla op in mijn favorieten
+                </label>
+                <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue); width: 100%; margin-bottom: 14px;">🥤 Drankje Toevoegen (+5 pt)</button>
+
                 <label>Aantal glazen / kopjes:</label>
                 <input type="number" id="drink-amount" value="1" min="1">
 
@@ -369,12 +373,6 @@
 
                 <label>Eiwitten per glas (g):</label>
                 <input type="number" id="drink-protein" value="0" min="0">
-
-                <label class="checkbox-label" style="margin-bottom: 16px;">
-                    <input type="checkbox" id="save-favorite-drink"> 💖 Sla op in mijn favorieten
-                </label>
-
-                <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue); width: 100%;">Drankje Toevoegen (+5 pt)</button>
             </div>
         </div>
 
@@ -645,21 +643,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261121g"></script>
-<script src="js/quotes.js?v=20261121g"></script>
-<script src="js/utils.js?v=20261121g"></script>
-<script src="js/auth.js?v=20261121g"></script>
-<script src="js/data.js?v=20261121g"></script>
-<script src="js/meals.js?v=20261121g"></script>
-<script src="js/favorites.js?v=20261121g"></script>
-<script src="js/ai.js?v=20261121g"></script>
-<script src="js/recipes.js?v=20261121g"></script>
-<script src="js/team.js?v=20261121g"></script>
-<script src="js/chat.js?v=20261121g"></script>
-<script src="js/notifications.js?v=20261121g"></script>
-<script src="js/history.js?v=20261121g"></script>
-<script src="js/ui.js?v=20261121g"></script>
-<script src="js/main.js?v=20261121g"></script>
+<script src="js/state.js?v=20261121h"></script>
+<script src="js/quotes.js?v=20261121h"></script>
+<script src="js/utils.js?v=20261121h"></script>
+<script src="js/auth.js?v=20261121h"></script>
+<script src="js/data.js?v=20261121h"></script>
+<script src="js/meals.js?v=20261121h"></script>
+<script src="js/favorites.js?v=20261121h"></script>
+<script src="js/ai.js?v=20261121h"></script>
+<script src="js/recipes.js?v=20261121h"></script>
+<script src="js/team.js?v=20261121h"></script>
+<script src="js/chat.js?v=20261121h"></script>
+<script src="js/notifications.js?v=20261121h"></script>
+<script src="js/history.js?v=20261121h"></script>
+<script src="js/ui.js?v=20261121h"></script>
+<script src="js/main.js?v=20261121h"></script>
 
 </body>
 </html>
