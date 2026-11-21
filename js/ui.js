@@ -281,11 +281,20 @@ function renderApp() {
     if (document.getElementById('favorite-drinks-select')) document.getElementById('favorite-drinks-select').innerHTML = drinkOptions;
     if (document.getElementById('favorites-manage-list')) document.getElementById('favorites-manage-list').innerHTML = favManageHtml;
 
-    // Update "🔄 Gisteren" dropdown (alfabetisch: eerst maaltijden, dan drankjes)
+    // Update "🔄 Gisteren" dropdown (ontdubbeld & alfabetisch: eerst maaltijden, dan drankjes)
     let yesterdayOptions = "<option value=''>🔄 Gisteren</option>";
-    const indexedYesterday = (appState.yesterdayMeals || []).map((item, idx) => ({ item, idx }));
-    const yMeals = indexedYesterday.filter(x => !(x.item.type || '').includes('Drank')).sort(sortByName);
-    const yDrinks = indexedYesterday.filter(x => (x.item.type || '').includes('Drank')).sort(sortByName);
+    const seenYesterdayKeys = new Set();
+    const uniqueYesterday = [];
+    (appState.yesterdayMeals || []).forEach((item, idx) => {
+        const isDrinkItem = (item.type || '').includes('Drank');
+        const cleanKey = (isDrinkItem ? 'drink:' : 'meal:') + (item.name || '').trim().toLowerCase();
+        if (!seenYesterdayKeys.has(cleanKey)) {
+            seenYesterdayKeys.add(cleanKey);
+            uniqueYesterday.push({ item, idx });
+        }
+    });
+    const yMeals = uniqueYesterday.filter(x => !(x.item.type || '').includes('Drank')).sort(sortByName);
+    const yDrinks = uniqueYesterday.filter(x => (x.item.type || '').includes('Drank')).sort(sortByName);
 
     yMeals.forEach(({ item, idx }) => {
         const ic = Number(item.carbs) || 0;
@@ -298,11 +307,11 @@ function renderApp() {
         const ic = Number(item.carbs) || 0;
         yesterdayOptions += "<option value='" + idx + "'>🥤 " + escapeHtml(item.name) + " (" + ic + "g KH)</option>";
     });
-    if (indexedYesterday.length > 1) {
+    if ((appState.yesterdayMeals || []).length > 1) {
         yesterdayOptions += "<option value='' disabled>──────────────────</option>";
-        yesterdayOptions += "<option value='all'>🔄 Alles van gisteren (" + indexedYesterday.length + ")</option>";
+        yesterdayOptions += "<option value='all'>🔄 Alles van gisteren (" + appState.yesterdayMeals.length + ")</option>";
     }
-    if (indexedYesterday.length === 0) {
+    if (uniqueYesterday.length === 0) {
         yesterdayOptions += "<option value='' disabled>Geen hapjes van gisteren</option>";
     }
     if (document.getElementById('btn-repeat')) document.getElementById('btn-repeat').innerHTML = yesterdayOptions;
