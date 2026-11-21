@@ -262,6 +262,15 @@ function initMealEvents() {
             }
         });
     }
+
+    if (document.getElementById('edit-meal-name')) {
+        document.getElementById('edit-meal-name').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('btn-autofill-edit-meal')?.click();
+            }
+        });
+    }
 }
 
 function initLogEvents() {
@@ -292,6 +301,24 @@ function initLogEvents() {
                 e.currentTarget
             )
         );
+    }
+
+    if (document.getElementById('new-meal-name')) {
+        document.getElementById('new-meal-name').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('btn-autofill-meal')?.click();
+            }
+        });
+    }
+
+    if (document.getElementById('drink-name')) {
+        document.getElementById('drink-name').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('btn-autofill-drink')?.click();
+            }
+        });
     }
 
     if (document.getElementById('btn-save-meal')) {

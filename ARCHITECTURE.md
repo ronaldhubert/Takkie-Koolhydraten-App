@@ -33,7 +33,7 @@ Alle bestanden in `js/` zijn **klassieke scripts**. Ze delen één globale scope
 | 5 | `js/data.js` | Gebruikersdata laden en opslaan, streak, punten, water, `saveMeal`, `saveRecipe`, profieldoelen |
 | 6 | `js/meals.js` | Gelogde maaltijd/drank wijzigen en verwijderen; formulieren om nieuwe te loggen (`initMealEvents`, `initLogEvents`) |
 | 7 | `js/favorites.js` | Favorieten (`saved_items`) beheren (`initFavoriteEvents`) |
-| 8 | `js/ai.js` | Gemini AI: macro-analyse, receptgeneratie, lokale fallback |
+| 8 | `js/ai.js` | Gemini AI: interactieve dialoog voor macro-analyse (met vervolgvragen & snelknoppen voor gram, ml, plakjes, aantal), receptgeneratie, lokale fallback |
 | 9 | `js/recipes.js` | Receptenboek: receptpagina, bewerken, verwijderen, "Bedenk een recept" (`initRecipeEvents`) |
 | 10 | `js/team.js` | Clubje: aanmaken, joinen, verlaten, ledenstatus, co-op dashboard, clubje-tabblad (`initTeamEvents`) |
 | 11 | `js/chat.js` | Huiskamer-chat: berichten, privéberichten, SOS, gedeelde recepten, realtime (`initChatEvents`) |

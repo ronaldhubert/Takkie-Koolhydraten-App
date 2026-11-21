@@ -174,4 +174,111 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
     color: var(--text-main);
 }
 
+/* AI Dialoog voor verduidelijkende vragen (gram, ml, plakjes, aantal) */
+.ai-dialog-box {
+    background-color: #FFFDF9;
+    border: 3px solid var(--border-color);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 3px 3px 0px var(--border-color);
+}
+.ai-dialog-intro {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    line-height: 1.35;
+}
+.ai-q-block {
+    background-color: var(--bubble-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.ai-q-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+}
+.ai-q-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.ai-q-chip {
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 5px 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 999px;
+    background-color: white;
+    color: var(--text-main);
+    cursor: pointer;
+    box-shadow: 2px 2px 0px var(--border-color);
+    transition: transform 0.1s, box-shadow 0.1s, background-color 0.12s;
+}
+.ai-q-chip:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px var(--border-color);
+}
+.ai-q-chip.active {
+    background-color: var(--accent-yellow);
+}
+.ai-q-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ai-q-custom-label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #555;
+    white-space: nowrap;
+}
+.ai-q-input {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0 !important;
+    padding: 6px 8px !important;
+    font-size: 0.8rem !important;
+    border-width: 2px !important;
+    border-radius: 8px !important;
+    background: white !important;
+}
+.ai-q-unit {
+    width: auto !important;
+    margin-bottom: 0 !important;
+    padding: 6px 8px !important;
+    font-size: 0.78rem !important;
+    font-weight: 700;
+    border-width: 2px !important;
+    border-radius: 8px !important;
+    background: white !important;
+}
+.ai-dialog-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+.ai-dialog-submit {
+    flex: 2;
+    background-color: var(--accent-green);
+    color: var(--text-main);
+    padding: 9px 12px;
+    font-size: 0.82rem;
+}
+.ai-dialog-skip {
+    flex: 1;
+    background-color: white;
+    color: #555;
+    padding: 9px 10px;
+    font-size: 0.78rem;
+}
+
 /* TEAMS & HUISKAMER CHAT STYLING */

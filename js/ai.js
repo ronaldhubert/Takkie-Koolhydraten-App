@@ -1,4 +1,4 @@
-// Gemini AI: macro-analyse, receptgeneratie en lokale fallback.
+// Gemini AI: interactieve dialoog voor macro-analyse (met snelknoppen voor gram, ml, plakjes, aantal), receptgeneratie en lokale fallback.
 // Klassiek script (geen module): deelt globale functies en variabelen met de andere bestanden in js/.
 // Zie ARCHITECTURE.md voor de laadvolgorde.
 
@@ -20,8 +20,28 @@ async function getGeminiApiKey() {
 }
 
 // ==========================================
-// AI ANALYSE (GEMINI API + FALLBACK)
+// AI ANALYSE & DIALOOG (GEMINI API + FALLBACK)
 // ==========================================
+const UNIT_QUICK_PICKS = {
+    stuks: ['1 stuk', '2 stuks', '3 stuks', '4 stuks', '6 stuks'],
+    g: ['25 g', '50 g', '100 g', '150 g', '200 g'],
+    ml: ['50 ml', '100 ml', '150 ml', '250 ml', '330 ml'],
+    plakjes: ['1 plakje', '2 plakjes', '3 plakjes', '4 plakjes', '6 plakjes'],
+    el: ['½ el', '1 el', '2 el', '1 tl'],
+    tl: ['½ tl', '1 tl', '2 tl', '1 el'],
+    keuze: []
+};
+
+const UNIT_SELECT_OPTIONS = [
+    { value: 'g', label: 'gram (g)' },
+    { value: 'ml', label: 'ml' },
+    { value: 'plakjes', label: 'plakjes' },
+    { value: 'stuks', label: 'stuks' },
+    { value: 'el', label: 'eetlepel (el)' },
+    { value: 'tl', label: 'theelepel (tl)' },
+    { value: '', label: 'vrij' }
+];
+
 function localFallbackNutrition(inputName) {
     const name = inputName.toLowerCase();
     let c = 0, f = 0, p = 0;
@@ -42,7 +62,6 @@ function localFallbackNutrition(inputName) {
 async function callGeminiJson(promptText) {
     const apiKey = await getGeminiApiKey();
     if (!apiKey) {
-        // Als er een Supabase Edge Function 'gemini-ai' is ingesteld, probeer die dan aan te roepen
         const { data: fnData, error: fnError } = await window.supabaseClient.functions.invoke('gemini-ai', {
             body: { prompt: promptText }
         });
@@ -86,6 +105,230 @@ async function callGeminiJson(promptText) {
     throw lastError || new Error('Kon geen verbinding maken met Gemini AI.');
 }
 
+function formatClarifyingAnswer(questionObj, selectedChip, customValue, customUnit) {
+    const subject = (questionObj.subject || questionObj.question || 'Onderdeel').trim();
+    const typed = (customValue || '').trim();
+    if (typed) {
+        const hasUnitAlready = /[a-zA-Z]/.test(typed);
+        const unitSuffix = (!hasUnitAlready && customUnit) ? ` ${customUnit}` : '';
+        return `${subject}: ${typed}${unitSuffix}`;
+    }
+    if (selectedChip) {
+        return `${subject}: ${selectedChip}`;
+    }
+    return '';
+}
+
+async function assessOrCalculateWithAI(description, contextType) {
+    const isDrink = contextType === 'drink';
+    const prompt = `Je bent de liefdevolle keto-voedingsexpert van Takkie & Siep.
+De gebruiker wil het volgende ${isDrink ? 'drankje (per glas/kopje)' : 'gerecht of voedingsmiddel'} loggen:
+"${description}"
+
+STAP 1: Beoordeel of de hoeveelheden, aantallen, gewichten (gram/ml/plakjes/stuks) of soort/bereiding duidelijk genoeg zijn om de macronutriënten betrouwbaar te berekenen.
+- Als belangrijke hoeveelheden ontbreken (bijv. "roerei met spek" zonder aantal eieren of gram/plakjes spek; "kwark met noten" zonder gram kwark of gram noten; "kaas" zonder aantal plakjes of gram; "koffie" zonder te weten of het zwart of met melk/room is; "vlees/vis/kip" zonder gewicht in gram), zet dan "complete": false en stel 1 tot maximaal 3 korte, vriendelijke vervolgvragen.
+- Kies per vraag de meest passende eenheid ("unit") uit: "stuks", "g", "ml", "plakjes", "el", "tl", of "keuze".
+- Geef per vraag 3 tot 5 handige snelknop-opties in "options" (bijv. bij eieren: ["1 ei", "2 eieren", "3 eieren", "4 eieren"]; bij spek: ["2 plakjes (30g)", "3 plakjes (45g)", "4 plakjes (60g)", "75 g"]; bij vlees/vis/kwark: ["100 g", "150 g", "200 g", "250 g"]; bij drank/room: ["50 ml", "150 ml", "200 ml", "250 ml"]).
+- Als de invoer WEL al specifiek genoeg is (bijv. "2 eieren met 50g spek" of "200g ribeye met 15g kruidenboter" of "1 glas droge witte wijn"), zet dan "complete": true en bereken direct de macro's.
+
+Geef ALLEEN een geldig JSON-object terug in exact één van deze twee formaten:
+Formaat A (als alles al duidelijk is):
+{
+  "complete": true,
+  "carbs": <geheel getal netto koolhydraten in gram>,
+  "fat": <geheel getal vetten in gram>,
+  "protein": <geheel getal eiwitten in gram>,
+  "explanation": "<korte, warme Nederlandse toelichting van 1 zin namens Takkie & Siep over de berekende portie en macro's>"
+}
+
+Formaat B (als verduidelijking nodig is):
+{
+  "complete": false,
+  "questions": [
+    {
+      "id": "q1",
+      "subject": "<kort onderwerp, bijv. Eieren of Spek of Bereiding>",
+      "question": "<korte vriendelijke vraag in het Nederlands>",
+      "unit": "<stuks|g|ml|plakjes|el|tl|keuze>",
+      "options": ["<optie 1>", "<optie 2>", "<optie 3>", "<optie 4>"]
+    }
+  ]
+}`;
+
+    return await callGeminiJson(prompt);
+}
+
+async function calculateNutritionDirect(description, answersList, contextType) {
+    const isDrink = contextType === 'drink';
+    const extraDetails = (answersList && answersList.length > 0)
+        ? `\nAanvullende antwoorden van de gebruiker:\n- ${answersList.join('\n- ')}`
+        : '';
+
+    const prompt = `Je bent de liefdevolle keto-voedingsexpert van Takkie & Siep.
+Bereken een nauwkeurige schatting van de netto koolhydraten (carbs), vetten (fat) en eiwitten (protein) in hele grammen voor het volgende ${isDrink ? 'drankje (geef de waarden per 1 glas/kopje, tenzij de gebruiker een specifieke hoeveelheid in ml koos)' : 'gerecht of voedingsmiddel'}:
+Omschrijving: "${description}"${extraDetails}
+
+Geef ALLEEN een geldig JSON-object terug in dit formaat:
+{
+  "carbs": <geheel getal in grammen>,
+  "fat": <geheel getal in grammen>,
+  "protein": <geheel getal in grammen>,
+  "refinedName": "<beknopte omschrijving inclusief de gekozen hoeveelheden, bijv. '2 roereieren met 3 plakjes spek'>",
+  "explanation": "<korte, warme Nederlandse toelichting van 1 zin namens Takkie & Siep over de aangenomen portie en macro's>"
+}`;
+
+    return await callGeminiJson(prompt);
+}
+
+function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip) {
+    if (!fbEl) return;
+    fbEl.style.display = 'block';
+
+    const normalizedQuestions = (questions || []).slice(0, 3).map((q, idx) => {
+        const unit = UNIT_QUICK_PICKS[q.unit] ? q.unit : 'g';
+        const defaultOpts = UNIT_QUICK_PICKS[unit] || [];
+        const opts = (Array.isArray(q.options) && q.options.length > 0) ? q.options : defaultOpts;
+        return {
+            id: q.id || ('q' + idx),
+            subject: q.subject || `Vraag ${idx + 1}`,
+            question: q.question || `Hoeveel ${q.subject || ''} bedoel je?`,
+            unit,
+            options: opts
+        };
+    });
+
+    const stateByQ = normalizedQuestions.map(q => ({
+        selectedChip: q.options[0] || '',
+        customVal: '',
+        customUnit: q.unit === 'keuze' ? '' : q.unit
+    }));
+
+    const questionsHtml = normalizedQuestions.map((q, qIdx) => {
+        const petIcon = qIdx % 2 === 0 ? '🐶 Takkie' : '🐱 Siepie';
+        const chipsHtml = q.options.map((opt, oIdx) => `
+            <button type="button" class="ai-q-chip${oIdx === 0 ? ' active' : ''}" data-q-idx="${qIdx}" data-chip-val="${escapeHtml(opt)}">${escapeHtml(opt)}</button>
+        `).join('');
+
+        const unitOptionsHtml = UNIT_SELECT_OPTIONS.map(u => `
+            <option value="${u.value}"${u.value === stateByQ[qIdx].customUnit ? ' selected' : ''}>${u.label}</option>
+        `).join('');
+
+        const inputPlaceholder = q.unit === 'keuze'
+            ? 'Of typ zelf...'
+            : 'Eigen aantal/gewicht...';
+
+        return `
+            <div class="ai-q-block" data-q-block="${qIdx}">
+                <div class="ai-q-title">${petIcon} vraagt: ${escapeHtml(q.question)}</div>
+                <div class="ai-q-chips">${chipsHtml}</div>
+                <div class="ai-q-custom-row">
+                    <span class="ai-q-custom-label">Of zelf:</span>
+                    <input type="${q.unit === 'keuze' ? 'text' : 'number'}" min="0" step="any" class="ai-q-input" data-q-input="${qIdx}" placeholder="${inputPlaceholder}">
+                    <select class="ai-q-unit" data-q-unit="${qIdx}">${unitOptionsHtml}</select>
+                </div>
+            </div>`;
+    }).join('');
+
+    fbEl.innerHTML = `
+        <div class="ai-dialog-box">
+            <div class="ai-dialog-intro">🐾 Even samen precies maken voor de beste macro's! Tik op een snelknop of vul het zelf in:</div>
+            ${questionsHtml}
+            <div class="ai-dialog-actions">
+                <button type="button" class="btn ai-dialog-submit" id="btn-ai-dialog-confirm">✅ Bereken macro's</button>
+                <button type="button" class="btn ai-dialog-skip" id="btn-ai-dialog-skip">⏭️ Sla over</button>
+            </div>
+        </div>`;
+
+    fbEl.querySelectorAll('.ai-q-chip').forEach(chipBtn => {
+        chipBtn.addEventListener('click', () => {
+            const qIdx = parseInt(chipBtn.getAttribute('data-q-idx'), 10);
+            const val = chipBtn.getAttribute('data-chip-val');
+            stateByQ[qIdx].selectedChip = val;
+            stateByQ[qIdx].customVal = '';
+
+            const block = fbEl.querySelector(`[data-q-block="${qIdx}"]`);
+            if (block) {
+                block.querySelectorAll('.ai-q-chip').forEach(b => b.classList.remove('active'));
+                chipBtn.classList.add('active');
+                const inp = block.querySelector(`[data-q-input="${qIdx}"]`);
+                if (inp) inp.value = '';
+            }
+        });
+    });
+
+    fbEl.querySelectorAll('.ai-q-input').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const qIdx = parseInt(inp.getAttribute('data-q-input'), 10);
+            stateByQ[qIdx].customVal = inp.value;
+            const block = fbEl.querySelector(`[data-q-block="${qIdx}"]`);
+            if (block) {
+                if (inp.value.trim()) {
+                    block.querySelectorAll('.ai-q-chip').forEach(b => b.classList.remove('active'));
+                }
+            }
+        });
+    });
+
+    fbEl.querySelectorAll('.ai-q-unit').forEach(sel => {
+        sel.addEventListener('change', () => {
+            const qIdx = parseInt(sel.getAttribute('data-q-unit'), 10);
+            stateByQ[qIdx].customUnit = sel.value;
+        });
+    });
+
+    const confirmBtn = fbEl.querySelector('#btn-ai-dialog-confirm');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            const answers = normalizedQuestions
+                .map((q, idx) => formatClarifyingAnswer(q, stateByQ[idx].selectedChip, stateByQ[idx].customVal, stateByQ[idx].customUnit))
+                .filter(Boolean);
+            onConfirmAnswers(answers);
+        });
+    }
+
+    const skipBtn = fbEl.querySelector('#btn-ai-dialog-skip');
+    if (skipBtn) {
+        skipBtn.addEventListener('click', () => {
+            onSkip();
+        });
+    }
+}
+
+function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, nameInputEl) {
+    const c = Math.max(0, Math.round(Number(result.carbs) || 0));
+    const f = Math.max(0, Math.round(Number(result.fat) || 0));
+    const p = Math.max(0, Math.round(Number(result.protein) || 0));
+
+    if (document.getElementById(carbsId)) document.getElementById(carbsId).value = c;
+    if (document.getElementById(fatId)) document.getElementById(fatId).value = f;
+    if (document.getElementById(proteinId)) document.getElementById(proteinId).value = p;
+
+    if (nameInputEl && result.refinedName && typeof result.refinedName === 'string' && result.refinedName.trim()) {
+        nameInputEl.value = result.refinedName.trim();
+    }
+
+    if (fbEl) {
+        fbEl.style.display = 'block';
+        fbEl.innerHTML = `✨ <b>AI Analyse:</b> ${escapeHtml(result.explanation || `Berekend op ${c}g KH, ${f}g vet en ${p}g eiwit.`)}`;
+    }
+}
+
+function applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl) {
+    const fallback = localFallbackNutrition(description);
+    if (document.getElementById(carbsId)) document.getElementById(carbsId).value = fallback.carbs;
+    if (document.getElementById(fatId)) document.getElementById(fatId).value = fallback.fat;
+    if (document.getElementById(proteinId)) document.getElementById(proteinId).value = fallback.protein;
+
+    if (fbEl) {
+        fbEl.style.display = 'block';
+        if (err && err.message === 'NO_API_KEY') {
+            fbEl.innerHTML = `⚠️ <b>Gemini API-key nog niet gevonden in Supabase:</b> We hebben nu een snelle schatting ingevuld. Sla je sleutel op in de <code>app_settings</code> tabel in Supabase.`;
+        } else {
+            fbEl.innerHTML = `⚠️ <b>AI tijdelijk niet bereikbaar (${escapeHtml(err?.message || 'fout')}):</b> We hebben een standaard schatting ingevuld.`;
+        }
+    }
+}
+
 async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, proteinId, feedbackId, btnEl) {
     const description = (inputName || '').trim();
     const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
@@ -95,55 +338,64 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
         return;
     }
     if (btnEl) clearInlineMessages(btnEl.closest('.widget'));
+
+    // Zoek het bijbehorende naam-invoerveld zodat we het na de dialoog kunnen aanvullen met de gekozen hoeveelheden
+    const widgetEl = btnEl ? btnEl.closest('.widget') : null;
+    const nameInputEl = widgetEl ? widgetEl.querySelector('input[type="text"]') : null;
+
     const originalBtnText = btnEl ? btnEl.innerText : '';
     if (btnEl) {
         btnEl.disabled = true;
-        btnEl.innerText = '🐾 Takkie & Siep rekenen met AI...';
+        btnEl.innerText = '🐾 Takkie & Siep kijken mee...';
     }
     if (fbEl) {
         fbEl.style.display = 'block';
-        fbEl.innerText = '🐶 Snuffel snuffel... macro\'s worden berekend...';
+        fbEl.innerText = '🐶 Snuffel snuffel... even kijken of alles duidelijk is...';
     }
 
-    const isDrink = contextType === 'drink';
-    const prompt = `Je bent de liefdevolle keto-voedingsexpert van Takkie & Siep.
-Bereken een realistische schatting van de netto koolhydraten (carbs), vetten (fat) en eiwitten (protein) in hele grammen voor het volgende ${isDrink ? 'drankje (LET OP: geef de waarden per 1 standaard glas/kopje, tenzij de gebruiker expliciet een specifieke hoeveelheid in ml noemt)' : 'gerecht of voedingsmiddel'}:
-"${description}"
-
-Geef ALLEEN een geldig JSON-object terug in dit formaat:
-{
-  "carbs": <geheel getal in grammen>,
-  "fat": <geheel getal in grammen>,
-  "protein": <geheel getal in grammen>,
-  "explanation": "<korte, warme Nederlandse toelichting van 1 zin namens Takkie & Siep over de aangenomen portie en macro's>"
-}`;
-
     try {
-        const result = await callGeminiJson(prompt);
-        const c = Math.max(0, Math.round(Number(result.carbs) || 0));
-        const f = Math.max(0, Math.round(Number(result.fat) || 0));
-        const p = Math.max(0, Math.round(Number(result.protein) || 0));
+        const assessment = await assessOrCalculateWithAI(description, contextType);
 
-        document.getElementById(carbsId).value = c;
-        document.getElementById(fatId).value = f;
-        document.getElementById(proteinId).value = p;
-
-        if (fbEl) {
-            fbEl.innerHTML = `✨ <b>AI Analyse:</b> ${escapeHtml(result.explanation || `Berekend op ${c}g KH, ${f}g vet en ${p}g eiwit.`)}`;
-        }
-    } catch (err) {
-        const fallback = localFallbackNutrition(description);
-        document.getElementById(carbsId).value = fallback.carbs;
-        document.getElementById(fatId).value = fallback.fat;
-        document.getElementById(proteinId).value = fallback.protein;
-
-        if (fbEl) {
-            if (err.message === 'NO_API_KEY') {
-                fbEl.innerHTML = `⚠️ <b>Gemini API-key nog niet gevonden in Supabase:</b> We hebben nu een snelle schatting ingevuld. Sla je sleutel op in de <code>app_settings</code> tabel in Supabase.`;
-            } else {
-                fbEl.innerHTML = `⚠️ <b>AI tijdelijk niet bereikbaar (${escapeHtml(err.message)}):</b> We hebben een standaard schatting ingevuld.`;
+        if (assessment && assessment.complete === false && Array.isArray(assessment.questions) && assessment.questions.length > 0 && fbEl) {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerText = originalBtnText;
             }
+
+            return await new Promise((resolve) => {
+                const runFinalCalculation = async (answersList) => {
+                    if (btnEl) {
+                        btnEl.disabled = true;
+                        btnEl.innerText = '🐾 Takkie & Siep rekenen met AI...';
+                    }
+                    fbEl.innerText = '🐶 Snuffel snuffel... macro\'s worden nu precies berekend...';
+                    try {
+                        const finalResult = await calculateNutritionDirect(description, answersList, contextType);
+                        applyNutritionResultToDom(finalResult, carbsId, fatId, proteinId, fbEl, answersList.length > 0 ? nameInputEl : null);
+                    } catch (err2) {
+                        applyFallbackToDom(description, err2, carbsId, fatId, proteinId, fbEl);
+                    } finally {
+                        if (btnEl) {
+                            btnEl.disabled = false;
+                            btnEl.innerText = originalBtnText;
+                        }
+                        resolve();
+                    }
+                };
+
+                renderClarifyingDialog(
+                    fbEl,
+                    assessment.questions,
+                    (answers) => runFinalCalculation(answers),
+                    () => runFinalCalculation([])
+                );
+            });
         }
+
+        // Invoer was al specifiek genoeg: vul direct de berekende macro's in
+        applyNutritionResultToDom(assessment, carbsId, fatId, proteinId, fbEl, null);
+    } catch (err) {
+        applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl);
     } finally {
         if (btnEl) {
             btnEl.disabled = false;
@@ -178,61 +430,28 @@ Geef ALLEEN een geldig JSON-object terug in exact dit formaat:
         carbs: c,
         fat: f,
         protein: p,
-        kcal: kcal,
-        ingredients: Array.isArray(result.ingredients) ? result.ingredients.join('\n') : String(result.ingredients || ''),
-        prep: Array.isArray(result.prep) ? result.prep.join('\n') : String(result.prep || '')
+        kcal,
+        ingredients: result.ingredients || selectedIngredients.map(i => `- ${i}`).join('\n'),
+        prep: result.prep || '1. Bereid de ingrediënten met liefde en serveer direct.'
     };
 }
 
 function generateSmartRecipeFallback(selectedIngredients) {
-    const items = selectedIngredients.length > 0 ? selectedIngredients : ['Eieren', 'Roomboter', 'Avocado'];
-    const macroMap = {
-        'Eieren': { c: 1, f: 11, p: 13, line: '- 2 verse vrije-uitloop eieren', step: 'Klop of bak de eieren zachtjes zodat ze heerlijk smeuïg blijven.' },
-        'Spek': { c: 0, f: 20, p: 12, line: '- 4 plakjes krokant ontbijtspek', step: 'Bak het spek in een koekenpan tot het goudbruin en knapperig is.' },
-        'Avocado': { c: 2, f: 15, p: 2, line: '- 1 rijpe avocado in plakjes', step: 'Snijd de avocado in mooie partjes en leg deze liefdevol op het bord.' },
-        'Roomboter': { c: 0, f: 12, p: 0, line: '- Een flinke klont roomboter', step: 'Smelt een royale klont roomboter in de warme pan voor extra smaak en brandstof.' },
-        'Kruidenboter': { c: 0, f: 12, p: 0, line: '- Een lekkere lepel kruidenboter', step: 'Laat een klontje kruidenboter zachtjes smelten over het gerecht.' },
-        'Zalm': { c: 0, f: 18, p: 25, line: '- 150g verse zalmfilet', step: 'Bak de zalmfilet op de huid in 4-5 minuutjes mooi rosé vanbinnen.' },
-        'Ribeye': { c: 0, f: 28, p: 32, line: '- 180g malse ribeye steak', step: 'Schroei de ribeye op hoog vuur dicht en laat hem even rusten onder een dekentje van folie.' },
-        'Kipfilet': { c: 0, f: 4, p: 35, line: '- 150g malse kipfilet in blokjes', step: 'Bak de kipfilet goudbruin en gaar in de pan.' },
-        'Kipfilet beleg': { c: 0, f: 2, p: 12, line: '- 4 plakjes kipfilet beleg', step: 'Rol de plakjes kipfilet beleg gezellig op als rolletjes.' },
-        'Ham': { c: 1, f: 4, p: 14, line: '- 4 plakjes lekkere achterham', step: 'Snijd of rol de plakjes ham en voeg ze toe.' },
-        'Kaas': { c: 0, f: 17, p: 13, line: '- 50g geraspte of plakjes volvette kaas', step: 'Laat de kaas heerlijk smelten voor een romig laagje.' },
-        'Brie': { c: 0, f: 18, p: 11, line: '- 60g romige Franse brie in plakjes', step: 'Leg de plakjes romige brie erop zodat ze zacht worden.' },
-        'Kwark': { c: 5, f: 8, p: 12, line: '- 150g volle romige kwark', step: 'Schep de volle kwark in een gezellig kommetje.' },
-        'Hüttenkäse': { c: 3, f: 4, p: 12, line: '- 100g frisse Hüttenkäse', step: 'Schep de frisse Hüttenkäse erbij en roer zachtjes door.' },
-        'Pecannoten': { c: 1, f: 18, p: 2, line: '- Een handje (25g) knapperige pecannoten', step: 'Hak de pecannoten grof en strooi ze er als knapperige topping overheen.' },
-        'Walnoten': { c: 1, f: 16, p: 4, line: '- Een handje (25g) walnoten', step: 'Breek de walnoten in stukjes en strooi ze er liefdevol overheen.' }
-    };
-
-    let c = 1, f = 0, p = 0;
-    const ingLines = [];
-    const prepLines = [];
-
-    items.forEach((item, idx) => {
-        const info = macroMap[item] || { c: 1, f: 10, p: 8, line: `- ${item}`, step: `Bereid ${item.toLowerCase()} met aandacht.` };
-        c += info.c;
-        f += info.f;
-        p += info.p;
-        ingLines.push(info.line);
-        prepLines.push(`${idx + 1}. ${info.step}`);
-    });
-
-    ingLines.push('- Snufje zeezout en zwarte peper');
-    prepLines.push(`${prepLines.length + 1}. Breng op smaak met peper en zeezout, en geniet samen met Takkie & Siep!`);
-
+    const main = selectedIngredients[0];
+    const second = selectedIngredients[1] || "Keto Kruiden";
+    let c = 1, f = 35, p = 28;
+    if (selectedIngredients.includes("Ribeye")) { f += 15; p += 20; }
+    if (selectedIngredients.includes("Avocado")) { c += 2; f += 15; }
     const kcal = (c * 4) + (p * 4) + (f * 9);
-    const title = items.length === 1
-        ? `Takkie's Liefdevolle ${items[0]} Schotel`
-        : `Siep & Takkie's ${items.slice(0, 2).join(' & ')} Feestje`;
-
+    const ingList = selectedIngredients.map(i => `- Een flinke portie ${i.toLowerCase()}`).join('\n') + "\n- Snufje zeezout en peper";
+    const prepText = `1. Snijd de ${selectedIngredients.join(' en ').toLowerCase()} in mooie stukjes.\n2. Verhit een klontje roomboter of olijfolie in je favoriete koekenpan.\n3. Bak alles op een rustig vuurtje goudbruin en gaar.\n4. Serveer op een gezellig bordje terwijl Takkie en Siep lief toekijken!`;
     return {
-        name: title,
+        name: `Takkie & Siep's ${main} & ${second} Feestje`,
         carbs: c,
         fat: f,
         protein: p,
-        kcal: kcal,
-        ingredients: ingLines.join('\n'),
-        prep: prepLines.join('\n')
+        kcal,
+        ingredients: ingList,
+        prep: prepText
     };
 }
