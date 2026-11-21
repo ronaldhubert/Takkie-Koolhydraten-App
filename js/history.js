@@ -263,7 +263,7 @@ async function renderHistory() {
             <span style="width:70px;"></span>`;
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
-            <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Dagen in Week ${getISOWeekNumber(ws)} (tik voor alle maaltijden):</div>
+            <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Dagen in Week ${getISOWeekNumber(ws)} (tik op een dag om die te openen op Home):</div>
             <div class="hist-cards-list">${dayCardsHtml}</div>`;
         return;
     }
@@ -644,8 +644,10 @@ document.addEventListener('click', (e) => {
         historyState.view = 'days';
         historyState.weekStart = t.getAttribute('data-hist-week');
     } else if (t.hasAttribute('data-hist-day')) {
-        historyState.view = 'day';
-        historyState.day = t.getAttribute('data-hist-day');
+        const chosenDate = t.getAttribute('data-hist-day');
+        appState.returnToHistoryDay = false;
+        loadDateLog(chosenDate).then(() => switchTab('home'));
+        return;
     } else if (t.hasAttribute('data-hist-prev')) {
         historyState.pageOffset += 1;
     } else if (t.hasAttribute('data-hist-next')) {

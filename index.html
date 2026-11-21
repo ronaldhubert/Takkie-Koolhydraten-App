@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261121h">
-    <link rel="stylesheet" href="css/auth.css?v=20261121h">
-    <link rel="stylesheet" href="css/layout.css?v=20261121h">
-    <link rel="stylesheet" href="css/pets.css?v=20261121h">
-    <link rel="stylesheet" href="css/widgets.css?v=20261121h">
-    <link rel="stylesheet" href="css/cards.css?v=20261121h">
-    <link rel="stylesheet" href="css/components.css?v=20261121h">
-    <link rel="stylesheet" href="css/team.css?v=20261121h">
-    <link rel="stylesheet" href="css/history.css?v=20261121h">
+    <link rel="stylesheet" href="css/base.css?v=20261121i">
+    <link rel="stylesheet" href="css/auth.css?v=20261121i">
+    <link rel="stylesheet" href="css/layout.css?v=20261121i">
+    <link rel="stylesheet" href="css/pets.css?v=20261121i">
+    <link rel="stylesheet" href="css/widgets.css?v=20261121i">
+    <link rel="stylesheet" href="css/cards.css?v=20261121i">
+    <link rel="stylesheet" href="css/components.css?v=20261121i">
+    <link rel="stylesheet" href="css/team.css?v=20261121i">
+    <link rel="stylesheet" href="css/history.css?v=20261121i">
 </head>
 <body>
 
@@ -124,14 +124,17 @@
             </div>
 
             <div class="widget">
-                <h3>
-                    <span id="home-log-title">📖 Vandaag Loggen</span>
-                    <button type="button" class="btn btn-auto" id="btn-home-goto-history" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow);">📊 Logboek</button>
+                <h3 style="gap: 6px;">
+                    <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                        <button type="button" class="btn btn-auto" id="btn-prev-day" title="1 dag terug" style="margin: 0; padding: 3px 8px; font-size: 0.78rem; background-color: var(--bubble-bg); width: auto;">◀</button>
+                        <span id="home-log-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📖 Vandaag Loggen</span>
+                        <button type="button" class="btn btn-auto" id="btn-next-day" title="1 dag vooruit" style="display: none; margin: 0; padding: 3px 8px; font-size: 0.78rem; background-color: var(--bubble-bg); width: auto;">▶</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
+                        <button type="button" class="btn btn-auto" id="btn-return-today" style="display: none; margin: 0; padding: 3px 8px; font-size: 0.75rem; background: var(--accent-green); width: auto;">↩️ Vandaag</button>
+                        <button type="button" class="btn btn-auto" id="btn-home-goto-history" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow); width: auto;">📊 Logboek</button>
+                    </div>
                 </h3>
-                <div id="active-date-banner" style="display: none; align-items: center; justify-content: space-between; gap: 8px; background: #FFF9E6; border: 2px solid var(--border-color); border-radius: 12px; padding: 6px 10px; margin-bottom: 10px; font-size: 0.8rem; font-weight: 700;">
-                    <span id="active-date-banner-text">📅 Andere dag geopend</span>
-                    <button type="button" class="btn btn-auto" id="btn-return-today" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background: var(--accent-green); width: auto;">↩️ Terug naar Vandaag</button>
-                </div>
 
                 <div class="btn-grid" style="margin-top: 4px; margin-bottom: 14px;">
                     <select class="btn" id="btn-repeat" aria-label="Kies een maaltijd of drankje van gisteren om direct te loggen">
@@ -643,21 +646,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261121h"></script>
-<script src="js/quotes.js?v=20261121h"></script>
-<script src="js/utils.js?v=20261121h"></script>
-<script src="js/auth.js?v=20261121h"></script>
-<script src="js/data.js?v=20261121h"></script>
-<script src="js/meals.js?v=20261121h"></script>
-<script src="js/favorites.js?v=20261121h"></script>
-<script src="js/ai.js?v=20261121h"></script>
-<script src="js/recipes.js?v=20261121h"></script>
-<script src="js/team.js?v=20261121h"></script>
-<script src="js/chat.js?v=20261121h"></script>
-<script src="js/notifications.js?v=20261121h"></script>
-<script src="js/history.js?v=20261121h"></script>
-<script src="js/ui.js?v=20261121h"></script>
-<script src="js/main.js?v=20261121h"></script>
+<script src="js/state.js?v=20261121i"></script>
+<script src="js/quotes.js?v=20261121i"></script>
+<script src="js/utils.js?v=20261121i"></script>
+<script src="js/auth.js?v=20261121i"></script>
+<script src="js/data.js?v=20261121i"></script>
+<script src="js/meals.js?v=20261121i"></script>
+<script src="js/favorites.js?v=20261121i"></script>
+<script src="js/ai.js?v=20261121i"></script>
+<script src="js/recipes.js?v=20261121i"></script>
+<script src="js/team.js?v=20261121i"></script>
+<script src="js/chat.js?v=20261121i"></script>
+<script src="js/notifications.js?v=20261121i"></script>
+<script src="js/history.js?v=20261121i"></script>
+<script src="js/ui.js?v=20261121i"></script>
+<script src="js/main.js?v=20261121i"></script>
 
 </body>
 </html>

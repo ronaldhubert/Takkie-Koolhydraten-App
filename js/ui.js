@@ -107,16 +107,17 @@ function renderApp() {
     if (document.getElementById('streak-count-text')) document.getElementById('streak-count-text').innerText = (appState.streak || 0);
 
     const homeTitleEl = document.getElementById('home-log-title');
-    const dateBannerEl = document.getElementById('active-date-banner');
-    const dateBannerTextEl = document.getElementById('active-date-banner-text');
+    const nextDayBtn = document.getElementById('btn-next-day');
+    const returnTodayBtn = document.getElementById('btn-return-today');
     if (isViewingOtherDay()) {
         const friendly = formatFriendlyDateNL(getActiveDateString());
-        if (homeTitleEl) homeTitleEl.innerText = `📖 Log van ${friendly}`;
-        if (dateBannerEl) dateBannerEl.style.display = 'flex';
-        if (dateBannerTextEl) dateBannerTextEl.innerText = `📅 Je wijzigt nu: ${friendly}`;
+        if (homeTitleEl) homeTitleEl.innerText = `📖 ${friendly}`;
+        if (nextDayBtn) nextDayBtn.style.display = 'inline-block';
+        if (returnTodayBtn) returnTodayBtn.style.display = 'inline-block';
     } else {
         if (homeTitleEl) homeTitleEl.innerText = '📖 Vandaag Loggen';
-        if (dateBannerEl) dateBannerEl.style.display = 'none';
+        if (nextDayBtn) nextDayBtn.style.display = 'none';
+        if (returnTodayBtn) returnTodayBtn.style.display = 'none';
     }
 
     updateLevel(appState.points);
@@ -377,6 +378,25 @@ function initNavEvents() {
             appState.returnToHistoryDay = false;
             await loadDateLog(getTodayString());
         });
+    }
+
+    async function stepActiveDate(deltaDays) {
+        const curStr = getActiveDateString();
+        const [y, m, d] = curStr.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        dt.setDate(dt.getDate() + deltaDays);
+        const nextStr = formatDateLocal(dt);
+        if (nextStr > getTodayString()) return;
+        appState.returnToHistoryDay = false;
+        await loadDateLog(nextStr);
+    }
+
+    if (document.getElementById('btn-prev-day')) {
+        document.getElementById('btn-prev-day').addEventListener('click', () => stepActiveDate(-1));
+    }
+
+    if (document.getElementById('btn-next-day')) {
+        document.getElementById('btn-next-day').addEventListener('click', () => stepActiveDate(1));
     }
 
     if (document.getElementById('btn-favorite')) {
