@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261121b">
-    <link rel="stylesheet" href="css/auth.css?v=20261121b">
-    <link rel="stylesheet" href="css/layout.css?v=20261121b">
-    <link rel="stylesheet" href="css/pets.css?v=20261121b">
-    <link rel="stylesheet" href="css/widgets.css?v=20261121b">
-    <link rel="stylesheet" href="css/cards.css?v=20261121b">
-    <link rel="stylesheet" href="css/components.css?v=20261121b">
-    <link rel="stylesheet" href="css/team.css?v=20261121b">
-    <link rel="stylesheet" href="css/history.css?v=20261121b">
+    <link rel="stylesheet" href="css/base.css?v=20261121c">
+    <link rel="stylesheet" href="css/auth.css?v=20261121c">
+    <link rel="stylesheet" href="css/layout.css?v=20261121c">
+    <link rel="stylesheet" href="css/pets.css?v=20261121c">
+    <link rel="stylesheet" href="css/widgets.css?v=20261121c">
+    <link rel="stylesheet" href="css/cards.css?v=20261121c">
+    <link rel="stylesheet" href="css/components.css?v=20261121c">
+    <link rel="stylesheet" href="css/team.css?v=20261121c">
+    <link rel="stylesheet" href="css/history.css?v=20261121c">
 </head>
 <body>
 
@@ -102,18 +102,25 @@
                 </div>
             </div>
 
-            <div class="widget">
-                <h3><span>Koolhydraten</span> <span id="carb-text" style="color: var(--takkie-red);">0g / 25g</span></h3>
-                <div class="progress-bar-bg"><div class="progress-bar-fill-carb" id="carb-bar"></div></div>
-
-                <h3><span>Vetten (Brandstof 🧈)</span> <span id="fat-text" style="color: #B2530C;">0g / 110g</span></h3>
-                <div class="progress-bar-bg"><div class="progress-bar-fill-fat" id="fat-bar"></div></div>
-
-                <h3><span>Eiwitten (Spierbehoud 🥩)</span> <span id="protein-text" style="color: #1b4332;">0g / 90g</span></h3>
-                <div class="progress-bar-bg"><div class="progress-bar-fill-protein" id="protein-bar"></div></div>
-
-                <h3><span>Calorieën (Energie ⚡)</span> <span id="kcal-text" style="color: #5a189a;">0 / 2000 kcal</span></h3>
-                <div class="progress-bar-bg"><div class="progress-bar-fill-kcal" id="kcal-bar"></div></div>
+            <div class="widget macro-widget">
+                <div class="macro-grid">
+                    <div class="macro-cell">
+                        <div class="macro-label"><span>🥑 Koolhydr.</span> <span id="carb-text" style="color: var(--takkie-red);">0g / 25g</span></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill-carb" id="carb-bar"></div></div>
+                    </div>
+                    <div class="macro-cell">
+                        <div class="macro-label"><span>🧈 Vetten</span> <span id="fat-text" style="color: #B2530C;">0g / 110g</span></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill-fat" id="fat-bar"></div></div>
+                    </div>
+                    <div class="macro-cell">
+                        <div class="macro-label"><span>🥩 Eiwitten</span> <span id="protein-text" style="color: #1b4332;">0g / 90g</span></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill-protein" id="protein-bar"></div></div>
+                    </div>
+                    <div class="macro-cell">
+                        <div class="macro-label"><span>⚡ Calorieën</span> <span id="kcal-text" style="color: #5a189a;">0 / 2000 kcal</span></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill-kcal" id="kcal-bar"></div></div>
+                    </div>
+                </div>
             </div>
 
             <div class="widget">
@@ -631,21 +638,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261121b"></script>
-<script src="js/quotes.js?v=20261121b"></script>
-<script src="js/utils.js?v=20261121b"></script>
-<script src="js/auth.js?v=20261121b"></script>
-<script src="js/data.js?v=20261121b"></script>
-<script src="js/meals.js?v=20261121b"></script>
-<script src="js/favorites.js?v=20261121b"></script>
-<script src="js/ai.js?v=20261121b"></script>
-<script src="js/recipes.js?v=20261121b"></script>
-<script src="js/team.js?v=20261121b"></script>
-<script src="js/chat.js?v=20261121b"></script>
-<script src="js/notifications.js?v=20261121b"></script>
-<script src="js/history.js?v=20261121b"></script>
-<script src="js/ui.js?v=20261121b"></script>
-<script src="js/main.js?v=20261121b"></script>
+<script src="js/state.js?v=20261121c"></script>
+<script src="js/quotes.js?v=20261121c"></script>
+<script src="js/utils.js?v=20261121c"></script>
+<script src="js/auth.js?v=20261121c"></script>
+<script src="js/data.js?v=20261121c"></script>
+<script src="js/meals.js?v=20261121c"></script>
+<script src="js/favorites.js?v=20261121c"></script>
+<script src="js/ai.js?v=20261121c"></script>
+<script src="js/recipes.js?v=20261121c"></script>
+<script src="js/team.js?v=20261121c"></script>
+<script src="js/chat.js?v=20261121c"></script>
+<script src="js/notifications.js?v=20261121c"></script>
+<script src="js/history.js?v=20261121c"></script>
+<script src="js/ui.js?v=20261121c"></script>
+<script src="js/main.js?v=20261121c"></script>
 
 </body>
 </html>
