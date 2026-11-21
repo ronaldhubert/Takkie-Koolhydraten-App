@@ -409,38 +409,17 @@ async function exportHistoryToPdf() {
 
     try {
         const thisMonday = getMondayOf(new Date());
-        let startStr, endStr, periodTitle, fileSlug;
-        let weekStarts = [];
-
-        if (historyState.view === 'day' && historyState.day) {
-            const dObj = parseLocalDate(historyState.day);
-            const ws = getMondayOf(dObj);
-            const we = addDays(ws, 6);
-            weekStarts = [ws];
-            startStr = formatDateLocal(ws);
-            endStr = formatDateLocal(we);
-            periodTitle = `Week ${getISOWeekNumber(ws)} & ${DAY_NAMES_FULL[dObj.getDay()]} ${shortDateLabel(dObj)} ${dObj.getFullYear()}`;
-            fileSlug = historyState.day;
-        } else if (historyState.view === 'days' && historyState.weekStart) {
-            const ws = parseLocalDate(historyState.weekStart);
-            const we = addDays(ws, 6);
-            weekStarts = [ws];
-            startStr = formatDateLocal(ws);
-            endStr = formatDateLocal(we);
-            periodTitle = `Week ${getISOWeekNumber(ws)} (${shortDateLabel(ws)} – ${shortDateLabel(we)} ${we.getFullYear()})`;
-            fileSlug = `week-${getISOWeekNumber(ws)}-${startStr}`;
-        } else {
-            const newestStart = addDays(thisMonday, -7 * historyState.pageOffset * HISTORY_WEEKS_PER_PAGE);
-            for (let i = 0; i < HISTORY_WEEKS_PER_PAGE; i++) {
-                weekStarts.push(addDays(newestStart, -7 * i));
-            }
-            const oldestStart = weekStarts[weekStarts.length - 1];
-            const newestEnd = addDays(newestStart, 6);
-            startStr = formatDateLocal(oldestStart);
-            endStr = formatDateLocal(newestEnd);
-            periodTitle = `Week ${getISOWeekNumber(oldestStart)} t/m Week ${getISOWeekNumber(newestStart)} (${shortDateLabel(oldestStart)} – ${shortDateLabel(newestEnd)} ${newestEnd.getFullYear()})`;
-            fileSlug = `${startStr}-tm-${endStr}`;
+        const newestStart = addDays(thisMonday, -7 * historyState.pageOffset * HISTORY_WEEKS_PER_PAGE);
+        const weekStarts = [];
+        for (let i = 0; i < HISTORY_WEEKS_PER_PAGE; i++) {
+            weekStarts.push(addDays(newestStart, -7 * i));
         }
+        const oldestStart = weekStarts[weekStarts.length - 1];
+        const newestEnd = addDays(newestStart, 6);
+        const startStr = formatDateLocal(oldestStart);
+        const endStr = formatDateLocal(newestEnd);
+        const periodTitle = `Week ${getISOWeekNumber(oldestStart)} t/m Week ${getISOWeekNumber(newestStart)} (${shortDateLabel(oldestStart)} – ${shortDateLabel(newestEnd)} ${newestEnd.getFullYear()})`;
+        const fileSlug = `${startStr}-tm-${endStr}`;
 
         const data = await fetchHistoryRange(startStr, endStr);
         const userName = appState.displayName || getDefaultDisplayName();
@@ -510,64 +489,22 @@ async function exportHistoryToPdf() {
             const hitsK = mealDays.filter(x => checkGoal('kcal', x.s.kcal)).length;
             const hitsW = waterLoggedDays.filter(x => checkGoal('water', x.water)).length;
 
-            const dayRowsHtml = weekDays.map(({ dObj, ds, s, water }) => {
-                const hasDayMeals = s.count > 0;
-                const hasDayWater = s.count > 0 || water > 0;
-                const okC = hasDayMeals && checkGoal('carbs', s.carbs);
-                const okP = hasDayMeals && checkGoal('protein', s.protein);
-                const okF = hasDayMeals && checkGoal('fat', s.fat);
-                const okK = hasDayMeals && checkGoal('kcal', s.kcal);
-                const okW = hasDayWater && checkGoal('water', water);
-                const goalsMetCount = (okC ? 1 : 0) + (okP ? 1 : 0) + (okF ? 1 : 0) + (okK ? 1 : 0) + (okW ? 1 : 0);
-                const isSelectedDay = historyState.view === 'day' && historyState.day === ds;
-
-                return `
-                    <tr style="${isSelectedDay ? 'outline:2px solid #E63946;' : ''}">
-                        <td style="padding:5px 8px; border:1px solid #1A1A1A; font-weight:700; background:#FFFDF9;">
-                            ${DAY_NAMES_SHORT[dObj.getDay()].toUpperCase()} ${shortDateLabel(dObj)}
-                        </td>
-                        ${goalCell(okC, `${s.carbs}g`, hasDayMeals)}
-                        ${goalCell(okP, `${s.protein}g`, hasDayMeals)}
-                        ${goalCell(okF, `${s.fat}g`, hasDayMeals)}
-                        ${goalCell(okK, `${s.kcal}`, hasDayMeals)}
-                        ${goalCell(okW, `${water}/8`, hasDayWater)}
-                        <td style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center; font-weight:700; background:${!hasDayWater ? '#F5F5F5' : (goalsMetCount >= 4 ? '#D8F3DC' : '#FFF9E6')};">
-                            ${hasDayWater ? `${goalsMetCount}/5 ${goalsMetCount === 5 ? '⭐' : ''}` : '–'}
-                        </td>
-                    </tr>`;
-            }).join('');
-
             return `
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:18px; padding:12px 14px; margin-bottom:14px; page-break-inside:avoid;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                        <div style="font-size:16px; font-weight:700;">📊 Weekoverzicht — Week ${getISOWeekNumber(ws)} (${shortDateLabel(ws)} – ${shortDateLabel(we)})</div>
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:18px; padding:14px 16px; margin-bottom:14px; page-break-inside:avoid;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                        <div style="font-size:16px; font-weight:700;">📊 Week ${getISOWeekNumber(ws)} <span style="font-weight:600; font-size:13px; color:#555;">(${shortDateLabel(ws)} – ${shortDateLabel(we)})</span></div>
                         <div style="font-size:11px; font-weight:700; background:#FFF9E6; border:2px solid #1A1A1A; border-radius:999px; padding:2px 10px;">
-                            ✅ Groen = doel gehaald • ❌ Rood = doel niet gehaald
+                            ${nMeals}/7 dagen gelogd
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-bottom:10px;">
+                    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;">
                         ${goalSummaryTile('🥑 Koolhydraten', `max ${goals.carbs}g`, `Gem. ${avgC}g`, checkGoal('carbs', avgC), hitsC, nMeals || 7, hasMeals)}
                         ${goalSummaryTile('🥩 Eiwitten', `min ${goals.protein}g`, `Gem. ${avgP}g`, checkGoal('protein', avgP), hitsP, nMeals || 7, hasMeals)}
                         ${goalSummaryTile('🧈 Vetten', `max ${goals.fat}g`, `Gem. ${avgF}g`, checkGoal('fat', avgF), hitsF, nMeals || 7, hasMeals)}
                         ${goalSummaryTile('⚡ Calorieën', `max ${goals.kcal}`, `Gem. ${avgK}`, checkGoal('kcal', avgK), hitsK, nMeals || 7, hasMeals)}
                         ${goalSummaryTile('💧 Drinkbak', 'min 8 glazen', `Gem. ${avgW}/8`, checkGoal('water', avgW), hitsW, nWater || 7, nWater > 0)}
                     </div>
-
-                    <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
-                        <thead>
-                            <tr style="background:#FFD166;">
-                                <th style="padding:5px 8px; border:1px solid #1A1A1A; text-align:left;">Dag</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥑 KH (≤${goals.carbs}g)</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥩 Eiwit (≥${goals.protein}g)</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🧈 Vet (≤${goals.fat}g)</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">⚡ Kcal (≤${goals.kcal})</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">💧 Water (8)</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">Doelen</th>
-                            </tr>
-                        </thead>
-                        <tbody>${dayRowsHtml}</tbody>
-                    </table>
                 </div>`;
         }).join('');
 
