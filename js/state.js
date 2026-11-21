@@ -17,6 +17,8 @@ let appState = {
     water: 0,
     meals: [],
     yesterdayMeals: [],
+    activeDate: null,
+    returnToHistoryDay: false,
     recipes: [],
     savedItems: [],
     goals: { carbs: 25, fat: 110, protein: 90, kcal: 2000 },

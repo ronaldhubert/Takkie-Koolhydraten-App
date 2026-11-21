@@ -57,6 +57,55 @@ function getDefaultDisplayName() {
     return 'Keto Maatje';
 }
 
+async function loadDateLog(dateStr) {
+    if (!currentUser) return;
+    const targetDate = dateStr || getTodayString();
+    appState.activeDate = (targetDate === getTodayString()) ? null : targetDate;
+
+    const { data: logData } = await window.supabaseClient
+        .from('daily_logs')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('date', targetDate)
+        .maybeSingle();
+
+    if (logData) {
+        appState.dailyLogId = logData.id;
+        appState.water = logData.water || 0;
+    } else {
+        const { data: newLog } = await window.supabaseClient
+            .from('daily_logs')
+            .insert([{ user_id: currentUser.id, date: targetDate, water: 0 }])
+            .select()
+            .single();
+        if (newLog) {
+            appState.dailyLogId = newLog.id;
+            appState.water = 0;
+        }
+    }
+
+    const { data: mealsData } = await window.supabaseClient
+        .from('meals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('date', targetDate);
+    appState.meals = mealsData || [];
+
+    // Laad ook de maaltijden van de dag vóór targetDate voor de "🔄 Gisteren" dropdown
+    const [y, m, d] = targetDate.split('-').map(Number);
+    const prevDateObj = new Date(y, m - 1, d);
+    prevDateObj.setDate(prevDateObj.getDate() - 1);
+    const prevDateStr = formatDateLocal(prevDateObj);
+    const { data: yesterdayMealsData } = await window.supabaseClient
+        .from('meals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('date', prevDateStr);
+    appState.yesterdayMeals = yesterdayMealsData || [];
+
+    renderApp();
+}
+
 async function loadUserData() {
     if (!currentUser) return;
     const today = getTodayString();
@@ -95,42 +144,7 @@ async function loadUserData() {
         await getGeminiApiKey();
     }
 
-    const { data: logData } = await window.supabaseClient
-        .from('daily_logs')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .eq('date', today)
-        .maybeSingle();
-
-    if (logData) {
-        appState.dailyLogId = logData.id;
-        appState.water = logData.water || 0;
-    } else {
-        const { data: newLog } = await window.supabaseClient
-            .from('daily_logs')
-            .insert([{ user_id: currentUser.id, date: today, water: 0 }])
-            .select()
-            .single();
-        if (newLog) {
-            appState.dailyLogId = newLog.id;
-            appState.water = 0;
-        }
-    }
-
-    const { data: mealsData } = await window.supabaseClient
-        .from('meals')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .eq('date', today);
-    appState.meals = mealsData || [];
-
-    const yesterday = getYesterdayString();
-    const { data: yesterdayMealsData } = await window.supabaseClient
-        .from('meals')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .eq('date', yesterday);
-    appState.yesterdayMeals = yesterdayMealsData || [];
+    await loadDateLog(today);
 
     const { data: recipesData } = await window.supabaseClient
         .from('recipes')
@@ -192,7 +206,7 @@ async function updateWater(amount) {
         .update({ water: amount })
         .eq('id', appState.dailyLogId);
 
-    if (prevWater < 8 && amount >= 8 && appState.teamId) {
+    if (prevWater < 8 && amount >= 8 && appState.teamId && !isViewingOtherDay()) {
         const sentKey = `takkie_water_goal_${getTodayString()}_${currentUser.id}`;
         if (!localStorage.getItem(sentKey)) {
             localStorage.setItem(sentKey, '1');
@@ -211,9 +225,10 @@ async function updateWater(amount) {
 
 async function saveMeal(type, name, carbs, fat, protein) {
     if (!currentUser) return;
+    const activeDate = getActiveDateString();
     const newMeal = {
         user_id: currentUser.id,
-        date: getTodayString(),
+        date: activeDate,
         type,
         name,
         carbs: Number(carbs) || 0,
@@ -230,7 +245,7 @@ async function saveMeal(type, name, carbs, fat, protein) {
     renderApp();
     if (appState.teamId) {
         refreshTeamMembersCoop();
-        if (isShareLogsEnabled()) {
+        if (isShareLogsEnabled() && !isViewingOtherDay()) {
             const kcal = Math.round((Number(carbs) || 0) * 4 + (Number(protein) || 0) * 4 + (Number(fat) || 0) * 9);
             sendTeamMessage('system', `📝 ${getDefaultDisplayName()} heeft gelogd: ${type} ${name} (${kcal} kcal)`, null, appState.petChoice);
         }
@@ -266,7 +281,11 @@ async function saveRecipe(name, carbs, fat, protein, kcal, ingredients, prep) {
 
 async function repeatYesterdayMeals() {
     if (!currentUser) return;
-    const yesterday = getYesterdayString();
+    const targetDate = getActiveDateString();
+    const [y, m, d] = targetDate.split('-').map(Number);
+    const prevDateObj = new Date(y, m - 1, d);
+    prevDateObj.setDate(prevDateObj.getDate() - 1);
+    const yesterday = formatDateLocal(prevDateObj);
     const { data: yesterdayMeals } = await window.supabaseClient
         .from('meals')
         .select('*')
@@ -281,10 +300,9 @@ async function repeatYesterdayMeals() {
         return;
     }
 
-    const today = getTodayString();
     const toInsert = yesterdayMeals.map(m => ({
         user_id: currentUser.id,
-        date: today,
+        date: targetDate,
         type: m.type,
         name: m.name,
         carbs: Number(m.carbs) || 0,

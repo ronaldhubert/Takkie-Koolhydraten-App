@@ -13,6 +13,24 @@ function getTodayString() {
     return formatDateLocal(new Date());
 }
 
+function getActiveDateString() {
+    return (typeof appState !== 'undefined' && appState.activeDate) ? appState.activeDate : getTodayString();
+}
+
+function isViewingOtherDay() {
+    return getActiveDateString() !== getTodayString();
+}
+
+function formatFriendlyDateNL(dateStr) {
+    if (!dateStr) return 'Vandaag';
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length !== 3) return dateStr;
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+    const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
 function getYesterdayString() {
     const d = new Date();
     d.setDate(d.getDate() - 1);

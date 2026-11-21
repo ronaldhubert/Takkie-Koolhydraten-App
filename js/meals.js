@@ -183,7 +183,12 @@ async function saveEditedMeal() {
     }
 
     editingMealIndex = null;
-    switchTab('home');
+    if (appState.returnToHistoryDay) {
+        appState.returnToHistoryDay = false;
+        switchTab('history');
+    } else {
+        switchTab('home');
+    }
 }
 
 window.deleteMeal = async function(idx, btnEl = null) {
@@ -205,7 +210,12 @@ function initMealEvents() {
     if (document.getElementById('btn-cancel-edit-meal')) {
         document.getElementById('btn-cancel-edit-meal').addEventListener('click', () => {
             editingMealIndex = null;
-            switchTab('home');
+            if (appState.returnToHistoryDay) {
+                appState.returnToHistoryDay = false;
+                switchTab('history');
+            } else {
+                switchTab('home');
+            }
         });
     }
 
@@ -347,7 +357,12 @@ function initLogEvents() {
             document.getElementById('save-favorite-meal').checked = false;
             const fb = document.getElementById('ai-meal-feedback');
             if (fb) fb.style.display = 'none';
-            switchTab('home');
+            if (appState.returnToHistoryDay) {
+                appState.returnToHistoryDay = false;
+                switchTab('history');
+            } else {
+                switchTab('home');
+            }
         });
     }
 
@@ -378,7 +393,12 @@ function initLogEvents() {
             document.getElementById('save-favorite-drink').checked = false;
             const fb = document.getElementById('ai-drink-feedback');
             if (fb) fb.style.display = 'none';
-            switchTab('home');
+            if (appState.returnToHistoryDay) {
+                appState.returnToHistoryDay = false;
+                switchTab('history');
+            } else {
+                switchTab('home');
+            }
         });
     }
 

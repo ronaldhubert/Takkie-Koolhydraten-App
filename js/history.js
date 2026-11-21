@@ -268,11 +268,11 @@ async function renderHistory() {
         return;
     }
 
-    // Dagdetails
+    // Dagdetails (startpunt om deze dag te bekijken én te wijzigen)
+    await loadDateLog(historyState.day);
     const dayObj = parseLocalDate(historyState.day);
-    const data = await fetchHistoryRange(historyState.day, historyState.day);
-    const s = summarizeDay(data.meals, historyState.day);
-    const water = data.water[historyState.day] || 0;
+    const s = summarizeDay(appState.meals, historyState.day);
+    const water = appState.water || 0;
     const goals = appState.goals;
     navEl.innerHTML = `
         <button type="button" class="btn btn-auto hist-nav-btn" data-hist-back-days>← Week</button>
@@ -295,14 +295,24 @@ async function renderHistory() {
 
     let waterDots = '';
     for (let i = 1; i <= 8; i++) {
-        waterDots += `<span style="opacity:${i <= water ? '1' : '0.25'};">💧</span>`;
+        waterDots += `<button type="button" onclick="setHistoryDayWater(${i})" title="Zet water op ${i} glazen" style="background:none; border:none; padding:0 1px; cursor:pointer; font-size:0.95rem; opacity:${i <= water ? '1' : '0.25'};">💧</button>`;
     }
 
-    const mealsHtml = s.meals.length
-        ? s.meals.map(m => `
-            <div class="hist-meal">
+    const mealsHtml = appState.meals.length
+        ? appState.meals.map((m, idx) => {
+            const favInfo = getMealFavoriteInfo(m);
+            const isFav = favInfo.favIdx !== -1;
+            const heartIcon = isFav ? '❤️' : '🤍';
+            const heartTitle = isFav ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten';
+            return `
+            <div class="hist-meal meal-item" style="display:block;">
                 <div class="hist-meal-top">
                     <span>${escapeHtml(m.type || '🍽️')} — ${escapeHtml(m.name || '')}</span>
+                    <span style="white-space:nowrap;">
+                        <button type="button" onclick="toggleHistoryDayFavorite(${idx})" title="${heartTitle}" style="background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0; margin-right:6px; vertical-align:middle;">${heartIcon}</button>
+                        <button type="button" onclick="openHistoryDayEditMeal(${idx})" style="background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; padding:0; margin-right:6px;">✏️ Wijzigen</button>
+                        <button type="button" onclick="deleteHistoryDayMeal(${idx}, this)" style="background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; padding:0;">Verwijderen</button>
+                    </span>
                 </div>
                 <div class="hist-badge-row">
                     <span class="hist-macro-pill hist-pill-carb">${Number(m.carbs) || 0}g KH</span>
@@ -310,10 +320,16 @@ async function renderHistory() {
                     <span class="hist-macro-pill hist-pill-prot">${Number(m.protein) || 0}g Eiwit</span>
                     <span class="hist-macro-pill hist-pill-kcal">${mealKcal(m)} kcal</span>
                 </div>
-            </div>`).join('')
+            </div>`;
+        }).join('')
         : '<p style="color:#666; text-align:center;">Geen maaltijden of drankjes gelogd op deze dag.</p>';
 
     contentEl.innerHTML = `
+        <div class="btn-grid" style="margin-top:0; margin-bottom:12px;">
+            <button type="button" class="btn btn-drink" onclick="openHistoryDayAddMeal()">🍽️ Maaltijd Toevoegen</button>
+            <button type="button" class="btn btn-drink" onclick="openHistoryDayAddDrink()">🥤 Drank Loggen</button>
+            <button type="button" class="btn" style="grid-column: span 2; background: var(--accent-yellow); padding: 9px;" onclick="openHistoryDayOnHome()">✏️ Open deze dag op Home</button>
+        </div>
         <div class="hist-summary">
             ${makeTile('🥑 Koolhydraten', s.carbs, goals.carbs, 'g', 'var(--takkie-red)')}
             ${makeTile('🧈 Vetten', s.fat, goals.fat, 'g', '#B2530C')}
@@ -321,12 +337,66 @@ async function renderHistory() {
             ${makeTile('⚡ Calorieën', s.kcal, goals.kcal, '', '#5a189a')}
         </div>
         <div class="hist-water-box">
-            <span>Takkie & Siep's Drinkbak: <strong>${water} / 8 glazen</strong></span>
+            <span>Drinkbak (tik op 💧): <strong>${water} / 8 glazen</strong></span>
             <span>${waterDots}</span>
         </div>
-        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">🍽️ Gelogde hapjes & drankjes (${s.meals.length}):</div>
+        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">🍽️ Gelogde hapjes & drankjes (${appState.meals.length}):</div>
         ${mealsHtml}`;
 }
+
+window.openHistoryDayOnHome = async function() {
+    if (!historyState.day) return;
+    appState.returnToHistoryDay = false;
+    await loadDateLog(historyState.day);
+    switchTab('home');
+};
+
+window.openHistoryDayAddMeal = async function() {
+    if (!historyState.day) return;
+    await loadDateLog(historyState.day);
+    appState.returnToHistoryDay = true;
+    switchTab('log');
+};
+
+window.openHistoryDayAddDrink = async function() {
+    if (!historyState.day) return;
+    await loadDateLog(historyState.day);
+    appState.returnToHistoryDay = true;
+    switchTab('log-drink');
+};
+
+window.openHistoryDayEditMeal = async function(idx) {
+    if (!historyState.day) return;
+    await loadDateLog(historyState.day);
+    appState.returnToHistoryDay = true;
+    window.openEditMeal(idx);
+};
+
+window.toggleHistoryDayFavorite = async function(idx) {
+    await window.toggleMealFavorite(idx);
+    await renderHistory();
+};
+
+window.deleteHistoryDayMeal = function(idx, btnEl) {
+    const anchor = btnEl || document.getElementById('history-content');
+    showInlineConfirm(anchor, "Weet je zeker dat je dit hapje wilt verwijderen?", async () => {
+        const mealToDel = appState.meals[idx];
+        appState.meals.splice(idx, 1);
+        if (mealToDel && mealToDel.id) {
+            await window.supabaseClient.from('meals').delete().eq('id', mealToDel.id);
+            await calculateStreak();
+        }
+        renderApp();
+        await renderHistory();
+    });
+};
+
+window.setHistoryDayWater = async function(clickedVal) {
+    const prevWater = appState.water;
+    const nextWater = (clickedVal === prevWater) ? clickedVal - 1 : clickedVal;
+    await updateWater(nextWater);
+    await renderHistory();
+};
 
 async function exportHistoryToPdf() {
     if (!currentUser) return;
@@ -582,8 +652,10 @@ document.addEventListener('click', (e) => {
         if (historyState.pageOffset > 0) historyState.pageOffset -= 1;
     } else if (t.hasAttribute('data-hist-back-weeks')) {
         historyState.view = 'weeks';
+        if (isViewingOtherDay()) loadDateLog(getTodayString());
     } else if (t.hasAttribute('data-hist-back-days')) {
         historyState.view = 'days';
+        if (isViewingOtherDay()) loadDateLog(getTodayString());
     }
     renderHistory();
 });

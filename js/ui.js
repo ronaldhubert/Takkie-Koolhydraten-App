@@ -106,6 +106,19 @@ function renderApp() {
     if (document.getElementById('streak-display')) document.getElementById('streak-display').innerText = "🔥 " + (appState.streak || 0) + " dagen";
     if (document.getElementById('streak-count-text')) document.getElementById('streak-count-text').innerText = (appState.streak || 0);
 
+    const homeTitleEl = document.getElementById('home-log-title');
+    const dateBannerEl = document.getElementById('active-date-banner');
+    const dateBannerTextEl = document.getElementById('active-date-banner-text');
+    if (isViewingOtherDay()) {
+        const friendly = formatFriendlyDateNL(getActiveDateString());
+        if (homeTitleEl) homeTitleEl.innerText = `📖 Log van ${friendly}`;
+        if (dateBannerEl) dateBannerEl.style.display = 'flex';
+        if (dateBannerTextEl) dateBannerTextEl.innerText = `📅 Je wijzigt nu: ${friendly}`;
+    } else {
+        if (homeTitleEl) homeTitleEl.innerText = '📖 Vandaag Loggen';
+        if (dateBannerEl) dateBannerEl.style.display = 'none';
+    }
+
     updateLevel(appState.points);
 
     if (document.getElementById('water-text')) document.getElementById('water-text').innerText = appState.water + " / 8 glazen";
@@ -338,11 +351,32 @@ function initNavEvents() {
     }
 
     if (document.getElementById('btn-back-from-log')) {
-        document.getElementById('btn-back-from-log').addEventListener('click', () => switchTab('home'));
+        document.getElementById('btn-back-from-log').addEventListener('click', () => {
+            if (appState.returnToHistoryDay) {
+                appState.returnToHistoryDay = false;
+                switchTab('history');
+            } else {
+                switchTab('home');
+            }
+        });
     }
 
     if (document.getElementById('btn-back-from-drink')) {
-        document.getElementById('btn-back-from-drink').addEventListener('click', () => switchTab('home'));
+        document.getElementById('btn-back-from-drink').addEventListener('click', () => {
+            if (appState.returnToHistoryDay) {
+                appState.returnToHistoryDay = false;
+                switchTab('history');
+            } else {
+                switchTab('home');
+            }
+        });
+    }
+
+    if (document.getElementById('btn-return-today')) {
+        document.getElementById('btn-return-today').addEventListener('click', async () => {
+            appState.returnToHistoryDay = false;
+            await loadDateLog(getTodayString());
+        });
     }
 
     if (document.getElementById('btn-favorite')) {
