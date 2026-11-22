@@ -135,6 +135,7 @@
   "fetchHistoryRange",
   "summarizeDay",
   "buildBarChart",
+  "buildCarbLineChartLast10Days",
   "renderHistory",
   "window.openHistoryDayOnHome",
   "window.openHistoryDayAddMeal",

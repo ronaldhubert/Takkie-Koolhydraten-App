@@ -128,6 +128,90 @@ function buildBarChart(items) {
         </div>`;
 }
 
+function buildCarbLineChartLast10Days(meals, isForPdf = false) {
+    const carbGoal = Number(appState.goals?.carbs) || 25;
+    const todayObj = new Date();
+    const days = [];
+    for (let i = 9; i >= 0; i--) {
+        const dObj = addDays(todayObj, -i);
+        const ds = formatDateLocal(dObj);
+        const s = summarizeDay(meals || [], ds);
+        days.push({
+            dObj,
+            ds,
+            dayName: DAY_NAMES_SHORT[dObj.getDay()],
+            shortDate: `${dObj.getDate()}/${dObj.getMonth() + 1}`,
+            carbs: s.carbs,
+            hasData: s.count > 0,
+            isToday: i === 0
+        });
+    }
+
+    const maxVal = Math.max(carbGoal * 1.25, ...days.map(d => d.carbs), 10);
+    const svgW = 520;
+    const svgH = 165;
+    const padL = 36;
+    const padR = 18;
+    const padT = 26;
+    const padB = 36;
+    const plotW = svgW - padL - padR;
+    const plotH = svgH - padT - padB;
+
+    const getX = (idx) => padL + (idx / (days.length - 1)) * plotW;
+    const getY = (val) => padT + plotH - Math.min(1, Math.max(0, val / maxVal)) * plotH;
+
+    const goalY = Math.round(getY(carbGoal) * 10) / 10;
+    const baseY = padT + plotH;
+
+    const coords = days.map((d, idx) => ({
+        ...d,
+        x: Math.round(getX(idx) * 10) / 10,
+        y: Math.round(getY(d.carbs) * 10) / 10
+    }));
+
+    const linePoints = coords.map(p => `${p.x},${p.y}`).join(' ');
+    const areaPoints = `${coords[0].x},${baseY} ${linePoints} ${coords[coords.length - 1].x},${baseY}`;
+
+    const dotsAndLabelsSvg = coords.map(p => {
+        const ok = p.carbs <= carbGoal;
+        const dotFill = !p.hasData ? '#E0E0E0' : (ok ? '#06D6A0' : '#E63946');
+        const valColor = !p.hasData ? '#888888' : (ok ? '#1B4332' : '#B71C1C');
+        const valText = p.hasData ? `${p.carbs}g` : '–';
+        const valY = Math.max(13, p.y - 9);
+        const dayWeight = p.isToday ? '700' : '600';
+        const dayColor = p.isToday ? '#E63946' : '#1A1A1A';
+        return `
+            <g>
+                <line x1="${p.x}" y1="${padT}" x2="${p.x}" y2="${baseY}" stroke="#EFEFEF" stroke-width="1" />
+                <text x="${p.x}" y="${valY}" text-anchor="middle" font-size="11" font-weight="700" fill="${valColor}" font-family="Fredoka, Arial, sans-serif">${valText}</text>
+                <circle cx="${p.x}" cy="${p.y}" r="${p.isToday ? 6 : 5}" fill="${dotFill}" stroke="#1A1A1A" stroke-width="2.2" />
+                <text x="${p.x}" y="${baseY + 14}" text-anchor="middle" font-size="11" font-weight="${dayWeight}" fill="${dayColor}" font-family="Fredoka, Arial, sans-serif">${p.dayName}</text>
+                <text x="${p.x}" y="${baseY + 27}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#666666" font-family="Fredoka, Arial, sans-serif">${p.shortDate}</text>
+            </g>`;
+    }).join('');
+
+    const cardStyle = isForPdf
+        ? 'background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px; margin-bottom:10px; page-break-inside:avoid;'
+        : 'background:#FFFDF9; border:3px solid var(--border-color); border-radius:16px; padding:10px 12px; box-shadow:3px 3px 0px var(--border-color); margin-bottom:12px;';
+
+    return `
+        <div style="${cardStyle}">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
+                <div style="font-size:${isForPdf ? '13px' : '0.84rem'}; font-weight:700;">📈 Koolhydraten per dag (laatste 10 dagen)</div>
+                <span style="background:#FFEEEE; color:#E63946; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 8px; font-weight:700; font-size:${isForPdf ? '10px' : '0.7rem'};">🎯 Dagdoel: max ${carbGoal}g</span>
+            </div>
+            <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" style="display:block; width:100%; height:auto; overflow:visible;">
+                <polygon points="${areaPoints}" fill="rgba(6, 214, 160, 0.14)" />
+                <line x1="${padL}" y1="${baseY}" x2="${svgW - padR}" y2="${baseY}" stroke="#1A1A1A" stroke-width="2" />
+                <line x1="${padL}" y1="${goalY}" x2="${svgW - padR}" y2="${goalY}" stroke="#E63946" stroke-width="1.8" stroke-dasharray="5,4" />
+                <text x="${padL - 5}" y="${goalY + 3}" text-anchor="end" font-size="10" font-weight="700" fill="#E63946" font-family="Fredoka, Arial, sans-serif">${carbGoal}g</text>
+                <text x="${padL - 5}" y="${baseY + 3}" text-anchor="end" font-size="10" font-weight="600" fill="#666666" font-family="Fredoka, Arial, sans-serif">0g</text>
+                <polyline fill="none" stroke="#1A1A1A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" points="${linePoints}" />
+                ${dotsAndLabelsSvg}
+            </svg>
+        </div>`;
+}
+
 async function renderHistory() {
     const navEl = document.getElementById('history-nav');
     const contentEl = document.getElementById('history-content');
@@ -206,12 +290,20 @@ async function renderHistory() {
             </button>
         `).join('');
 
+        const tenDaysStartStr = formatDateLocal(addDays(new Date(), -9));
+        let last10Meals = data.meals;
+        if (rangeStart > tenDaysStartStr || rangeEnd < todayStr) {
+            const tenDaysData = await fetchHistoryRange(tenDaysStartStr, todayStr);
+            last10Meals = tenDaysData.meals;
+        }
+
         navEl.innerHTML = `
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-prev>← Eerder</button>
             <span style="font-weight:700; font-size:0.85rem; text-align:center;">Gemiddeld per dag (3 weken)</span>
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-next ${historyState.pageOffset === 0 ? 'disabled style="opacity:0.4;"' : ''}>Later →</button>`;
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
+            ${buildCarbLineChartLast10Days(last10Meals, false)}
             <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Overzicht per week (tik voor alle dagen):</div>
             <div class="hist-cards-list">${weekCardsHtml}</div>`;
         return;
@@ -219,7 +311,14 @@ async function renderHistory() {
 
     if (historyState.view === 'days') {
         const ws = parseLocalDate(historyState.weekStart);
-        const data = await fetchHistoryRange(historyState.weekStart, formatDateLocal(addDays(ws, 6)));
+        const weekEndStr = formatDateLocal(addDays(ws, 6));
+        const data = await fetchHistoryRange(historyState.weekStart, weekEndStr);
+        const tenDaysStartStr = formatDateLocal(addDays(new Date(), -9));
+        let last10Meals = data.meals;
+        if (historyState.weekStart > tenDaysStartStr || weekEndStr < todayStr) {
+            const tenDaysData = await fetchHistoryRange(tenDaysStartStr, todayStr);
+            last10Meals = tenDaysData.meals;
+        }
         const chartItems = [];
         const dayRows = [];
         for (let d = 0; d < 7; d++) {
@@ -263,6 +362,7 @@ async function renderHistory() {
             <span style="width:70px;"></span>`;
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
+            ${buildCarbLineChartLast10Days(last10Meals, false)}
             <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Dagen in Week ${getISOWeekNumber(ws)} (tik op een dag om die te openen op Home):</div>
             <div class="hist-cards-list">${dayCardsHtml}</div>`;
         return;
@@ -583,6 +683,8 @@ async function exportHistoryToPdf() {
                 </div>
             </div>`;
 
+        const carbLineChartPdfHtml = buildCarbLineChartLast10Days(data.meals, true);
+
         const reportHtml = `
             <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:14px; box-sizing:border-box;">
                 <div style="background:#F1FAEE; border:3.5px solid #1A1A1A; border-radius:18px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
@@ -593,6 +695,7 @@ async function exportHistoryToPdf() {
                     <img src="takkie.png" alt="Takkie" style="height:46px; width:auto;">
                 </div>
 
+                ${carbLineChartPdfHtml}
                 ${weeksOverviewHtml}
                 ${topListsHtml}
 
