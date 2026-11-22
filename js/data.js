@@ -166,34 +166,14 @@ async function loadUserData() {
     });
 }
 
-function getLevelTitle(pts) {
-    let title = "⭐ Level 1: Keto Snuffelaar";
-    if (pts > 50) title = "🌟 Level 2: Speelse Vetverbrander";
-    if (pts > 150) title = "🏆 Level 3: Takkie's Vrolijke Vriendje";
-    if (pts > 300) title = "👑 Level 4: Siep's Spinnende Kampioen";
-    if (pts > 600) title = "🐾 Level 5: Keto Koning(in)";
-    return title;
-}
-
 async function addPoints(amount) {
     if (!currentUser) return;
-    const oldLevel = getLevelTitle(appState.points);
     appState.points += amount;
-    const newLevel = getLevelTitle(appState.points);
     renderApp();
     await window.supabaseClient
         .from('profiles')
         .update({ points: appState.points })
         .eq('id', currentUser.id);
-
-    if (oldLevel !== newLevel && appState.teamId) {
-        await sendTeamMessage(
-            'system',
-            `🌟 Miauw! ${getDefaultDisplayName()} is nu ${newLevel}!`,
-            null,
-            'siepie'
-        );
-    }
 }
 
 async function updateWater(amount) {

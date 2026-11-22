@@ -90,17 +90,6 @@ function getRandomQuote() {
     }
 }
 
-function updateLevel(pts) {
-    let title = "⭐ Level 1: Keto Snuffelaar";
-    if (pts > 50) title = "🌟 Level 2: Speelse Vetverbrander";
-    if (pts > 150) title = "🏆 Level 3: Takkie's Vrolijke Vriendje";
-    if (pts > 300) title = "👑 Level 4: Siep's Spinnende Kampioen";
-    if (pts > 600) title = "🐾 Level 5: Keto Koning(in)";
-    if (document.getElementById('level-display')) {
-        document.getElementById('level-display').innerText = title;
-    }
-}
-
 function updateSlidersLive() {
     document.getElementById('slider-carb-val').innerText = document.getElementById('slider-carbs').value + 'g';
     document.getElementById('slider-fat-val').innerText = document.getElementById('slider-fat').value + 'g';
@@ -128,8 +117,6 @@ function renderApp() {
         if (nextDayBtn) nextDayBtn.style.display = 'none';
         if (returnTodayBtn) returnTodayBtn.style.display = 'none';
     }
-
-    updateLevel(appState.points);
 
     if (document.getElementById('water-text')) document.getElementById('water-text').innerText = appState.water + " / 8 glazen";
     let waterHtml = '';

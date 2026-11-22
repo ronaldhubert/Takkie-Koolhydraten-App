@@ -312,7 +312,6 @@ function renderTeamCoopDashboard() {
         } else {
             membersListEl.innerHTML = members.map(m => {
                 const petImg = m.petChoice === 'siepie' ? 'siepie.png' : 'takkie.png';
-                const lvl = getLevelTitle(m.points);
                 return `<div class="member-card">
                     <img src="${petImg}" alt="${escapeHtml(m.petChoice)}" class="member-pet-icon">
                     <div style="flex: 1;">
@@ -320,7 +319,6 @@ function renderTeamCoopDashboard() {
                             <strong style="font-size: 0.92rem;">${escapeHtml(m.displayName)}</strong>
                             <span style="font-size: 0.75rem; font-weight: 700; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 1px 6px;">🔥 ${m.streak}d</span>
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--takkie-red); font-weight: 700;">${escapeHtml(lvl)}</div>
                         <div style="font-size: 0.78rem; color: #333; margin-top: 2px;">${escapeHtml(m.statusText)}</div>
                         ${m.id !== currentUser.id ? `<button type="button" class="btn" style="margin: 6px 0 0; padding: 4px 10px; font-size: 0.75rem; background: white; width: auto;" onclick="openDirectMessage('${m.id}', this)">✉️ Stuur bericht</button>` : ''}
                     </div>
