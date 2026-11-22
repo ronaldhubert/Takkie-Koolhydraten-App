@@ -136,6 +136,7 @@
   "summarizeDay",
   "buildBarChart",
   "buildCarbLineChartLast10Days",
+  "buildTop5MealsAndDrinksHtml",
   "renderHistory",
   "window.openHistoryDayOnHome",
   "window.openHistoryDayAddMeal",

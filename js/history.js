@@ -24,7 +24,7 @@ function renderMetricPicker() {
         return `<button type="button" class="hist-metric-btn${active ? ' active' : ''}" data-hist-metric="${k}">${m.icon} ${m.label}</button>`;
     }).join('');
 }
-const HISTORY_WEEKS_PER_PAGE = 3;
+const HISTORY_WEEKS_PER_PAGE = 4;
 const DAY_NAMES_SHORT = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const DAY_NAMES_FULL = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
 const MONTH_NAMES_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -328,6 +328,77 @@ function buildCarbLineChartLast10Days(meals, isForPdf = false) {
         </div>`;
 }
 
+function buildTop5MealsAndDrinksHtml(mealsList, isForPdf = false) {
+    const mealCounts = new Map();
+    const drinkCounts = new Map();
+
+    (mealsList || []).forEach(m => {
+        const isDrink = (m.type || '').includes('Drank');
+        const rawName = (m.name || '').trim();
+        if (!rawName) return;
+        const cleanName = rawName.replace(/^(\d+)\s*x\s+/i, '').trim();
+        if (!cleanName) return;
+        const key = cleanName.toLowerCase();
+        const targetMap = isDrink ? drinkCounts : mealCounts;
+        if (!targetMap.has(key)) {
+            targetMap.set(key, { name: cleanName, count: 0, carbs: 0, fat: 0, protein: 0 });
+        }
+        const entry = targetMap.get(key);
+        entry.count += 1;
+        entry.carbs += Number(m.carbs) || 0;
+        entry.fat += Number(m.fat) || 0;
+        entry.protein += Number(m.protein) || 0;
+    });
+
+    const getTop5ListHtml = (mapObj, emptyText) => {
+        const top5 = Array.from(mapObj.values())
+            .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name, 'nl'))
+            .slice(0, 5);
+        if (top5.length === 0) {
+            return `<div style="font-size:${isForPdf ? '11px' : '0.78rem'}; color:#777; font-style:italic;">${emptyText}</div>`;
+        }
+        return top5.map((item, idx) => {
+            const avgC = Math.round(item.carbs / item.count);
+            const avgP = Math.round(item.protein / item.count);
+            const avgF = Math.round(item.fat / item.count);
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 0; border-bottom:1px dashed #DDD; font-size:${isForPdf ? '11px' : '0.8rem'};">
+                    <div style="font-weight:600; color:#1A1A1A; min-width:0; overflow:hidden; text-overflow:ellipsis;">${idx + 1}. ${escapeHtml(item.name)}</div>
+                    <div style="white-space:nowrap; font-size:${isForPdf ? '10px' : '0.74rem'}; color:#444; flex-shrink:0;">
+                        <span style="font-weight:700; background:#FFF9E6; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 7px;">${item.count}×</span>
+                        <span style="margin-left:4px; color:#666;">(${avgC}g KH • ${avgP}g E • ${avgF}g V)</span>
+                    </div>
+                </div>`;
+        }).join('');
+    };
+
+    if (isForPdf) {
+        return `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; page-break-inside:avoid;">
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
+                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🍽️ Top 5 Maaltijden (laatste 4 weken)</div>
+                    ${getTop5ListHtml(mealCounts, 'Nog geen maaltijden gelogd in deze 4 weken.')}
+                </div>
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
+                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🥤 Top 5 Drankjes (laatste 4 weken)</div>
+                    ${getTop5ListHtml(drinkCounts, 'Nog geen drankjes gelogd in deze 4 weken.')}
+                </div>
+            </div>`;
+    }
+
+    return `
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+            <div style="background:#FFFDF9; border:3px solid var(--border-color); border-radius:14px; padding:10px 12px; box-shadow:3px 3px 0px var(--border-color);">
+                <div style="font-size:0.86rem; font-weight:700; margin-bottom:6px;">🍽️ Top 5 Meest Gebruikte Maaltijden <span style="font-weight:500; font-size:0.75rem; color:#555;">(laatste 4 weken)</span></div>
+                ${getTop5ListHtml(mealCounts, 'Nog geen maaltijden gelogd in de laatste 4 weken.')}
+            </div>
+            <div style="background:#FFFDF9; border:3px solid var(--border-color); border-radius:14px; padding:10px 12px; box-shadow:3px 3px 0px var(--border-color);">
+                <div style="font-size:0.86rem; font-weight:700; margin-bottom:6px;">🥤 Top 5 Meest Gebruikte Drankjes <span style="font-weight:500; font-size:0.75rem; color:#555;">(laatste 4 weken)</span></div>
+                ${getTop5ListHtml(drinkCounts, 'Nog geen drankjes gelogd in de laatste 4 weken.')}
+            </div>
+        </div>`;
+}
+
 async function renderHistory() {
     const navEl = document.getElementById('history-nav');
     const contentEl = document.getElementById('history-content');
@@ -406,24 +477,26 @@ async function renderHistory() {
             </button>
         `).join('');
 
-        const tenDaysStartStr = formatDateLocal(addDays(new Date(), -9));
-        let last10Meals = data.meals;
-        if (rangeStart > tenDaysStartStr || rangeEnd < todayStr) {
-            const tenDaysData = await fetchHistoryRange(tenDaysStartStr, todayStr);
-            last10Meals = tenDaysData.meals;
+        const last4StartStr = formatDateLocal(addDays(thisMonday, -21));
+        const last4EndStr = formatDateLocal(addDays(thisMonday, 6));
+        let last4WeeksMeals = data.meals;
+        if (rangeStart !== last4StartStr || rangeEnd !== last4EndStr) {
+            const last4Data = await fetchHistoryRange(last4StartStr, last4EndStr);
+            last4WeeksMeals = last4Data.meals;
         }
 
         const lineChartEl = document.getElementById('history-line-chart');
-        if (lineChartEl) lineChartEl.innerHTML = buildCarbLineChartLast10Days(last10Meals, false);
+        if (lineChartEl) lineChartEl.innerHTML = buildCarbLineChartLast10Days(last4WeeksMeals, false);
 
         navEl.innerHTML = `
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-prev>← Eerder</button>
-            <span style="font-weight:700; font-size:0.85rem; text-align:center;">Gemiddeld per dag (3 weken)</span>
+            <span style="font-weight:700; font-size:0.85rem; text-align:center;">Gemiddeld per dag (4 weken)</span>
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-next ${historyState.pageOffset === 0 ? 'disabled style="opacity:0.4;"' : ''}>Later →</button>`;
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
             <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Overzicht per week (tik voor alle dagen):</div>
-            <div class="hist-cards-list">${weekCardsHtml}</div>`;
+            <div class="hist-cards-list">${weekCardsHtml}</div>
+            ${buildTop5MealsAndDrinksHtml(last4WeeksMeals, false)}`;
         return;
     }
 
@@ -431,14 +504,12 @@ async function renderHistory() {
         const ws = parseLocalDate(historyState.weekStart);
         const weekEndStr = formatDateLocal(addDays(ws, 6));
         const data = await fetchHistoryRange(historyState.weekStart, weekEndStr);
-        const tenDaysStartStr = formatDateLocal(addDays(new Date(), -9));
-        let last10Meals = data.meals;
-        if (historyState.weekStart > tenDaysStartStr || weekEndStr < todayStr) {
-            const tenDaysData = await fetchHistoryRange(tenDaysStartStr, todayStr);
-            last10Meals = tenDaysData.meals;
-        }
+        const last4StartStr = formatDateLocal(addDays(thisMonday, -21));
+        const last4EndStr = formatDateLocal(addDays(thisMonday, 6));
+        const last4Data = await fetchHistoryRange(last4StartStr, last4EndStr);
+        const last4WeeksMeals = last4Data.meals;
         const lineChartEl = document.getElementById('history-line-chart');
-        if (lineChartEl) lineChartEl.innerHTML = buildCarbLineChartLast10Days(last10Meals, false);
+        if (lineChartEl) lineChartEl.innerHTML = buildCarbLineChartLast10Days(last4WeeksMeals, false);
         const chartItems = [];
         const dayRows = [];
         for (let d = 0; d < 7; d++) {
@@ -483,7 +554,8 @@ async function renderHistory() {
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
             <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Dagen in Week ${getISOWeekNumber(ws)} (tik op een dag om die te openen op Home):</div>
-            <div class="hist-cards-list">${dayCardsHtml}</div>`;
+            <div class="hist-cards-list">${dayCardsHtml}</div>
+            ${buildTop5MealsAndDrinksHtml(last4WeeksMeals, false)}`;
         return;
     }
 
@@ -746,61 +818,8 @@ async function exportHistoryToPdf() {
                 </div>`;
         }).join('');
 
-        // 2. Bereken Top 5 meest gebruikte maaltijden en Top 5 meest gebruikte drankjes over de 4 weken
-        const mealCounts = new Map();
-        const drinkCounts = new Map();
-
-        (data.meals || []).forEach(m => {
-            const isDrink = (m.type || '').includes('Drank');
-            const rawName = (m.name || '').trim();
-            if (!rawName) return;
-            const cleanName = rawName.replace(/^(\d+)\s*x\s+/i, '').trim();
-            if (!cleanName) return;
-            const key = cleanName.toLowerCase();
-            const targetMap = isDrink ? drinkCounts : mealCounts;
-            if (!targetMap.has(key)) {
-                targetMap.set(key, { name: cleanName, count: 0, carbs: 0, fat: 0, protein: 0 });
-            }
-            const entry = targetMap.get(key);
-            entry.count += 1;
-            entry.carbs += Number(m.carbs) || 0;
-            entry.fat += Number(m.fat) || 0;
-            entry.protein += Number(m.protein) || 0;
-        });
-
-        const getTop5ListHtml = (mapObj, emptyText) => {
-            const top5 = Array.from(mapObj.values())
-                .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name, 'nl'))
-                .slice(0, 5);
-            if (top5.length === 0) {
-                return `<div style="font-size:11px; color:#777; font-style:italic;">${emptyText}</div>`;
-            }
-            return top5.map((item, idx) => {
-                const avgC = Math.round(item.carbs / item.count);
-                const avgP = Math.round(item.protein / item.count);
-                const avgF = Math.round(item.fat / item.count);
-                return `
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px dashed #DDD; font-size:11px;">
-                        <div style="font-weight:600; color:#1A1A1A;">${idx + 1}. ${escapeHtml(item.name)}</div>
-                        <div style="white-space:nowrap; font-size:10px; color:#444;">
-                            <span style="font-weight:700; background:#FFF9E6; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 7px;">${item.count}×</span>
-                            <span style="margin-left:4px; color:#666;">(${avgC}g KH • ${avgP}g E • ${avgF}g V)</span>
-                        </div>
-                    </div>`;
-            }).join('');
-        };
-
-        const topListsHtml = `
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; page-break-inside:avoid;">
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
-                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🍽️ Top 5 Meest Gebruikte Maaltijden</div>
-                    ${getTop5ListHtml(mealCounts, 'Nog geen maaltijden gelogd in deze 4 weken.')}
-                </div>
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
-                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🥤 Top 5 Meest Gebruikte Drankjes</div>
-                    ${getTop5ListHtml(drinkCounts, 'Nog geen drankjes gelogd in deze 4 weken.')}
-                </div>
-            </div>`;
+        // 2. Top 5 meest gebruikte maaltijden en Top 5 meest gebruikte drankjes over de laatste 4 weken
+        const topListsHtml = buildTop5MealsAndDrinksHtml(data.meals, true);
 
         const carbLineChartPdfHtml = buildCarbLineChartLast10Days(data.meals, true);
 
