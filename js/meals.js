@@ -288,7 +288,13 @@ function updateMealWizardKcal() {
     const f = parseInt(document.getElementById('new-meal-fat')?.value, 10) || 0;
     const p = parseInt(document.getElementById('new-meal-protein')?.value, 10) || 0;
     const kcal = (c * 4) + (p * 4) + (f * 9);
+    const cEl = document.getElementById('meal-summary-carbs');
+    const fEl = document.getElementById('meal-summary-fat');
+    const pEl = document.getElementById('meal-summary-protein');
     const el = document.getElementById('meal-summary-kcal');
+    if (cEl) cEl.innerText = `${c} g`;
+    if (fEl) fEl.innerText = `${f} g`;
+    if (pEl) pEl.innerText = `${p} g`;
     if (el) el.innerText = `${kcal} kcal`;
 }
 
@@ -298,7 +304,13 @@ function updateDrinkWizardKcal() {
     const f = parseInt(document.getElementById('drink-fat')?.value, 10) || 0;
     const p = parseInt(document.getElementById('drink-protein')?.value, 10) || 0;
     const kcal = ((c * 4) + (p * 4) + (f * 9)) * a;
+    const cEl = document.getElementById('drink-summary-carbs');
+    const fEl = document.getElementById('drink-summary-fat');
+    const pEl = document.getElementById('drink-summary-protein');
     const el = document.getElementById('drink-summary-kcal');
+    if (cEl) cEl.innerText = `${c * a} g`;
+    if (fEl) fEl.innerText = `${f * a} g`;
+    if (pEl) pEl.innerText = `${p * a} g`;
     if (el) el.innerText = `${kcal} kcal`;
 }
 
@@ -338,7 +350,7 @@ function setMealWizardStep(step, summaryData = null) {
         if (titleEl) titleEl.innerText = `${t} — ${n}`;
         const explEl = document.getElementById('meal-summary-explanation');
         if (explEl) {
-            const explText = summaryData?.explanation || 'Controleer hieronder de macro\'s en pas ze zo nodig nog aan.';
+            const explText = summaryData?.explanation || 'Hier zie je het overzicht van de berekende voedingswaarden.';
             explEl.innerHTML = `✨ <b>Samenvatting:</b> ${escapeHtml(explText)}`;
         }
         updateMealWizardKcal();
@@ -372,7 +384,7 @@ function setDrinkWizardStep(step, summaryData = null) {
         if (titleEl) titleEl.innerText = `🥤 ${n}`;
         const explEl = document.getElementById('drink-summary-explanation');
         if (explEl) {
-            const explText = summaryData?.explanation || 'Controleer hieronder het aantal glazen en de macro\'s.';
+            const explText = summaryData?.explanation || 'Hier zie je het overzicht van de berekende voedingswaarden.';
             explEl.innerHTML = `✨ <b>Samenvatting:</b> ${escapeHtml(explText)}`;
         }
         updateDrinkWizardKcal();

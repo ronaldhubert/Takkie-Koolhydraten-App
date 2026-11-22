@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261122a">
-    <link rel="stylesheet" href="css/auth.css?v=20261122a">
-    <link rel="stylesheet" href="css/layout.css?v=20261122a">
-    <link rel="stylesheet" href="css/pets.css?v=20261122a">
-    <link rel="stylesheet" href="css/widgets.css?v=20261122a">
-    <link rel="stylesheet" href="css/cards.css?v=20261122a">
-    <link rel="stylesheet" href="css/components.css?v=20261122a">
-    <link rel="stylesheet" href="css/team.css?v=20261122a">
-    <link rel="stylesheet" href="css/history.css?v=20261122a">
+    <link rel="stylesheet" href="css/base.css?v=20261122b">
+    <link rel="stylesheet" href="css/auth.css?v=20261122b">
+    <link rel="stylesheet" href="css/layout.css?v=20261122b">
+    <link rel="stylesheet" href="css/pets.css?v=20261122b">
+    <link rel="stylesheet" href="css/widgets.css?v=20261122b">
+    <link rel="stylesheet" href="css/cards.css?v=20261122b">
+    <link rel="stylesheet" href="css/components.css?v=20261122b">
+    <link rel="stylesheet" href="css/team.css?v=20261122b">
+    <link rel="stylesheet" href="css/history.css?v=20261122b">
 </head>
 <body>
 
@@ -343,18 +343,22 @@
                         <div class="wizard-summary-title" id="meal-summary-title">🍽️ Maaltijd</div>
                         <div class="wizard-summary-expl" id="meal-summary-explanation"></div>
 
+                        <input type="hidden" id="new-meal-carbs" value="1">
+                        <input type="hidden" id="new-meal-fat" value="45">
+                        <input type="hidden" id="new-meal-protein" value="30">
+
                         <div class="wizard-macro-grid">
                             <div class="wizard-macro-box">
-                                <label>🥑 Koolhydraten (g)</label>
-                                <input type="number" id="new-meal-carbs" value="1" min="0">
+                                <label>🥑 Koolhydraten</label>
+                                <div class="wizard-macro-val" id="meal-summary-carbs">1 g</div>
                             </div>
                             <div class="wizard-macro-box">
-                                <label>🧈 Vetten (g)</label>
-                                <input type="number" id="new-meal-fat" value="45" min="0">
+                                <label>🧈 Vetten</label>
+                                <div class="wizard-macro-val" id="meal-summary-fat">45 g</div>
                             </div>
                             <div class="wizard-macro-box">
-                                <label>🥩 Eiwitten (g)</label>
-                                <input type="number" id="new-meal-protein" value="30" min="0">
+                                <label>🥩 Eiwitten</label>
+                                <div class="wizard-macro-val" id="meal-summary-protein">30 g</div>
                             </div>
                             <div class="wizard-macro-box">
                                 <label>⚡ Calorieën</label>
@@ -362,7 +366,7 @@
                             </div>
                         </div>
 
-                        <label class="checkbox-label" style="margin: 10px 0 4px 0;">
+                        <label class="checkbox-label" style="margin: 8px 0 2px 0; font-size: 0.8rem;">
                             <input type="checkbox" id="save-favorite-meal"> 💖 Sla ook op in mijn favorieten
                         </label>
                     </div>
@@ -439,29 +443,31 @@
                         <div class="wizard-summary-title" id="drink-summary-title">🥤 Drankje</div>
                         <div class="wizard-summary-expl" id="drink-summary-explanation"></div>
 
-                        <label style="font-size: 0.8rem; font-weight: 700;">Aantal glazen / kopjes (telt mee voor je Drinkbak 💧):</label>
-                        <input type="number" id="drink-amount" value="1" min="1" style="margin-bottom: 10px;">
+                        <input type="hidden" id="drink-amount" value="1">
+                        <input type="hidden" id="drink-carbs" value="0">
+                        <input type="hidden" id="drink-fat" value="0">
+                        <input type="hidden" id="drink-protein" value="0">
 
                         <div class="wizard-macro-grid">
                             <div class="wizard-macro-box">
-                                <label>🥑 KH per glas (g)</label>
-                                <input type="number" id="drink-carbs" value="0" min="0">
+                                <label>🥑 Koolhydraten</label>
+                                <div class="wizard-macro-val" id="drink-summary-carbs">0 g</div>
                             </div>
                             <div class="wizard-macro-box">
-                                <label>🧈 Vet per glas (g)</label>
-                                <input type="number" id="drink-fat" value="0" min="0">
+                                <label>🧈 Vetten</label>
+                                <div class="wizard-macro-val" id="drink-summary-fat">0 g</div>
                             </div>
                             <div class="wizard-macro-box">
-                                <label>🥩 Eiwit per glas (g)</label>
-                                <input type="number" id="drink-protein" value="0" min="0">
+                                <label>🥩 Eiwitten</label>
+                                <div class="wizard-macro-val" id="drink-summary-protein">0 g</div>
                             </div>
                             <div class="wizard-macro-box">
-                                <label>⚡ Totaal Kcal</label>
+                                <label>⚡ Calorieën</label>
                                 <div class="wizard-kcal-display" id="drink-summary-kcal">0 kcal</div>
                             </div>
                         </div>
 
-                        <label class="checkbox-label" style="margin: 10px 0 4px 0;">
+                        <label class="checkbox-label" style="margin: 8px 0 2px 0; font-size: 0.8rem;">
                             <input type="checkbox" id="save-favorite-drink"> 💖 Sla ook op in mijn favorieten
                         </label>
                     </div>
@@ -742,21 +748,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261122a"></script>
-<script src="js/quotes.js?v=20261122a"></script>
-<script src="js/utils.js?v=20261122a"></script>
-<script src="js/auth.js?v=20261122a"></script>
-<script src="js/data.js?v=20261122a"></script>
-<script src="js/meals.js?v=20261122a"></script>
-<script src="js/favorites.js?v=20261122a"></script>
-<script src="js/ai.js?v=20261122a"></script>
-<script src="js/recipes.js?v=20261122a"></script>
-<script src="js/team.js?v=20261122a"></script>
-<script src="js/chat.js?v=20261122a"></script>
-<script src="js/notifications.js?v=20261122a"></script>
-<script src="js/history.js?v=20261122a"></script>
-<script src="js/ui.js?v=20261122a"></script>
-<script src="js/main.js?v=20261122a"></script>
+<script src="js/state.js?v=20261122b"></script>
+<script src="js/quotes.js?v=20261122b"></script>
+<script src="js/utils.js?v=20261122b"></script>
+<script src="js/auth.js?v=20261122b"></script>
+<script src="js/data.js?v=20261122b"></script>
+<script src="js/meals.js?v=20261122b"></script>
+<script src="js/favorites.js?v=20261122b"></script>
+<script src="js/ai.js?v=20261122b"></script>
+<script src="js/recipes.js?v=20261122b"></script>
+<script src="js/team.js?v=20261122b"></script>
+<script src="js/chat.js?v=20261122b"></script>
+<script src="js/notifications.js?v=20261122b"></script>
+<script src="js/history.js?v=20261122b"></script>
+<script src="js/ui.js?v=20261122b"></script>
+<script src="js/main.js?v=20261122b"></script>
 
 </body>
 </html>
