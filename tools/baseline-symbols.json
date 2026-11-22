@@ -63,6 +63,7 @@
   "UNIT_QUICK_PICKS",
   "UNIT_SELECT_OPTIONS",
   "localFallbackNutrition",
+  "isDescriptionComplete",
   "localIngredientQuestionsFallback",
   "callGeminiJson",
   "formatClarifyingAnswer",

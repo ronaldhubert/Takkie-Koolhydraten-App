@@ -453,7 +453,26 @@ function initLogEvents() {
 
     if (document.getElementById('btn-meal-step3-back-step2')) {
         document.getElementById('btn-meal-step3-back-step2').addEventListener('click', () => {
-            document.getElementById('btn-autofill-meal')?.click();
+            const val = (document.getElementById('new-meal-name')?.value || '').trim();
+            if (!val) {
+                setMealWizardStep(1);
+                return;
+            }
+            analyzeNutritionWithAI(
+                val,
+                'meal',
+                'new-meal-carbs',
+                'new-meal-fat',
+                'new-meal-protein',
+                'ai-meal-feedback',
+                document.getElementById('btn-autofill-meal'),
+                {
+                    forceStep2: true,
+                    onEnterStep2: () => setMealWizardStep(2),
+                    onBackToStep1: () => setMealWizardStep(1),
+                    onEnterStep3: (summary) => setMealWizardStep(3, summary)
+                }
+            );
         });
     }
     if (document.getElementById('btn-meal-step3-back-step1')) {
@@ -463,7 +482,26 @@ function initLogEvents() {
     }
     if (document.getElementById('btn-drink-step3-back-step2')) {
         document.getElementById('btn-drink-step3-back-step2').addEventListener('click', () => {
-            document.getElementById('btn-autofill-drink')?.click();
+            const val = (document.getElementById('drink-name')?.value || '').trim();
+            if (!val) {
+                setDrinkWizardStep(1);
+                return;
+            }
+            analyzeNutritionWithAI(
+                val,
+                'drink',
+                'drink-carbs',
+                'drink-fat',
+                'drink-protein',
+                'ai-drink-feedback',
+                document.getElementById('btn-autofill-drink'),
+                {
+                    forceStep2: true,
+                    onEnterStep2: () => setDrinkWizardStep(2),
+                    onBackToStep1: () => setDrinkWizardStep(1),
+                    onEnterStep3: (summary) => setDrinkWizardStep(3, summary)
+                }
+            );
         });
     }
     if (document.getElementById('btn-drink-step3-back-step1')) {

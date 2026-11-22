@@ -61,6 +61,17 @@ function localFallbackNutrition(inputName) {
     return { carbs: c, fat: f, protein: p };
 }
 
+// Controleert of elk genoemd onderdeel in de invoer al een duidelijke hoeveelheid of maat bevat
+function isDescriptionComplete(description) {
+    const parts = (description || '')
+        .split(/\s*(?:,|\bmet\b|\ben\b|\bplus\b|&)\s*/i)
+        .map(s => s.trim())
+        .filter(Boolean);
+    if (parts.length === 0) return false;
+    const qtyPattern = /(?:\b\d+\b|\d+\s*(?:g|gr|gram|ml|l|cl|dl|el|tl|stuks?)\b|½|¼|¾|\b(?:een|één|twee|drie|vier|vijf|zes|halve|half|kwart|glas|glazen|glaasje|kop|kopje|kopjes|mok|beker|plak|plakje|plakjes|snee|sneetje|stuk|stuks|handje|schaaltje|bakje|kom|kommetje|blikje|flesje|portie|eetlepel|eetlepels|theelepel|theelepels|klontje|scheut|scheutje)\b)/i;
+    return parts.every(part => qtyPattern.test(part));
+}
+
 // Slimme lokale uitsplitsing per onderdeel als vangnet wanneer AI niet bereikbaar is
 function localIngredientQuestionsFallback(description, contextType) {
     if (contextType === 'drink') {
@@ -195,26 +206,37 @@ De gebruiker voert in Stap 1 van de maaltijd-wizard het volgende ${isDrink ? 'dr
 "${description}"
 
 JOUW TAAK:
-Splits deze invoer uit in de losse ingrediënten/onderdelen (1 tot maximaal 4 onderdelen, bijv. bij "gebakken eieren met spek en melk" -> 1. Gebakken eieren, 2. Spek, 3. Melk, 4. Bereiding/bakvet) zodat de gebruiker in Stap 2 per onderdeel met 1 tik de juiste hoeveelheid en eenheid kan kiezen of bevestigen!
+${forceWizardQuestions
+    ? 'Splits deze invoer uit in de losse ingrediënten/onderdelen (1 tot maximaal 4 onderdelen) zodat de gebruiker in Stap 2 per onderdeel de hoeveelheid kan aanpassen.'
+    : 'Controleer eerst of voor ELK genoemd onderdeel in de tekst de hoeveelheid al duidelijk is (bijv. "1 glas melk", "2 gebakken eieren met 1 plakje spek", "150g zalm met 1 halve avocado", "kopje koffie").\n- Als alles al een hoeveelheid/aantal/maat heeft: stel GEEN extra vragen (ook niet over bakboter/bereiding), maar geef direct "complete": true terug met de berekende "carbs", "fat", "protein", "refinedName" en "explanation"!\n- Alleen als van één of meer onderdelen de hoeveelheid nog ontbreekt (bijv. "gebakken eieren met spek en melk" of "2 eieren met spek"): geef "complete": false en splits de onderdelen uit in "questions" zodat de gebruiker in Stap 2 met 1 tik de hoeveelheid kan kiezen.'}
 
-BELANGRIJKE REGELS VOOR EENHEDEN PER ONDERDEEL:
+BELANGRIJKE REGELS VOOR EENHEDEN PER ONDERDEEL (wanneer "complete": false):
 - Eieren, losse vruchten, worstjes, stuks -> "unit": "stuks", met opties zoals ["1 ei", "2 eieren", "3 eieren", "4 eieren"]
 - Spek, kaas, ham, kipfilet beleg, plakjes -> "unit": "plakjes", met opties zoals ["1 plakje", "2 plakjes", "3 plakjes", "4 plakjes", "50 g"]
 - Melk, wijn, koffie, thee, water, room, drank -> "unit": "glazen", met opties zoals ["½ glas (100 ml)", "1 glas (200 ml)", "2 glazen (400 ml)", "50 ml"]
 - Vlees, vis, kip, gehakt, kwark, yoghurt, groente, noten -> "unit": "g", met opties zoals ["50 g", "100 g", "150 g", "200 g", "250 g"]
 - Boter, olie, mayonaise, dressing -> "unit": "el", met opties zoals ["1 klontje roomboter (10g)", "1 el olijfolie", "Zonder boter/olie"]
-- Als de gebruiker in de tekst al een aantal noemde voor een onderdeel (bijv. "3 eieren"), zet die waarde dan in "options" én zet "defaultOption" exact op die waarde zodat de gebruiker er niet nog eens op hoeft te klikken!
+- Als de gebruiker in de tekst al een aantal noemde voor een onderdeel (bijv. "3 eieren"), zet die waarde dan in "options" én zet "defaultOption" exact op die waarde.
 - Kies voor "defaultOption" altijd de meest logische standaardportie uit "options".
-${forceWizardQuestions ? '- Geef voor de wizard ALTIJD "complete": false met de uitgesplitste onderdelen in "questions", zodat Stap 2 van de wizard altijd de hoeveelheden per onderdeel toont.' : '- Als voor élk onderdeel het exacte gewicht/aantal al in de tekst staat, mag je "complete": true teruggeven.'}
 
-Geef ALLEEN een geldig JSON-object terug in dit formaat:
+Geef ALLEEN een geldig JSON-object terug.
+Als "complete": true (alles is al duidelijk, Stap 2 wordt overgeslagen):
+{
+  "complete": true,
+  "carbs": <geheel getal in grammen>,
+  "fat": <geheel getal in grammen>,
+  "protein": <geheel getal in grammen>,
+  "refinedName": "<nette Nederlandse omschrijving inclusief hoeveelheden>",
+  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep>"
+}
+Als "complete": false (hoeveelheden uitvragen in Stap 2):
 {
   "complete": false,
   "questions": [
     {
       "id": "q1",
       "subject": "<emoji + naam van onderdeel, bijv. '🥚 Gebakken eieren' of '🥓 Spek' of '🥛 Melk'>",
-      "question": "<korte vriendelijke vraag in het Nederlands, bijv. 'Hoeveel eieren?' of 'Hoeveel plakjes spek?' of 'Hoeveel melk?'>",
+      "question": "<korte vriendelijke vraag in het Nederlands>",
       "unit": "<stuks|plakjes|glazen|g|ml|el|tl|keuze>",
       "options": ["<optie 1>", "<optie 2>", "<optie 3>", "<optie 4>"],
       "defaultOption": "<de standaard geselecteerde optie uit options>"
@@ -459,10 +481,32 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     if (btnEl) clearInlineMessages(btnEl.closest('.widget'));
 
     const isWizard = !!wizardCallbacks;
+    const forceStep2 = !!(isWizard && wizardCallbacks.forceStep2);
+    const alreadyComplete = !forceStep2 && isDescriptionComplete(description);
     const widgetEl = btnEl ? btnEl.closest('.widget') : null;
     const nameInputEl = widgetEl ? widgetEl.querySelector('input[type="text"]') : null;
 
     const originalBtnHtml = btnEl ? btnEl.innerHTML : '';
+
+    // Als elk onderdeel al een duidelijke hoeveelheid heeft (bijv. "1 glas melk" of "2 gebakken eieren met 1 plakje spek"),
+    // sla Stap 2 dan direct over en bereken meteen de samenvatting voor Stap 3!
+    if (alreadyComplete) {
+        setAiLoadingState(btnEl, fbEl, 'Alles is al duidelijk! Takkie & Siep berekenen direct je samenvatting...');
+        let summary;
+        try {
+            const directResult = await calculateNutritionDirect(description, [], contextType);
+            summary = applyNutritionResultToDom(directResult, carbsId, fatId, proteinId, fbEl, nameInputEl);
+        } catch (errDirect) {
+            summary = applyFallbackToDom(description, errDirect, carbsId, fatId, proteinId, fbEl);
+        } finally {
+            clearAiLoadingButton(btnEl, originalBtnHtml);
+        }
+        if (isWizard && wizardCallbacks.onEnterStep3) {
+            wizardCallbacks.onEnterStep3(summary);
+        }
+        return summary;
+    }
+
     if (isWizard && wizardCallbacks.onEnterStep2) {
         wizardCallbacks.onEnterStep2();
     }
@@ -472,11 +516,15 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     let directAssessment = null;
 
     try {
-        const assessment = await assessOrCalculateWithAI(description, contextType, isWizard);
-        if (assessment && Array.isArray(assessment.questions) && assessment.questions.length > 0) {
+        const assessment = await assessOrCalculateWithAI(description, contextType, forceStep2);
+        if (!forceStep2 && assessment && assessment.complete === true) {
+            if (assessment.carbs !== undefined) {
+                directAssessment = assessment;
+            } else {
+                directAssessment = await calculateNutritionDirect(description, [], contextType);
+            }
+        } else if (assessment && Array.isArray(assessment.questions) && assessment.questions.length > 0) {
             questionsToAsk = assessment.questions;
-        } else if (assessment && assessment.complete === true && !isWizard) {
-            directAssessment = assessment;
         } else {
             questionsToAsk = localIngredientQuestionsFallback(description, contextType);
         }
