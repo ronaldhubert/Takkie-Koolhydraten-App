@@ -6,6 +6,9 @@
 // UI EN EVENTS
 // ==========================================
 function switchTab(tabId) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
     clearInlineMessages();
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));

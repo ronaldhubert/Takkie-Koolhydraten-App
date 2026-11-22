@@ -18,6 +18,17 @@
     --bubble-bg: #F1FAEE;
 }
 
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     font-family: 'Fredoka', cursive, sans-serif;
     background-color: var(--bg-color);
@@ -33,6 +44,7 @@ body {
 .phone-container {
     width: 100%;
     max-width: 420px;
+    min-width: 0;
     min-height: 100vh;
     background-color: var(--card-bg);
     display: flex;
@@ -41,5 +53,16 @@ body {
     border-right: 4px solid var(--border-color);
     box-shadow: 8px 0px 0px rgba(0,0,0,0.1);
     position: relative;
+    overflow-x: hidden;
+    box-sizing: border-box;
     display: none; /* Standaard verborgen tot we zijn ingelogd */
+}
+
+@media (max-width: 430px) {
+    .phone-container {
+        max-width: 100%;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+    }
 }

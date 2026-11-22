@@ -7,6 +7,9 @@
     padding: 13px 14px;
     margin-bottom: 12px;
     box-shadow: 5px 5px 0px var(--border-color);
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .macro-widget {
@@ -15,7 +18,7 @@
 
 .macro-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 8px 12px;
 }
 

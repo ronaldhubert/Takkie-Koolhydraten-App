@@ -69,13 +69,18 @@ header {
 
 .content {
     flex: 1;
-    padding: 16px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding-bottom: 40px;
 }
 
 .tab-content {
     display: none;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .tab-content.active {

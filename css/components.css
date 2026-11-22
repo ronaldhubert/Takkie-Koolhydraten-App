@@ -2,7 +2,7 @@
 
 .btn-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
     margin-top: 14px;
 }
@@ -19,6 +19,8 @@
     transition: transform 0.1s, box-shadow 0.1s;
     text-align: center;
     font-family: 'Fredoka', cursive, sans-serif;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--border-color); }
@@ -32,6 +34,8 @@
 
 input, select, textarea {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 10px;
     margin-bottom: 12px;
     border: 3px solid var(--border-color);
@@ -43,6 +47,8 @@ input, select, textarea {
 }
 
 select.btn {
+    width: 100%;
+    max-width: 100%;
     margin-bottom: 0;
     padding: 12px 10px;
     border-radius: 14px;
@@ -54,6 +60,7 @@ select.btn {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 select.btn option {
     text-align: left;
@@ -76,7 +83,7 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
 
 .checkbox-group {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 8px;
     margin-bottom: 14px;
 }
@@ -405,7 +412,7 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
 }
 .wizard-macro-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 6px;
 }
 .wizard-macro-box {
@@ -436,6 +443,16 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
     font-weight: 700;
     color: #5a189a;
     white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    textarea {
+        font-size: 16px;
+    }
 }
 
 /* TEAMS & HUISKAMER CHAT STYLING */
