@@ -408,10 +408,12 @@ async function exportHistoryToPdf() {
     }
 
     try {
+        // Altijd een overzicht van de laatste 4 weken, inclusief de huidige week
+        const PDF_WEEKS_COUNT = 4;
         const thisMonday = getMondayOf(new Date());
-        const newestStart = addDays(thisMonday, -7 * historyState.pageOffset * HISTORY_WEEKS_PER_PAGE);
+        const newestStart = thisMonday;
         const weekStarts = [];
-        for (let i = 0; i < HISTORY_WEEKS_PER_PAGE; i++) {
+        for (let i = 0; i < PDF_WEEKS_COUNT; i++) {
             weekStarts.push(addDays(newestStart, -7 * i));
         }
         const oldestStart = weekStarts[weekStarts.length - 1];
@@ -435,31 +437,17 @@ async function exportHistoryToPdf() {
             return false;
         };
 
-        const goalCell = (ok, label, hasData) => {
+        const goalCell = (ok, label, hasData, isFooter = false) => {
+            const borderStyle = isFooter ? 'border-top:2px solid #1A1A1A; border:1px solid #1A1A1A;' : 'border:1px solid #1A1A1A;';
             if (!hasData) {
-                return `<td style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center; background:#F5F5F5; color:#888;">–</td>`;
+                return `<td style="padding:4px 6px; ${borderStyle} text-align:center; background:#F5F5F5; color:#888; font-size:11px;">–</td>`;
             }
             const bg = ok ? '#D8F3DC' : '#FFE5E5';
             const fg = ok ? '#1B4332' : '#B71C1C';
-            const icon = ok ? '✅' : '❌';
-            return `<td style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center; background:${bg}; color:${fg}; font-weight:700;">${icon} ${label}</td>`;
+            return `<td style="padding:4px 6px; ${borderStyle} text-align:center; background:${bg}; color:${fg}; font-weight:700; font-size:11px;">${label}</td>`;
         };
 
-        const goalSummaryTile = (title, ruleText, avgText, ok, daysHit, daysTotal, hasData) => {
-            const bg = !hasData ? '#F5F5F5' : (ok ? '#D8F3DC' : '#FFE5E5');
-            const fg = !hasData ? '#666' : (ok ? '#1B4332' : '#B71C1C');
-            const statusText = !hasData ? 'Nog niet gelogd' : (ok ? '✅ DOEL GEHAALD' : '❌ NIET GEHAALD');
-            return `
-                <div style="background:${bg}; color:${fg}; border:2.5px solid #1A1A1A; border-radius:12px; padding:8px 6px; text-align:center;">
-                    <div style="font-size:11px; font-weight:700; color:#1A1A1A;">${title}</div>
-                    <div style="font-size:10px; color:#555; margin-bottom:3px;">Doel: ${ruleText}</div>
-                    <div style="font-size:14px; font-weight:700;">${avgText}</div>
-                    <div style="font-size:10px; font-weight:700; margin-top:2px;">${statusText}</div>
-                    <div style="font-size:10px; color:#333; margin-top:1px;">${daysHit}/${daysTotal} dgn gehaald</div>
-                </div>`;
-        };
-
-        // 1. Bouw het Weekoverzicht (bovenaan de PDF) waarin per doel direct zichtbaar is wat wel/niet is gehaald
+        // 1. Bouw per week (laatste 4 weken incl. huidige week) een kader met een tabel per dag van de week
         const weeksOverviewHtml = weekStarts.map(ws => {
             const we = addDays(ws, 6);
             const weekDays = [];
@@ -483,45 +471,129 @@ async function exportHistoryToPdf() {
             const nWater = waterLoggedDays.length;
             const avgW = nWater ? Math.round((waterLoggedDays.reduce((a, b) => a + b.water, 0) / nWater) * 10) / 10 : 0;
 
-            const hitsC = mealDays.filter(x => checkGoal('carbs', x.s.carbs)).length;
-            const hitsP = mealDays.filter(x => checkGoal('protein', x.s.protein)).length;
-            const hitsF = mealDays.filter(x => checkGoal('fat', x.s.fat)).length;
-            const hitsK = mealDays.filter(x => checkGoal('kcal', x.s.kcal)).length;
-            const hitsW = waterLoggedDays.filter(x => checkGoal('water', x.water)).length;
+            const dayRowsHtml = weekDays.map(x => {
+                const dayLabel = `${DAY_NAMES_FULL[x.dObj.getDay()]} ${shortDateLabel(x.dObj)}`;
+                const hasDayMeals = x.s.count > 0;
+                const hasDayWater = hasDayMeals || x.water > 0;
+                return `
+                    <tr>
+                        <td style="padding:4px 8px; border:1px solid #1A1A1A; font-weight:600; font-size:11px; background:#FFFDF9;">${dayLabel}</td>
+                        ${goalCell(checkGoal('carbs', x.s.carbs), `${x.s.carbs} g`, hasDayMeals)}
+                        ${goalCell(checkGoal('protein', x.s.protein), `${x.s.protein} g`, hasDayMeals)}
+                        ${goalCell(checkGoal('fat', x.s.fat), `${x.s.fat} g`, hasDayMeals)}
+                        ${goalCell(checkGoal('kcal', x.s.kcal), `${x.s.kcal}`, hasDayMeals)}
+                        ${goalCell(checkGoal('water', x.water), `${x.water}/8`, hasDayWater)}
+                    </tr>`;
+            }).join('');
 
             return `
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:18px; padding:14px 16px; margin-bottom:14px; page-break-inside:avoid;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-                        <div style="font-size:16px; font-weight:700;">📊 Week ${getISOWeekNumber(ws)} <span style="font-weight:600; font-size:13px; color:#555;">(${shortDateLabel(ws)} – ${shortDateLabel(we)})</span></div>
-                        <div style="font-size:11px; font-weight:700; background:#FFF9E6; border:2px solid #1A1A1A; border-radius:999px; padding:2px 10px;">
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px; margin-bottom:10px; page-break-inside:avoid;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                        <div style="font-size:14px; font-weight:700;">📊 Week ${getISOWeekNumber(ws)} <span style="font-weight:600; font-size:12px; color:#555;">(${shortDateLabel(ws)} – ${shortDateLabel(we)})</span></div>
+                        <div style="font-size:10px; font-weight:700; background:#FFF9E6; border:2px solid #1A1A1A; border-radius:999px; padding:1px 9px;">
                             ${nMeals}/7 dagen gelogd
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;">
-                        ${goalSummaryTile('🥑 Koolhydraten', `max ${goals.carbs}g`, `Gem. ${avgC}g`, checkGoal('carbs', avgC), hitsC, nMeals || 7, hasMeals)}
-                        ${goalSummaryTile('🥩 Eiwitten', `min ${goals.protein}g`, `Gem. ${avgP}g`, checkGoal('protein', avgP), hitsP, nMeals || 7, hasMeals)}
-                        ${goalSummaryTile('🧈 Vetten', `max ${goals.fat}g`, `Gem. ${avgF}g`, checkGoal('fat', avgF), hitsF, nMeals || 7, hasMeals)}
-                        ${goalSummaryTile('⚡ Calorieën', `max ${goals.kcal}`, `Gem. ${avgK}`, checkGoal('kcal', avgK), hitsK, nMeals || 7, hasMeals)}
-                        ${goalSummaryTile('💧 Drinkbak', 'min 8 glazen', `Gem. ${avgW}/8`, checkGoal('water', avgW), hitsW, nWater || 7, nWater > 0)}
-                    </div>
+                    <table style="width:100%; border-collapse:collapse; border:2px solid #1A1A1A;">
+                        <thead>
+                            <tr style="background:#FFF9E6; font-size:11px;">
+                                <th style="padding:5px 8px; border:1px solid #1A1A1A; text-align:left;">Dag</th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥑 Koolhydraat <span style="font-weight:500; font-size:10px; color:#555;">(≤${goals.carbs}g)</span></th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥩 Eiwit <span style="font-weight:500; font-size:10px; color:#555;">(≥${goals.protein}g)</span></th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🧈 Vet <span style="font-weight:500; font-size:10px; color:#555;">(≤${goals.fat}g)</span></th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">⚡ Kcal <span style="font-weight:500; font-size:10px; color:#555;">(≤${goals.kcal})</span></th>
+                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">💧 Water <span style="font-weight:500; font-size:10px; color:#555;">(≥8)</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${dayRowsHtml}
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight:700;">
+                                <td style="padding:4px 8px; border:1px solid #1A1A1A; font-size:11px; background:#F1FAEE;">Gemiddeld</td>
+                                ${goalCell(checkGoal('carbs', avgC), `${avgC} g`, hasMeals, true)}
+                                ${goalCell(checkGoal('protein', avgP), `${avgP} g`, hasMeals, true)}
+                                ${goalCell(checkGoal('fat', avgF), `${avgF} g`, hasMeals, true)}
+                                ${goalCell(checkGoal('kcal', avgK), `${avgK}`, hasMeals, true)}
+                                ${goalCell(checkGoal('water', avgW), `${avgW}/8`, nWater > 0, true)}
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>`;
         }).join('');
 
+        // 2. Bereken Top 5 meest gebruikte maaltijden en Top 5 meest gebruikte drankjes over de 4 weken
+        const mealCounts = new Map();
+        const drinkCounts = new Map();
+
+        (data.meals || []).forEach(m => {
+            const isDrink = (m.type || '').includes('Drank');
+            const rawName = (m.name || '').trim();
+            if (!rawName) return;
+            const cleanName = rawName.replace(/^(\d+)\s*x\s+/i, '').trim();
+            if (!cleanName) return;
+            const key = cleanName.toLowerCase();
+            const targetMap = isDrink ? drinkCounts : mealCounts;
+            if (!targetMap.has(key)) {
+                targetMap.set(key, { name: cleanName, count: 0, carbs: 0, fat: 0, protein: 0 });
+            }
+            const entry = targetMap.get(key);
+            entry.count += 1;
+            entry.carbs += Number(m.carbs) || 0;
+            entry.fat += Number(m.fat) || 0;
+            entry.protein += Number(m.protein) || 0;
+        });
+
+        const getTop5ListHtml = (mapObj, emptyText) => {
+            const top5 = Array.from(mapObj.values())
+                .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name, 'nl'))
+                .slice(0, 5);
+            if (top5.length === 0) {
+                return `<div style="font-size:11px; color:#777; font-style:italic;">${emptyText}</div>`;
+            }
+            return top5.map((item, idx) => {
+                const avgC = Math.round(item.carbs / item.count);
+                const avgP = Math.round(item.protein / item.count);
+                const avgF = Math.round(item.fat / item.count);
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px dashed #DDD; font-size:11px;">
+                        <div style="font-weight:600; color:#1A1A1A;">${idx + 1}. ${escapeHtml(item.name)}</div>
+                        <div style="white-space:nowrap; font-size:10px; color:#444;">
+                            <span style="font-weight:700; background:#FFF9E6; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 7px;">${item.count}×</span>
+                            <span style="margin-left:4px; color:#666;">(${avgC}g KH • ${avgP}g E • ${avgF}g V)</span>
+                        </div>
+                    </div>`;
+            }).join('');
+        };
+
+        const topListsHtml = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; page-break-inside:avoid;">
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
+                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🍽️ Top 5 Meest Gebruikte Maaltijden</div>
+                    ${getTop5ListHtml(mealCounts, 'Nog geen maaltijden gelogd in deze 4 weken.')}
+                </div>
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
+                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🥤 Top 5 Meest Gebruikte Drankjes</div>
+                    ${getTop5ListHtml(drinkCounts, 'Nog geen drankjes gelogd in deze 4 weken.')}
+                </div>
+            </div>`;
+
         const reportHtml = `
-            <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:18px; box-sizing:border-box;">
-                <div style="background:#F1FAEE; border:4px solid #1A1A1A; border-radius:20px; padding:16px 18px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
+            <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:14px; box-sizing:border-box;">
+                <div style="background:#F1FAEE; border:3.5px solid #1A1A1A; border-radius:18px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
                     <div>
-                        <div style="color:#E63946; font-size:22px; font-weight:700; margin-bottom:2px;">🐾 Takkie & Siep's Keto Logboek</div>
-                        <div style="font-size:14px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
-                        <div style="font-size:12px; color:#555; margin-top:4px;">Jouw dagdoelen: max ${goals.carbs}g KH • min ${goals.protein}g Eiwit • max ${goals.fat}g Vet • max ${goals.kcal} kcal • 8 glazen water</div>
+                        <div style="color:#E63946; font-size:19px; font-weight:700; margin-bottom:2px;">🐾 Takkie & Siep's Keto Logboek (Laatste 4 Weken)</div>
+                        <div style="font-size:13px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
+                        <div style="font-size:11px; color:#444; margin-top:3px;">Doelen: max ${goals.carbs}g KH • min ${goals.protein}g Eiwit • max ${goals.fat}g Vet • max ${goals.kcal} kcal • min 8 glazen water &nbsp;|&nbsp; <span style="background:#D8F3DC; color:#1B4332; padding:1px 6px; border-radius:4px; font-weight:700;">Groen = gehaald</span> <span style="background:#FFE5E5; color:#B71C1C; padding:1px 6px; border-radius:4px; font-weight:700;">Rood = niet gehaald</span></div>
                     </div>
-                    <img src="takkie.png" alt="Takkie" style="height:54px; width:auto;">
+                    <img src="takkie.png" alt="Takkie" style="height:46px; width:auto;">
                 </div>
 
                 ${weeksOverviewHtml}
+                ${topListsHtml}
 
-                <div style="text-align:center; font-size:11px; color:#666; margin-top:10px;">
+                <div style="text-align:center; font-size:10px; color:#666; margin-top:8px;">
                     🐾 Met liefde gemaakt in Takkie & Siep's Keto Tracker — "Elke kleine stap telt!"
                 </div>
             </div>`;
