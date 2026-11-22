@@ -139,6 +139,10 @@ function localIngredientQuestionsFallback(description, contextType) {
     return list;
 }
 
+let preferredGeminiModel = null;
+const aiAssessCache = new Map();
+const aiCalcCache = new Map();
+
 async function callGeminiJson(promptText) {
     const apiKey = await getGeminiApiKey();
     if (!apiKey) {
@@ -151,20 +155,29 @@ async function callGeminiJson(promptText) {
         throw new Error('NO_API_KEY');
     }
 
-    const models = ['gemini-3.8-flash', 'gemini-flash-latest'];
+    const baseModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+    const models = preferredGeminiModel
+        ? [preferredGeminiModel, ...baseModels.filter(m => m !== preferredGeminiModel)]
+        : baseModels;
     let lastError = null;
 
     for (const model of models) {
+        const supportsThinkingConfig = model.includes('2.5') || model === 'gemini-flash-latest';
+        const genConfig = {
+            temperature: 0.2,
+            responseMimeType: 'application/json'
+        };
+        if (supportsThinkingConfig) {
+            genConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: {
-                    temperature: 0.2,
-                    responseMimeType: 'application/json'
-                }
+                generationConfig: genConfig
             })
         });
 
@@ -174,6 +187,7 @@ async function callGeminiJson(promptText) {
             continue;
         }
 
+        preferredGeminiModel = model;
         const data = await response.json();
         const rawText = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '')
             .replace(/^```json\s*/i, '')
@@ -200,73 +214,73 @@ function formatClarifyingAnswer(questionObj, selectedChip, customValue, customUn
 }
 
 async function assessOrCalculateWithAI(description, contextType, forceWizardQuestions = false) {
-    const isDrink = contextType === 'drink';
-    const prompt = `Je bent de liefdevolle keto-voedingsexpert van Takkie & Siep.
-De gebruiker voert in Stap 1 van de maaltijd-wizard het volgende ${isDrink ? 'drankje' : 'gerecht / maaltijd'} in:
-"${description}"
-
-JOUW TAAK:
-${forceWizardQuestions
-    ? 'Splits deze invoer uit in de losse ingrediënten/onderdelen (1 tot maximaal 4 onderdelen) zodat de gebruiker in Stap 2 per onderdeel de hoeveelheid kan aanpassen.'
-    : 'Controleer eerst of voor ELK genoemd onderdeel in de tekst de hoeveelheid al duidelijk is (bijv. "1 glas melk", "2 gebakken eieren met 1 plakje spek", "150g zalm met 1 halve avocado", "kopje koffie").\n- Als alles al een hoeveelheid/aantal/maat heeft: stel GEEN extra vragen (ook niet over bakboter/bereiding), maar geef direct "complete": true terug met de berekende "carbs", "fat", "protein", "refinedName" en "explanation"!\n- Alleen als van één of meer onderdelen de hoeveelheid nog ontbreekt (bijv. "gebakken eieren met spek en melk" of "2 eieren met spek"): geef "complete": false en splits de onderdelen uit in "questions" zodat de gebruiker in Stap 2 met 1 tik de hoeveelheid kan kiezen.'}
-
-BELANGRIJKE REGELS VOOR EENHEDEN PER ONDERDEEL (wanneer "complete": false):
-- Eieren, losse vruchten, worstjes, stuks -> "unit": "stuks", met opties zoals ["1 ei", "2 eieren", "3 eieren", "4 eieren"]
-- Spek, kaas, ham, kipfilet beleg, plakjes -> "unit": "plakjes", met opties zoals ["1 plakje", "2 plakjes", "3 plakjes", "4 plakjes", "50 g"]
-- Melk, wijn, koffie, thee, water, room, drank -> "unit": "glazen", met opties zoals ["½ glas (100 ml)", "1 glas (200 ml)", "2 glazen (400 ml)", "50 ml"]
-- Vlees, vis, kip, gehakt, kwark, yoghurt, groente, noten -> "unit": "g", met opties zoals ["50 g", "100 g", "150 g", "200 g", "250 g"]
-- Boter, olie, mayonaise, dressing -> "unit": "el", met opties zoals ["1 klontje roomboter (10g)", "1 el olijfolie", "Zonder boter/olie"]
-- Als de gebruiker in de tekst al een aantal noemde voor een onderdeel (bijv. "3 eieren"), zet die waarde dan in "options" én zet "defaultOption" exact op die waarde.
-- Kies voor "defaultOption" altijd de meest logische standaardportie uit "options".
-
-Geef ALLEEN een geldig JSON-object terug.
-Als "complete": true (alles is al duidelijk, Stap 2 wordt overgeslagen):
-{
-  "complete": true,
-  "carbs": <geheel getal in grammen>,
-  "fat": <geheel getal in grammen>,
-  "protein": <geheel getal in grammen>,
-  "refinedName": "<nette Nederlandse omschrijving inclusief hoeveelheden>",
-  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep>"
-}
-Als "complete": false (hoeveelheden uitvragen in Stap 2):
-{
-  "complete": false,
-  "questions": [
-    {
-      "id": "q1",
-      "subject": "<emoji + naam van onderdeel, bijv. '🥚 Gebakken eieren' of '🥓 Spek' of '🥛 Melk'>",
-      "question": "<korte vriendelijke vraag in het Nederlands>",
-      "unit": "<stuks|plakjes|glazen|g|ml|el|tl|keuze>",
-      "options": ["<optie 1>", "<optie 2>", "<optie 3>", "<optie 4>"],
-      "defaultOption": "<de standaard geselecteerde optie uit options>"
+    const cacheKey = `${contextType}|${forceWizardQuestions ? 'force' : 'auto'}|${description.trim().toLowerCase()}`;
+    if (aiAssessCache.has(cacheKey)) {
+        return await aiAssessCache.get(cacheKey);
     }
-  ]
-}`;
 
-    return await callGeminiJson(prompt);
+    const isDrink = contextType === 'drink';
+    const prompt = `Je bent de keto-voedingsexpert van Takkie & Siep.
+Invoer (${isDrink ? 'drankje' : 'maaltijd'}): "${description}"
+
+TAAK:
+${forceWizardQuestions
+    ? 'Splits uit in 1-4 losse onderdelen zodat de gebruiker per onderdeel de hoeveelheid kan kiezen.'
+    : '1. Als ELK genoemd onderdeel al een aantal/gewicht/maat heeft (bijv. "1 glas melk", "2 gebakken eieren met 1 plakje spek", "150g zalm", "kopje koffie"): geef direct "complete": true terug met berekende "carbs", "fat", "protein", "refinedName" en "explanation" (stel GEEN extra vragen over bakboter).\n2. Als van een onderdeel de hoeveelheid ontbreekt: geef "complete": false met "questions" per onderdeel.'}
+
+EENHEDEN (bij "complete": false):
+- Eieren/stuks -> "unit": "stuks", options bijv. ["1 ei", "2 eieren", "3 eieren", "4 eieren"]
+- Spek/kaas/ham/plakjes -> "unit": "plakjes", options bijv. ["1 plakje", "2 plakjes", "3 plakjes", "4 plakjes", "50 g"]
+- Melk/wijn/koffie/thee/drank -> "unit": "glazen", options bijv. ["½ glas (100 ml)", "1 glas (200 ml)", "2 glazen (400 ml)", "50 ml"]
+- Vlees/vis/kip/groente/zuivel/noten -> "unit": "g", options bijv. ["50 g", "100 g", "150 g", "200 g", "250 g"]
+- Boter/olie/saus -> "unit": "el", options bijv. ["1 klontje roomboter (10g)", "1 el olijfolie", "Zonder boter/olie"]
+- Noemde de gebruiker al een aantal voor een onderdeel, zet dat als "defaultOption"; kies anders de gangbare portie.
+
+Geef ALLEEN JSON terug:
+Bij "complete": true:
+{"complete":true,"carbs":0,"fat":0,"protein":0,"refinedName":"...","explanation":"Korte warme Takkie & Siep toelichting (1-2 zinnen)"}
+Bij "complete": false:
+{"complete":false,"questions":[{"id":"q1","subject":"🥚 Onderdeel","question":"Hoeveel ...?","unit":"stuks","options":["..."],"defaultOption":"..."}]}`;
+
+    const reqPromise = callGeminiJson(prompt).catch(err => {
+        aiAssessCache.delete(cacheKey);
+        throw err;
+    });
+    aiAssessCache.set(cacheKey, reqPromise);
+    return await reqPromise;
 }
 
 async function calculateNutritionDirect(description, answersList, contextType) {
+    const normAnswers = (answersList || []).map(a => a.trim()).filter(Boolean);
+    const cacheKey = `${contextType}|${description.trim().toLowerCase()}|${normAnswers.join('||').toLowerCase()}`;
+    if (aiCalcCache.has(cacheKey)) {
+        return await aiCalcCache.get(cacheKey);
+    }
+
     const isDrink = contextType === 'drink';
-    const extraDetails = (answersList && answersList.length > 0)
-        ? `\nGekozen hoeveelheden per onderdeel:\n- ${answersList.join('\n- ')}`
+    const extraDetails = normAnswers.length > 0
+        ? `\nHoeveelheden: ${normAnswers.join(', ')}`
         : '';
 
-    const prompt = `Je bent de liefdevolle keto-voedingsexpert van Takkie & Siep.
-Bereken een nauwkeurige schatting van de netto koolhydraten (carbs), vetten (fat) en eiwitten (protein) in hele grammen voor het volgende ${isDrink ? 'drankje (geef de waarden per 1 glas/kopje, tenzij de gebruiker een specifieke totale hoeveelheid koos)' : 'gerecht of voedingsmiddel'}:
-Oorspronkelijke invoer: "${description}"${extraDetails}
+    const prompt = `Je bent de keto-voedingsexpert van Takkie & Siep.
+Bereken netto koolhydraten (carbs), vetten (fat) en eiwitten (protein) in hele grammen voor dit ${isDrink ? 'drankje' : 'gerecht'}:
+"${description}"${extraDetails}
 
-Geef ALLEEN een geldig JSON-object terug in dit formaat:
+Geef ALLEEN JSON terug:
 {
-  "carbs": <geheel getal in grammen>,
-  "fat": <geheel getal in grammen>,
-  "protein": <geheel getal in grammen>,
-  "refinedName": "<duidelijke, natuurlijke Nederlandse samenvatting van het gerecht inclusief de gekozen hoeveelheden, bijv. '3 gebakken eieren met 2 plakjes spek en 1 glas melk'>",
-  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep over de berekende onderdelen en macro's>"
+  "carbs": <geheel getal in g>,
+  "fat": <geheel getal in g>,
+  "protein": <geheel getal in g>,
+  "refinedName": "<natuurlijke Nederlandse naam inclusief hoeveelheden, bijv. '3 gebakken eieren met 2 plakjes spek en 1 glas melk'>",
+  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep>"
 }`;
 
-    return await callGeminiJson(prompt);
+    const reqPromise = callGeminiJson(prompt).catch(err => {
+        aiCalcCache.delete(cacheKey);
+        throw err;
+    });
+    aiCalcCache.set(cacheKey, reqPromise);
+    return await reqPromise;
 }
 
 function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialogOpts = {}) {
@@ -274,6 +288,8 @@ function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialo
     fbEl.style.display = 'block';
     const isWizard = !!dialogOpts.isWizard;
     const onBackToStep1 = dialogOpts.onBackToStep1 || null;
+    const onPrefetchAnswers = dialogOpts.onPrefetchAnswers || null;
+    let prefetchTimer = null;
 
     const normalizedQuestions = (questions || []).slice(0, 4).map((q, idx) => {
         const unit = UNIT_QUICK_PICKS[q.unit] ? q.unit : 'g';
@@ -335,6 +351,21 @@ function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialo
             </div>
         </div>`;
 
+    const collectCurrentAnswers = () => normalizedQuestions
+        .map((q, idx) => formatClarifyingAnswer(q, stateByQ[idx].selectedChip, stateByQ[idx].customVal, stateByQ[idx].customUnit))
+        .filter(Boolean);
+
+    const schedulePrefetch = (delayMs = 150) => {
+        if (!onPrefetchAnswers) return;
+        if (prefetchTimer) clearTimeout(prefetchTimer);
+        prefetchTimer = setTimeout(() => {
+            onPrefetchAnswers(collectCurrentAnswers());
+        }, delayMs);
+    };
+
+    // Start direct op de achtergrond met het voorberekenen van de voorgeselecteerde standaardporties
+    schedulePrefetch(0);
+
     fbEl.querySelectorAll('.ai-q-chip:not(.ai-q-chip-other)').forEach(chipBtn => {
         chipBtn.addEventListener('click', () => {
             const qIdx = parseInt(chipBtn.getAttribute('data-q-idx'), 10);
@@ -351,6 +382,7 @@ function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialo
                 const customRow = block.querySelector(`[data-q-custom-row="${qIdx}"]`);
                 if (customRow) customRow.style.display = 'none';
             }
+            schedulePrefetch(100);
         });
     });
 
@@ -374,6 +406,7 @@ function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialo
         inp.addEventListener('input', () => {
             const qIdx = parseInt(inp.getAttribute('data-q-input'), 10);
             stateByQ[qIdx].customVal = inp.value;
+            schedulePrefetch(350);
         });
     });
 
@@ -381,16 +414,15 @@ function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialo
         sel.addEventListener('change', () => {
             const qIdx = parseInt(sel.getAttribute('data-q-unit'), 10);
             stateByQ[qIdx].customUnit = sel.value;
+            schedulePrefetch(150);
         });
     });
 
     const confirmBtn = fbEl.querySelector('#btn-ai-dialog-confirm');
     if (confirmBtn) {
         confirmBtn.addEventListener('click', () => {
-            const answers = normalizedQuestions
-                .map((q, idx) => formatClarifyingAnswer(q, stateByQ[idx].selectedChip, stateByQ[idx].customVal, stateByQ[idx].customUnit))
-                .filter(Boolean);
-            onConfirmAnswers(answers);
+            if (prefetchTimer) clearTimeout(prefetchTimer);
+            onConfirmAnswers(collectCurrentAnswers());
         });
     }
 
@@ -569,6 +601,9 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
                 () => runFinalCalculation([]),
                 {
                     isWizard,
+                    onPrefetchAnswers: (answers) => {
+                        calculateNutritionDirect(description, answers, contextType).catch(() => {});
+                    },
                     onBackToStep1: isWizard && wizardCallbacks.onBackToStep1
                         ? () => {
                             wizardCallbacks.onBackToStep1();
