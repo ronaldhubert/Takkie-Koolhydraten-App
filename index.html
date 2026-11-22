@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261121j">
-    <link rel="stylesheet" href="css/auth.css?v=20261121j">
-    <link rel="stylesheet" href="css/layout.css?v=20261121j">
-    <link rel="stylesheet" href="css/pets.css?v=20261121j">
-    <link rel="stylesheet" href="css/widgets.css?v=20261121j">
-    <link rel="stylesheet" href="css/cards.css?v=20261121j">
-    <link rel="stylesheet" href="css/components.css?v=20261121j">
-    <link rel="stylesheet" href="css/team.css?v=20261121j">
-    <link rel="stylesheet" href="css/history.css?v=20261121j">
+    <link rel="stylesheet" href="css/base.css?v=20261122a">
+    <link rel="stylesheet" href="css/auth.css?v=20261122a">
+    <link rel="stylesheet" href="css/layout.css?v=20261122a">
+    <link rel="stylesheet" href="css/pets.css?v=20261122a">
+    <link rel="stylesheet" href="css/widgets.css?v=20261122a">
+    <link rel="stylesheet" href="css/cards.css?v=20261122a">
+    <link rel="stylesheet" href="css/components.css?v=20261122a">
+    <link rel="stylesheet" href="css/team.css?v=20261122a">
+    <link rel="stylesheet" href="css/history.css?v=20261122a">
 </head>
 <body>
 
@@ -285,46 +285,94 @@
             </div>
         </div>
 
-        <!-- TAB 3: MAALTIJD TOEVOEGEN -->
+        <!-- TAB 3: MAALTIJD TOEVOEGEN (3-STAPS WIZARD) -->
         <div id="tab-log" class="tab-content">
             <button type="button" class="btn btn-back" id="btn-back-from-log">⬅️ Terug naar Home</button>
             <div class="widget">
                 <h3>🍽️ Maaltijd Toevoegen</h3>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin: 0;">Kies uit eerdere favorieten:</label>
-                    <button type="button" class="btn btn-auto" id="btn-manage-favs-meal" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow);">✏️ Favorieten wijzigen</button>
+
+                <div class="wizard-steps">
+                    <span class="wizard-step-pill active" id="meal-step-pill-1">① Wat?</span>
+                    <span class="wizard-step-pill" id="meal-step-pill-2">② Hoeveel?</span>
+                    <span class="wizard-step-pill" id="meal-step-pill-3">③ Klopt dit?</span>
                 </div>
-                <select id="favorite-meals-select" style="margin-bottom: 12px; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
-                    <option value="">-- Geen favoriet geselecteerd --</option>
-                </select>
 
-                <label>Naam Maaltijd (of beschrijving):</label>
-                <input type="text" id="new-meal-name" placeholder="Bijv. 2 roereieren met 15g roomboter en spek">
-                <button class="btn btn-auto" id="btn-autofill-meal" style="width: 100%;">🤖 Analyseer macro's met AI</button>
-                <div id="ai-meal-feedback" style="display: none; font-size: 0.8rem; background: var(--bubble-bg); border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
+                <div class="pets-box" style="margin-bottom: 12px; padding: 10px 12px;">
+                    <div class="pets-avatars">
+                        <div class="takkie-avatar" id="meal-wizard-pet"></div>
+                    </div>
+                    <div class="speech-bubble" id="meal-wizard-speech">
+                        "Woef! Wat heb je lekker gegeten? 🍽️"
+                    </div>
+                </div>
 
-                <label class="checkbox-label" style="margin-bottom: 10px;">
-                    <input type="checkbox" id="save-favorite-meal"> 💖 Sla op in mijn favorieten
-                </label>
-                <button class="btn btn-primary" id="btn-save-meal" style="width: 100%; margin-bottom: 14px;">🍽️ Maaltijd Toevoegen (+10 pt)</button>
-                
-                <label>Type:</label>
-                <select id="new-meal-type">
-                    <option value="🍳 Ontbijt">🍳 Ontbijt</option>
-                    <option value="🥗 Lunch">🥗 Lunch</option>
-                    <option value="🍲 Avondeten">🍲 Avondeten</option>
-                    <option value="⚡ Snack">⚡ Snack</option>
-                </select>
+                <!-- STAP 1: WAT HEB JE GEGETEN? -->
+                <div id="meal-wizard-step-1">
+                    <label>Welk eetmoment is het?</label>
+                    <select id="new-meal-type">
+                        <option value="🍳 Ontbijt">🍳 Ontbijt</option>
+                        <option value="🥗 Lunch">🥗 Lunch</option>
+                        <option value="🍲 Avondeten">🍲 Avondeten</option>
+                        <option value="⚡ Snack">⚡ Snack</option>
+                    </select>
 
-                <label>Koolhydraten (gram):</label>
-                <input type="number" id="new-meal-carbs" value="1" min="0">
+                    <label>Wat heb je gegeten?</label>
+                    <input type="text" id="new-meal-name" placeholder="Bijv. gebakken eieren met spek en melk">
 
-                <label>Vetten (gram):</label>
-                <input type="number" id="new-meal-fat" value="45" min="0">
+                    <button type="button" class="btn btn-primary" id="btn-autofill-meal" style="width: 100%; margin-bottom: 14px;">🐾 Volgende stap: Hoeveelheden →</button>
 
-                <label>Eiwitten (gram):</label>
-                <input type="number" id="new-meal-protein" value="30" min="0">
+                    <div style="border-top: 2px dashed #ddd; padding-top: 10px; margin-top: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="margin: 0; font-size: 0.8rem; color: #555;">Of kies direct uit je favorieten:</label>
+                            <button type="button" class="btn btn-auto" id="btn-manage-favs-meal" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow); width: auto;">✏️ Favorieten wijzigen</button>
+                        </div>
+                        <select id="favorite-meals-select" style="margin-bottom: 0; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
+                            <option value="">-- Geen favoriet geselecteerd --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- STAP 2: HOEVEEL GRAM, PLAKJES, STUKS OF ML? -->
+                <div id="meal-wizard-step-2" style="display: none;">
+                    <div id="ai-meal-feedback" style="font-size: 0.85rem;"></div>
+                </div>
+
+                <!-- STAP 3: SAMENVATTING - KLOPT DIT ZO? -->
+                <div id="meal-wizard-step-3" style="display: none;">
+                    <div class="wizard-summary-card">
+                        <div class="wizard-summary-title" id="meal-summary-title">🍽️ Maaltijd</div>
+                        <div class="wizard-summary-expl" id="meal-summary-explanation"></div>
+
+                        <div class="wizard-macro-grid">
+                            <div class="wizard-macro-box">
+                                <label>🥑 Koolhydraten (g)</label>
+                                <input type="number" id="new-meal-carbs" value="1" min="0">
+                            </div>
+                            <div class="wizard-macro-box">
+                                <label>🧈 Vetten (g)</label>
+                                <input type="number" id="new-meal-fat" value="45" min="0">
+                            </div>
+                            <div class="wizard-macro-box">
+                                <label>🥩 Eiwitten (g)</label>
+                                <input type="number" id="new-meal-protein" value="30" min="0">
+                            </div>
+                            <div class="wizard-macro-box">
+                                <label>⚡ Calorieën</label>
+                                <div class="wizard-kcal-display" id="meal-summary-kcal">529 kcal</div>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-label" style="margin: 10px 0 4px 0;">
+                            <input type="checkbox" id="save-favorite-meal"> 💖 Sla ook op in mijn favorieten
+                        </label>
+                    </div>
+
+                    <button type="button" class="btn btn-primary" id="btn-save-meal" style="width: 100%; margin-bottom: 8px;">✅ Ja, klopt! Toevoegen (+10 pt)</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn" id="btn-meal-step3-back-step2" style="flex: 1; background: #FFF9E6; padding: 9px;">← Hoeveelheden</button>
+                        <button type="button" class="btn" id="btn-meal-step3-back-step1" style="flex: 1; background: white; padding: 9px;">✏️ Andere maaltijd</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -341,41 +389,89 @@
             </div>
         </div>
 
-        <!-- TAB 3B: DRANK TOEVOEGEN -->
+        <!-- TAB 3B: DRANK TOEVOEGEN (3-STAPS WIZARD) -->
         <div id="tab-log-drink" class="tab-content">
             <button type="button" class="btn btn-back" id="btn-back-from-drink">⬅️ Terug naar Home</button>
             <div class="widget" style="background-color: #E3F2FD;">
                 <h3>🥤 Drankje Loggen</h3>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin: 0;">Kies uit eerdere favorieten:</label>
-                    <button type="button" class="btn btn-auto" id="btn-manage-favs-drink" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow);">✏️ Favorieten wijzigen</button>
+                <div class="wizard-steps">
+                    <span class="wizard-step-pill active" id="drink-step-pill-1">① Wat?</span>
+                    <span class="wizard-step-pill" id="drink-step-pill-2">② Hoeveel?</span>
+                    <span class="wizard-step-pill" id="drink-step-pill-3">③ Klopt dit?</span>
                 </div>
-                <select id="favorite-drinks-select" style="margin-bottom: 12px; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
-                    <option value="">-- Geen favoriet geselecteerd --</option>
-                </select>
 
-                <label>Wat drink je? (per glas/kopje):</label>
-                <input type="text" id="drink-name" placeholder="Bijv. Droge witte wijn, cappuccino met room">
-                <button class="btn btn-auto" id="btn-autofill-drink" style="width: 100%; background-color: var(--accent-yellow);">🤖 Analyseer macro's met AI</button>
-                <div id="ai-drink-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
+                <div class="pets-box" style="margin-bottom: 12px; padding: 10px 12px; background-color: white;">
+                    <div class="pets-avatars">
+                        <div class="siep-avatar" id="drink-wizard-pet"></div>
+                    </div>
+                    <div class="speech-bubble" id="drink-wizard-speech">
+                        "Miauw! Wat heb je lekker gedronken? 🥤"
+                    </div>
+                </div>
 
-                <label class="checkbox-label" style="margin-bottom: 10px;">
-                    <input type="checkbox" id="save-favorite-drink"> 💖 Sla op in mijn favorieten
-                </label>
-                <button class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-blue); width: 100%; margin-bottom: 14px;">🥤 Drankje Toevoegen (+5 pt)</button>
+                <!-- STAP 1: WAT HEB JE GEDRONKEN? -->
+                <div id="drink-wizard-step-1">
+                    <label>Wat heb je gedronken?</label>
+                    <input type="text" id="drink-name" placeholder="Bijv. droge witte wijn, cappuccino met room">
 
-                <label>Aantal glazen / kopjes:</label>
-                <input type="number" id="drink-amount" value="1" min="1">
+                    <button type="button" class="btn btn-primary" id="btn-autofill-drink" style="width: 100%; background-color: var(--accent-yellow); margin-bottom: 14px;">🐾 Volgende stap: Hoeveelheid →</button>
 
-                <label>Koolhydraten per glas (g):</label>
-                <input type="number" id="drink-carbs" value="0" min="0">
+                    <div style="border-top: 2px dashed #b0bec5; padding-top: 10px; margin-top: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="margin: 0; font-size: 0.8rem; color: #444;">Of kies direct uit je favorieten:</label>
+                            <button type="button" class="btn btn-auto" id="btn-manage-favs-drink" style="margin: 0; padding: 3px 8px; font-size: 0.75rem; background-color: var(--accent-yellow); width: auto;">✏️ Favorieten wijzigen</button>
+                        </div>
+                        <select id="favorite-drinks-select" style="margin-bottom: 0; width: 100%; padding: 8px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Fredoka', sans-serif;">
+                            <option value="">-- Geen favoriet geselecteerd --</option>
+                        </select>
+                    </div>
+                </div>
 
-                <label>Vetten per glas (g):</label>
-                <input type="number" id="drink-fat" value="0" min="0">
+                <!-- STAP 2: HOEVEEL GLAZEN / ML / TOEVOEGINGEN? -->
+                <div id="drink-wizard-step-2" style="display: none;">
+                    <div id="ai-drink-feedback" style="font-size: 0.85rem;"></div>
+                </div>
 
-                <label>Eiwitten per glas (g):</label>
-                <input type="number" id="drink-protein" value="0" min="0">
+                <!-- STAP 3: SAMENVATTING - KLOPT DIT ZO? -->
+                <div id="drink-wizard-step-3" style="display: none;">
+                    <div class="wizard-summary-card" style="background: white;">
+                        <div class="wizard-summary-title" id="drink-summary-title">🥤 Drankje</div>
+                        <div class="wizard-summary-expl" id="drink-summary-explanation"></div>
+
+                        <label style="font-size: 0.8rem; font-weight: 700;">Aantal glazen / kopjes (telt mee voor je Drinkbak 💧):</label>
+                        <input type="number" id="drink-amount" value="1" min="1" style="margin-bottom: 10px;">
+
+                        <div class="wizard-macro-grid">
+                            <div class="wizard-macro-box">
+                                <label>🥑 KH per glas (g)</label>
+                                <input type="number" id="drink-carbs" value="0" min="0">
+                            </div>
+                            <div class="wizard-macro-box">
+                                <label>🧈 Vet per glas (g)</label>
+                                <input type="number" id="drink-fat" value="0" min="0">
+                            </div>
+                            <div class="wizard-macro-box">
+                                <label>🥩 Eiwit per glas (g)</label>
+                                <input type="number" id="drink-protein" value="0" min="0">
+                            </div>
+                            <div class="wizard-macro-box">
+                                <label>⚡ Totaal Kcal</label>
+                                <div class="wizard-kcal-display" id="drink-summary-kcal">0 kcal</div>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-label" style="margin: 10px 0 4px 0;">
+                            <input type="checkbox" id="save-favorite-drink"> 💖 Sla ook op in mijn favorieten
+                        </label>
+                    </div>
+
+                    <button type="button" class="btn btn-primary" id="btn-save-drink" style="background-color: var(--accent-green); width: 100%; margin-bottom: 8px;">✅ Ja, klopt! Toevoegen (+5 pt)</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn" id="btn-drink-step3-back-step2" style="flex: 1; background: #FFF9E6; padding: 9px;">← Hoeveelheid</button>
+                        <button type="button" class="btn" id="btn-drink-step3-back-step1" style="flex: 1; background: white; padding: 9px;">✏️ Ander drankje</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -646,21 +742,21 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261121j"></script>
-<script src="js/quotes.js?v=20261121j"></script>
-<script src="js/utils.js?v=20261121j"></script>
-<script src="js/auth.js?v=20261121j"></script>
-<script src="js/data.js?v=20261121j"></script>
-<script src="js/meals.js?v=20261121j"></script>
-<script src="js/favorites.js?v=20261121j"></script>
-<script src="js/ai.js?v=20261121j"></script>
-<script src="js/recipes.js?v=20261121j"></script>
-<script src="js/team.js?v=20261121j"></script>
-<script src="js/chat.js?v=20261121j"></script>
-<script src="js/notifications.js?v=20261121j"></script>
-<script src="js/history.js?v=20261121j"></script>
-<script src="js/ui.js?v=20261121j"></script>
-<script src="js/main.js?v=20261121j"></script>
+<script src="js/state.js?v=20261122a"></script>
+<script src="js/quotes.js?v=20261122a"></script>
+<script src="js/utils.js?v=20261122a"></script>
+<script src="js/auth.js?v=20261122a"></script>
+<script src="js/data.js?v=20261122a"></script>
+<script src="js/meals.js?v=20261122a"></script>
+<script src="js/favorites.js?v=20261122a"></script>
+<script src="js/ai.js?v=20261122a"></script>
+<script src="js/recipes.js?v=20261122a"></script>
+<script src="js/team.js?v=20261122a"></script>
+<script src="js/chat.js?v=20261122a"></script>
+<script src="js/notifications.js?v=20261122a"></script>
+<script src="js/history.js?v=20261122a"></script>
+<script src="js/ui.js?v=20261122a"></script>
+<script src="js/main.js?v=20261122a"></script>
 
 </body>
 </html>

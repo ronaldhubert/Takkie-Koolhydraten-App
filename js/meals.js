@@ -283,34 +283,181 @@ function initMealEvents() {
     }
 }
 
+function updateMealWizardKcal() {
+    const c = parseInt(document.getElementById('new-meal-carbs')?.value, 10) || 0;
+    const f = parseInt(document.getElementById('new-meal-fat')?.value, 10) || 0;
+    const p = parseInt(document.getElementById('new-meal-protein')?.value, 10) || 0;
+    const kcal = (c * 4) + (p * 4) + (f * 9);
+    const el = document.getElementById('meal-summary-kcal');
+    if (el) el.innerText = `${kcal} kcal`;
+}
+
+function updateDrinkWizardKcal() {
+    const a = Math.max(1, parseInt(document.getElementById('drink-amount')?.value, 10) || 1);
+    const c = parseInt(document.getElementById('drink-carbs')?.value, 10) || 0;
+    const f = parseInt(document.getElementById('drink-fat')?.value, 10) || 0;
+    const p = parseInt(document.getElementById('drink-protein')?.value, 10) || 0;
+    const kcal = ((c * 4) + (p * 4) + (f * 9)) * a;
+    const el = document.getElementById('drink-summary-kcal');
+    if (el) el.innerText = `${kcal} kcal`;
+}
+
+function setMealWizardStep(step, summaryData = null) {
+    [1, 2, 3].forEach(n => {
+        const panel = document.getElementById('meal-wizard-step-' + n);
+        if (panel) panel.style.display = (n === step) ? 'block' : 'none';
+        const pill = document.getElementById('meal-step-pill-' + n);
+        if (pill) {
+            pill.classList.toggle('active', n === step);
+            pill.classList.toggle('done', n < step);
+        }
+    });
+
+    const petEl = document.getElementById('meal-wizard-pet');
+    const speechEl = document.getElementById('meal-wizard-speech');
+    if (step === 1) {
+        if (petEl) petEl.className = 'takkie-avatar';
+        if (speechEl) speechEl.innerText = '"Woef! Wat heb je lekker gegeten? 🍽️"';
+        const hour = new Date().getHours();
+        const typeEl = document.getElementById('new-meal-type');
+        if (typeEl) {
+            if (hour >= 5 && hour < 11) typeEl.value = '🍳 Ontbijt';
+            else if (hour >= 11 && hour < 16) typeEl.value = '🥗 Lunch';
+            else if (hour >= 16 && hour < 21) typeEl.value = '🍲 Avondeten';
+            else typeEl.value = '⚡ Snack';
+        }
+    } else if (step === 2) {
+        if (petEl) petEl.className = 'siep-avatar';
+        if (speechEl) speechEl.innerText = '"Miauw! Hoeveel had je van elk onderdeel? Tik op een snelknop of pas het aan 🐾"';
+    } else if (step === 3) {
+        if (petEl) petEl.className = 'takkie-avatar';
+        if (speechEl) speechEl.innerText = '"Woef! We hebben het samengevat. Klopt dit zo? 🥰"';
+        const t = document.getElementById('new-meal-type')?.value || '🍽️ Maaltijd';
+        const n = document.getElementById('new-meal-name')?.value.trim() || '';
+        const titleEl = document.getElementById('meal-summary-title');
+        if (titleEl) titleEl.innerText = `${t} — ${n}`;
+        const explEl = document.getElementById('meal-summary-explanation');
+        if (explEl) {
+            const explText = summaryData?.explanation || 'Controleer hieronder de macro\'s en pas ze zo nodig nog aan.';
+            explEl.innerHTML = `✨ <b>Samenvatting:</b> ${escapeHtml(explText)}`;
+        }
+        updateMealWizardKcal();
+    }
+}
+
+function setDrinkWizardStep(step, summaryData = null) {
+    [1, 2, 3].forEach(n => {
+        const panel = document.getElementById('drink-wizard-step-' + n);
+        if (panel) panel.style.display = (n === step) ? 'block' : 'none';
+        const pill = document.getElementById('drink-step-pill-' + n);
+        if (pill) {
+            pill.classList.toggle('active', n === step);
+            pill.classList.toggle('done', n < step);
+        }
+    });
+
+    const petEl = document.getElementById('drink-wizard-pet');
+    const speechEl = document.getElementById('drink-wizard-speech');
+    if (step === 1) {
+        if (petEl) petEl.className = 'siep-avatar';
+        if (speechEl) speechEl.innerText = '"Miauw! Wat heb je lekker gedronken? 🥤"';
+    } else if (step === 2) {
+        if (petEl) petEl.className = 'takkie-avatar';
+        if (speechEl) speechEl.innerText = '"Woef! Hoe groot was je glas of kopje? 🐾"';
+    } else if (step === 3) {
+        if (petEl) petEl.className = 'siep-avatar';
+        if (speechEl) speechEl.innerText = '"Miauw! Dit hebben we berekend. Klopt de samenvatting zo? 🥰"';
+        const n = document.getElementById('drink-name')?.value.trim() || '';
+        const titleEl = document.getElementById('drink-summary-title');
+        if (titleEl) titleEl.innerText = `🥤 ${n}`;
+        const explEl = document.getElementById('drink-summary-explanation');
+        if (explEl) {
+            const explText = summaryData?.explanation || 'Controleer hieronder het aantal glazen en de macro\'s.';
+            explEl.innerHTML = `✨ <b>Samenvatting:</b> ${escapeHtml(explText)}`;
+        }
+        updateDrinkWizardKcal();
+    }
+}
+
 function initLogEvents() {
-    // AI Analyse bij Maaltijd & Drank toevoegen
+    // 3-Staps Wizard bij Maaltijd & Drank toevoegen
     if (document.getElementById('btn-autofill-drink')) {
-        document.getElementById('btn-autofill-drink').addEventListener('click', (e) =>
+        document.getElementById('btn-autofill-drink').addEventListener('click', (e) => {
+            const val = (document.getElementById('drink-name')?.value || '').trim();
+            if (!val) {
+                showInlineMessage('btn-autofill-drink', 'Typ eerst even wat je hebt gedronken!');
+                return;
+            }
             analyzeNutritionWithAI(
-                document.getElementById('drink-name').value,
+                val,
                 'drink',
                 'drink-carbs',
                 'drink-fat',
                 'drink-protein',
                 'ai-drink-feedback',
-                e.currentTarget
-            )
-        );
+                e.currentTarget,
+                {
+                    onEnterStep2: () => setDrinkWizardStep(2),
+                    onBackToStep1: () => setDrinkWizardStep(1),
+                    onEnterStep3: (summary) => setDrinkWizardStep(3, summary)
+                }
+            );
+        });
     }
 
     if (document.getElementById('btn-autofill-meal')) {
-        document.getElementById('btn-autofill-meal').addEventListener('click', (e) =>
+        document.getElementById('btn-autofill-meal').addEventListener('click', (e) => {
+            const val = (document.getElementById('new-meal-name')?.value || '').trim();
+            if (!val) {
+                showInlineMessage('btn-autofill-meal', 'Typ eerst even wat je hebt gegeten!');
+                return;
+            }
             analyzeNutritionWithAI(
-                document.getElementById('new-meal-name').value,
+                val,
                 'meal',
                 'new-meal-carbs',
                 'new-meal-fat',
                 'new-meal-protein',
                 'ai-meal-feedback',
-                e.currentTarget
-            )
-        );
+                e.currentTarget,
+                {
+                    onEnterStep2: () => setMealWizardStep(2),
+                    onBackToStep1: () => setMealWizardStep(1),
+                    onEnterStep3: (summary) => setMealWizardStep(3, summary)
+                }
+            );
+        });
+    }
+
+    ['new-meal-carbs', 'new-meal-fat', 'new-meal-protein'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateMealWizardKcal);
+    });
+
+    ['drink-amount', 'drink-carbs', 'drink-fat', 'drink-protein'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateDrinkWizardKcal);
+    });
+
+    if (document.getElementById('btn-meal-step3-back-step2')) {
+        document.getElementById('btn-meal-step3-back-step2').addEventListener('click', () => {
+            document.getElementById('btn-autofill-meal')?.click();
+        });
+    }
+    if (document.getElementById('btn-meal-step3-back-step1')) {
+        document.getElementById('btn-meal-step3-back-step1').addEventListener('click', () => {
+            setMealWizardStep(1);
+        });
+    }
+    if (document.getElementById('btn-drink-step3-back-step2')) {
+        document.getElementById('btn-drink-step3-back-step2').addEventListener('click', () => {
+            document.getElementById('btn-autofill-drink')?.click();
+        });
+    }
+    if (document.getElementById('btn-drink-step3-back-step1')) {
+        document.getElementById('btn-drink-step3-back-step1').addEventListener('click', () => {
+            setDrinkWizardStep(1);
+        });
     }
 
     if (document.getElementById('new-meal-name')) {
@@ -355,8 +502,7 @@ function initLogEvents() {
 
             document.getElementById('new-meal-name').value = '';
             document.getElementById('save-favorite-meal').checked = false;
-            const fb = document.getElementById('ai-meal-feedback');
-            if (fb) fb.style.display = 'none';
+            setMealWizardStep(1);
             if (appState.returnToHistoryDay) {
                 appState.returnToHistoryDay = false;
                 switchTab('history');
@@ -391,8 +537,7 @@ function initLogEvents() {
 
             document.getElementById('drink-name').value = '';
             document.getElementById('save-favorite-drink').checked = false;
-            const fb = document.getElementById('ai-drink-feedback');
-            if (fb) fb.style.display = 'none';
+            setDrinkWizardStep(1);
             if (appState.returnToHistoryDay) {
                 appState.returnToHistoryDay = false;
                 switchTab('history');
@@ -406,11 +551,13 @@ function initLogEvents() {
         document.getElementById('favorite-meals-select').addEventListener('change', (e) => {
             if (e.target.value === "") return;
             const item = appState.savedItems[e.target.value];
+            e.target.value = "";
             if (item) {
                 document.getElementById('new-meal-name').value = item.name;
                 document.getElementById('new-meal-carbs').value = item.carbs;
                 document.getElementById('new-meal-fat').value = item.fat;
                 document.getElementById('new-meal-protein').value = item.protein;
+                setMealWizardStep(3, { explanation: `Gekozen uit je favorieten: ${item.name}.` });
             }
         });
     }
@@ -419,11 +566,13 @@ function initLogEvents() {
         document.getElementById('favorite-drinks-select').addEventListener('change', (e) => {
             if (e.target.value === "") return;
             const item = appState.savedItems[e.target.value];
+            e.target.value = "";
             if (item) {
                 document.getElementById('drink-name').value = item.name;
                 document.getElementById('drink-carbs').value = item.carbs;
                 document.getElementById('drink-fat').value = item.fat;
                 document.getElementById('drink-protein').value = item.protein;
+                setDrinkWizardStep(3, { explanation: `Gekozen uit je favorieten: ${item.name}.` });
             }
         });
     }

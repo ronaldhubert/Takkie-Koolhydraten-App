@@ -15,6 +15,12 @@ function switchTab(tabId) {
     if (tabId === 'home' || tabId === 'quotes') {
         getRandomQuote();
     }
+    if (tabId === 'log') {
+        setMealWizardStep(1);
+    }
+    if (tabId === 'log-drink') {
+        setDrinkWizardStep(1);
+    }
     if (tabId === 'history') {
         renderHistory();
     }
