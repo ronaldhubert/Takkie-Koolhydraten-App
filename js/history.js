@@ -585,7 +585,6 @@ async function exportHistoryToPdf() {
                     <div>
                         <div style="color:#E63946; font-size:19px; font-weight:700; margin-bottom:2px;">🐾 Takkie & Siep's Keto Logboek (Laatste 4 Weken)</div>
                         <div style="font-size:13px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
-                        <div style="font-size:11px; color:#444; margin-top:3px;">Doelen: max ${goals.carbs}g KH • min ${goals.protein}g Eiwit • max ${goals.fat}g Vet • max ${goals.kcal} kcal • min 8 glazen water &nbsp;|&nbsp; <span style="background:#D8F3DC; color:#1B4332; padding:1px 6px; border-radius:4px; font-weight:700;">Groen = gehaald</span> <span style="background:#FFE5E5; color:#B71C1C; padding:1px 6px; border-radius:4px; font-weight:700;">Rood = niet gehaald</span></div>
                     </div>
                     <img src="takkie.png" alt="Takkie" style="height:46px; width:auto;">
                 </div>
