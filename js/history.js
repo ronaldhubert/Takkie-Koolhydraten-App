@@ -169,6 +169,126 @@ function buildCarbLineChartLast10Days(meals, isForPdf = false) {
         y: Math.round(getY(d.carbs) * 10) / 10
     }));
 
+    const cardStyle = isForPdf
+        ? 'background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px; margin-bottom:10px; page-break-inside:avoid;'
+        : 'background:#FFFDF9; border:3px solid var(--border-color); border-radius:16px; padding:10px 12px; box-shadow:3px 3px 0px var(--border-color); margin-bottom:12px;';
+
+    // Voor PDF: teken op een 2x canvas en zet om naar PNG data-URL zodat html2canvas/html2pdf alle lijnen, punten en waarden 100% betrouwbaar rendert
+    if (isForPdf && typeof document !== 'undefined') {
+        const canvas = document.createElement('canvas');
+        const scale = 2;
+        canvas.width = svgW * scale;
+        canvas.height = svgH * scale;
+        const ctx = canvas.getContext && canvas.getContext('2d');
+        if (ctx) {
+            ctx.scale(scale, scale);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, svgW, svgH);
+
+            // Vlakvulling onder de lijn
+            ctx.beginPath();
+            ctx.moveTo(coords[0].x, baseY);
+            coords.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.lineTo(coords[coords.length - 1].x, baseY);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(6, 214, 160, 0.14)';
+            ctx.fill();
+
+            // Verticale hulplijnen per dag
+            ctx.strokeStyle = '#EFEFEF';
+            ctx.lineWidth = 1;
+            coords.forEach(p => {
+                ctx.beginPath();
+                ctx.moveTo(p.x, padT);
+                ctx.lineTo(p.x, baseY);
+                ctx.stroke();
+            });
+
+            // X-as basislijn
+            ctx.strokeStyle = '#1A1A1A';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padL, baseY);
+            ctx.lineTo(svgW - padR, baseY);
+            ctx.stroke();
+
+            // Rode gestippelde doellijn
+            ctx.save();
+            ctx.strokeStyle = '#E63946';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([5, 4]);
+            ctx.beginPath();
+            ctx.moveTo(padL, goalY);
+            ctx.lineTo(svgW - padR, goalY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Y-as labels (doel & 0g)
+            ctx.textAlign = 'right';
+            ctx.font = 'bold 10px Fredoka, Arial, sans-serif';
+            ctx.fillStyle = '#E63946';
+            ctx.fillText(`${carbGoal}g`, padL - 5, goalY + 3);
+            ctx.font = '600 10px Fredoka, Arial, sans-serif';
+            ctx.fillStyle = '#666666';
+            ctx.fillText('0g', padL - 5, baseY + 3);
+
+            // Verbindingslijn tussen de 10 dagen
+            ctx.strokeStyle = '#1A1A1A';
+            ctx.lineWidth = 2.8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            coords.forEach((p, idx) => {
+                if (idx === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Punten, waarden en daglabels
+            ctx.textAlign = 'center';
+            coords.forEach(p => {
+                const ok = p.carbs <= carbGoal;
+                const dotFill = !p.hasData ? '#E0E0E0' : (ok ? '#06D6A0' : '#E63946');
+                const valColor = !p.hasData ? '#888888' : (ok ? '#1B4332' : '#B71C1C');
+                const valText = p.hasData ? `${p.carbs}g` : '–';
+                const valY = Math.max(13, p.y - 9);
+
+                // Bolletje
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.isToday ? 6 : 5, 0, Math.PI * 2);
+                ctx.fillStyle = dotFill;
+                ctx.fill();
+                ctx.lineWidth = 2.2;
+                ctx.strokeStyle = '#1A1A1A';
+                ctx.stroke();
+
+                // Waarde boven bolletje
+                ctx.font = 'bold 11px Fredoka, Arial, sans-serif';
+                ctx.fillStyle = valColor;
+                ctx.fillText(valText, p.x, valY);
+
+                // Dagnaam & datum onder de as
+                ctx.font = `${p.isToday ? 'bold' : '600'} 11px Fredoka, Arial, sans-serif`;
+                ctx.fillStyle = p.isToday ? '#E63946' : '#1A1A1A';
+                ctx.fillText(p.dayName, p.x, baseY + 14);
+
+                ctx.font = '600 9.5px Fredoka, Arial, sans-serif';
+                ctx.fillStyle = '#666666';
+                ctx.fillText(p.shortDate, p.x, baseY + 27);
+            });
+
+            const dataUrl = canvas.toDataURL('image/png');
+            return `
+                <div style="${cardStyle}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
+                        <div style="font-size:13px; font-weight:700;">📈 Koolhydraten per dag (laatste 10 dagen)</div>
+                        <span style="background:#FFEEEE; color:#E63946; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 8px; font-weight:700; font-size:10px;">🎯 Dagdoel: max ${carbGoal}g</span>
+                    </div>
+                    <img src="${dataUrl}" alt="Koolhydraten laatste 10 dagen" style="display:block; width:100%; height:auto;" />
+                </div>`;
+        }
+    }
+
     const linePoints = coords.map(p => `${p.x},${p.y}`).join(' ');
     const areaPoints = `${coords[0].x},${baseY} ${linePoints} ${coords[coords.length - 1].x},${baseY}`;
 
@@ -190,17 +310,13 @@ function buildCarbLineChartLast10Days(meals, isForPdf = false) {
             </g>`;
     }).join('');
 
-    const cardStyle = isForPdf
-        ? 'background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px; margin-bottom:10px; page-break-inside:avoid;'
-        : 'background:#FFFDF9; border:3px solid var(--border-color); border-radius:16px; padding:10px 12px; box-shadow:3px 3px 0px var(--border-color); margin-bottom:12px;';
-
     return `
         <div style="${cardStyle}">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
                 <div style="font-size:${isForPdf ? '13px' : '0.84rem'}; font-weight:700;">📈 Koolhydraten per dag (laatste 10 dagen)</div>
                 <span style="background:#FFEEEE; color:#E63946; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 8px; font-weight:700; font-size:${isForPdf ? '10px' : '0.7rem'};">🎯 Dagdoel: max ${carbGoal}g</span>
             </div>
-            <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" style="display:block; width:100%; height:auto; overflow:visible;">
+            <svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" style="display:block; width:100%; height:auto; overflow:visible;">
                 <polygon points="${areaPoints}" fill="rgba(6, 214, 160, 0.14)" />
                 <line x1="${padL}" y1="${baseY}" x2="${svgW - padR}" y2="${baseY}" stroke="#1A1A1A" stroke-width="2" />
                 <line x1="${padL}" y1="${goalY}" x2="${svgW - padR}" y2="${goalY}" stroke="#E63946" stroke-width="1.8" stroke-dasharray="5,4" />
@@ -297,13 +413,15 @@ async function renderHistory() {
             last10Meals = tenDaysData.meals;
         }
 
+        const lineChartEl = document.getElementById('history-line-chart');
+        if (lineChartEl) lineChartEl.innerHTML = buildCarbLineChartLast10Days(last10Meals, false);
+
         navEl.innerHTML = `
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-prev>← Eerder</button>
             <span style="font-weight:700; font-size:0.85rem; text-align:center;">Gemiddeld per dag (3 weken)</span>
             <button type="button" class="btn btn-auto hist-nav-btn" data-hist-next ${historyState.pageOffset === 0 ? 'disabled style="opacity:0.4;"' : ''}>Later →</button>`;
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
-            ${buildCarbLineChartLast10Days(last10Meals, false)}
             <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Overzicht per week (tik voor alle dagen):</div>
             <div class="hist-cards-list">${weekCardsHtml}</div>`;
         return;
@@ -319,6 +437,8 @@ async function renderHistory() {
             const tenDaysData = await fetchHistoryRange(tenDaysStartStr, todayStr);
             last10Meals = tenDaysData.meals;
         }
+        const lineChartEl = document.getElementById('history-line-chart');
+        if (lineChartEl) lineChartEl.innerHTML = buildCarbLineChartLast10Days(last10Meals, false);
         const chartItems = [];
         const dayRows = [];
         for (let d = 0; d < 7; d++) {
@@ -362,7 +482,6 @@ async function renderHistory() {
             <span style="width:70px;"></span>`;
         contentEl.innerHTML = `
             ${buildBarChart(chartItems)}
-            ${buildCarbLineChartLast10Days(last10Meals, false)}
             <div style="font-weight:700; font-size:0.84rem; margin-bottom:6px;">🐾 Dagen in Week ${getISOWeekNumber(ws)} (tik op een dag om die te openen op Home):</div>
             <div class="hist-cards-list">${dayCardsHtml}</div>`;
         return;
