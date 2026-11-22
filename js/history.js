@@ -149,11 +149,11 @@ function buildCarbLineChartLast10Days(meals, isForPdf = false) {
 
     const maxVal = Math.max(carbGoal * 1.25, ...days.map(d => d.carbs), 10);
     const svgW = 520;
-    const svgH = 165;
+    const svgH = isForPdf ? 130 : 165;
     const padL = 36;
     const padR = 18;
-    const padT = 26;
-    const padB = 36;
+    const padT = isForPdf ? 20 : 26;
+    const padB = isForPdf ? 30 : 36;
     const plotW = svgW - padL - padR;
     const plotH = svgH - padT - padB;
 
@@ -170,7 +170,7 @@ function buildCarbLineChartLast10Days(meals, isForPdf = false) {
     }));
 
     const cardStyle = isForPdf
-        ? 'background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px; margin-bottom:10px; page-break-inside:avoid;'
+        ? 'background:#FFFFFF; border:3px solid #1A1A1A; border-radius:14px; padding:7px 12px; margin-bottom:7px; page-break-inside:avoid; break-inside:avoid; box-sizing:border-box;'
         : 'background:#FFFDF9; border:3px solid var(--border-color); border-radius:16px; padding:10px 12px; box-shadow:3px 3px 0px var(--border-color); margin-bottom:12px;';
 
     // Voor PDF: teken op een 2x canvas en zet om naar PNG data-URL zodat html2canvas/html2pdf alle lijnen, punten en waarden 100% betrouwbaar rendert
@@ -374,13 +374,13 @@ function buildTop5MealsAndDrinksHtml(mealsList, isForPdf = false) {
 
     if (isForPdf) {
         return `
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; page-break-inside:avoid;">
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
-                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🍽️ Top 5 Maaltijden (laatste 4 weken)</div>
+            <div style="display:flex; gap:10px; align-items:stretch; margin-top:2px; padding-bottom:4px; page-break-inside:avoid; break-inside:avoid; box-sizing:border-box;">
+                <div style="flex:1; min-width:0; background:#FFFFFF; border:3px solid #1A1A1A; border-radius:14px; padding:8px 12px 10px 12px; box-sizing:border-box; page-break-inside:avoid; break-inside:avoid;">
+                    <div style="font-size:12px; font-weight:700; margin-bottom:4px;">🍽️ Top 5 Maaltijden (laatste 4 weken)</div>
                     ${getTop5ListHtml(mealCounts, 'Nog geen maaltijden gelogd in deze 4 weken.')}
                 </div>
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px;">
-                    <div style="font-size:13px; font-weight:700; margin-bottom:6px;">🥤 Top 5 Drankjes (laatste 4 weken)</div>
+                <div style="flex:1; min-width:0; background:#FFFFFF; border:3px solid #1A1A1A; border-radius:14px; padding:8px 12px 10px 12px; box-sizing:border-box; page-break-inside:avoid; break-inside:avoid;">
+                    <div style="font-size:12px; font-weight:700; margin-bottom:4px;">🥤 Top 5 Drankjes (laatste 4 weken)</div>
                     ${getTop5ListHtml(drinkCounts, 'Nog geen drankjes gelogd in deze 4 weken.')}
                 </div>
             </div>`;
@@ -735,11 +735,11 @@ async function exportHistoryToPdf() {
         const goalCell = (ok, label, hasData, isFooter = false) => {
             const borderStyle = isFooter ? 'border-top:2px solid #1A1A1A; border:1px solid #1A1A1A;' : 'border:1px solid #1A1A1A;';
             if (!hasData) {
-                return `<td style="padding:4px 6px; ${borderStyle} text-align:center; background:#F5F5F5; color:#888; font-size:11px;">–</td>`;
+                return `<td style="padding:2.5px 5px; ${borderStyle} text-align:center; background:#F5F5F5; color:#888; font-size:10.5px;">–</td>`;
             }
             const bg = ok ? '#D8F3DC' : '#FFE5E5';
             const fg = ok ? '#1B4332' : '#B71C1C';
-            return `<td style="padding:4px 6px; ${borderStyle} text-align:center; background:${bg}; color:${fg}; font-weight:700; font-size:11px;">${label}</td>`;
+            return `<td style="padding:2.5px 5px; ${borderStyle} text-align:center; background:${bg}; color:${fg}; font-weight:700; font-size:10.5px;">${label}</td>`;
         };
 
         // 1. Bouw per week (laatste 4 weken incl. huidige week) een kader met een tabel per dag van de week
@@ -772,7 +772,7 @@ async function exportHistoryToPdf() {
                 const hasDayWater = hasDayMeals || x.water > 0;
                 return `
                     <tr>
-                        <td style="padding:4px 8px; border:1px solid #1A1A1A; font-weight:600; font-size:11px; background:#FFFDF9;">${dayLabel}</td>
+                        <td style="padding:2.5px 7px; border:1px solid #1A1A1A; font-weight:600; font-size:10.5px; background:#FFFDF9;">${dayLabel}</td>
                         ${goalCell(checkGoal('carbs', x.s.carbs), `${x.s.carbs} g`, hasDayMeals)}
                         ${goalCell(checkGoal('protein', x.s.protein), `${x.s.protein} g`, hasDayMeals)}
                         ${goalCell(checkGoal('fat', x.s.fat), `${x.s.fat} g`, hasDayMeals)}
@@ -782,23 +782,23 @@ async function exportHistoryToPdf() {
             }).join('');
 
             return `
-                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:16px; padding:10px 14px; margin-bottom:10px; page-break-inside:avoid;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-                        <div style="font-size:14px; font-weight:700;">📊 Week ${getISOWeekNumber(ws)} <span style="font-weight:600; font-size:12px; color:#555;">(${shortDateLabel(ws)} – ${shortDateLabel(we)})</span></div>
-                        <div style="font-size:10px; font-weight:700; background:#FFF9E6; border:2px solid #1A1A1A; border-radius:999px; padding:1px 9px;">
+                <div style="background:#FFFFFF; border:3px solid #1A1A1A; border-radius:14px; padding:7px 12px; margin-bottom:7px; page-break-inside:avoid; break-inside:avoid; box-sizing:border-box;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:4px;">
+                        <div style="font-size:13px; font-weight:700;">📊 Week ${getISOWeekNumber(ws)} <span style="font-weight:600; font-size:11px; color:#555;">(${shortDateLabel(ws)} – ${shortDateLabel(we)})</span></div>
+                        <div style="font-size:9.5px; font-weight:700; background:#FFF9E6; border:1.5px solid #1A1A1A; border-radius:999px; padding:1px 8px;">
                             ${nMeals}/7 dagen gelogd
                         </div>
                     </div>
 
                     <table style="width:100%; border-collapse:collapse; border:2px solid #1A1A1A;">
                         <thead>
-                            <tr style="background:#FFF9E6; font-size:11px;">
-                                <th style="padding:5px 8px; border:1px solid #1A1A1A; text-align:left;">Dag</th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥑 Koolhydraat <span style="font-weight:500; font-size:10px; color:#555;">(≤${goals.carbs}g)</span></th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🥩 Eiwit <span style="font-weight:500; font-size:10px; color:#555;">(≥${goals.protein}g)</span></th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">🧈 Vet <span style="font-weight:500; font-size:10px; color:#555;">(≤${goals.fat}g)</span></th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">⚡ Kcal <span style="font-weight:500; font-size:10px; color:#555;">(≤${goals.kcal})</span></th>
-                                <th style="padding:5px 6px; border:1px solid #1A1A1A; text-align:center;">💧 Water <span style="font-weight:500; font-size:10px; color:#555;">(≥8)</span></th>
+                            <tr style="background:#FFF9E6; font-size:10.5px;">
+                                <th style="padding:3.5px 7px; border:1px solid #1A1A1A; text-align:left;">Dag</th>
+                                <th style="padding:3.5px 5px; border:1px solid #1A1A1A; text-align:center;">🥑 Koolhydraat <span style="font-weight:500; font-size:9.5px; color:#555;">(≤${goals.carbs}g)</span></th>
+                                <th style="padding:3.5px 5px; border:1px solid #1A1A1A; text-align:center;">🥩 Eiwit <span style="font-weight:500; font-size:9.5px; color:#555;">(≥${goals.protein}g)</span></th>
+                                <th style="padding:3.5px 5px; border:1px solid #1A1A1A; text-align:center;">🧈 Vet <span style="font-weight:500; font-size:9.5px; color:#555;">(≤${goals.fat}g)</span></th>
+                                <th style="padding:3.5px 5px; border:1px solid #1A1A1A; text-align:center;">⚡ Kcal <span style="font-weight:500; font-size:9.5px; color:#555;">(≤${goals.kcal})</span></th>
+                                <th style="padding:3.5px 5px; border:1px solid #1A1A1A; text-align:center;">💧 Water <span style="font-weight:500; font-size:9.5px; color:#555;">(≥8)</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -806,7 +806,7 @@ async function exportHistoryToPdf() {
                         </tbody>
                         <tfoot>
                             <tr style="font-weight:700;">
-                                <td style="padding:4px 8px; border:1px solid #1A1A1A; font-size:11px; background:#F1FAEE;">Gemiddeld</td>
+                                <td style="padding:2.5px 7px; border:1px solid #1A1A1A; font-size:10.5px; background:#F1FAEE;">Gemiddeld</td>
                                 ${goalCell(checkGoal('carbs', avgC), `${avgC} g`, hasMeals, true)}
                                 ${goalCell(checkGoal('protein', avgP), `${avgP} g`, hasMeals, true)}
                                 ${goalCell(checkGoal('fat', avgF), `${avgF} g`, hasMeals, true)}
@@ -824,34 +824,37 @@ async function exportHistoryToPdf() {
         const carbLineChartPdfHtml = buildCarbLineChartLast10Days(data.meals, true);
 
         const reportHtml = `
-            <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:14px; box-sizing:border-box;">
-                <div style="background:#F1FAEE; border:3.5px solid #1A1A1A; border-radius:18px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
+            <div style="font-family:'Fredoka', Arial, sans-serif; color:#1A1A1A; background:#FFFDF9; padding:10px 12px 18px 12px; width:760px; box-sizing:border-box;">
+                <div style="background:#F1FAEE; border:3px solid #1A1A1A; border-radius:16px; padding:8px 14px; margin-bottom:7px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
                     <div>
-                        <div style="color:#E63946; font-size:19px; font-weight:700; margin-bottom:2px;">🐾 Takkie & Siep's Keto Logboek (Laatste 4 Weken)</div>
-                        <div style="font-size:13px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
+                        <div style="color:#E63946; font-size:17px; font-weight:700; margin-bottom:1px;">🐾 Takkie & Siep's Keto Logboek (Laatste 4 Weken)</div>
+                        <div style="font-size:12px; font-weight:700;">Maatje: ${escapeHtml(userName)} • Periode: ${escapeHtml(periodTitle)}</div>
                     </div>
-                    <img src="takkie.png" alt="Takkie" style="height:46px; width:auto;">
+                    <img src="takkie.png" alt="Takkie" style="height:38px; width:auto;">
                 </div>
 
                 ${carbLineChartPdfHtml}
                 ${weeksOverviewHtml}
                 ${topListsHtml}
 
-                <div style="text-align:center; font-size:10px; color:#666; margin-top:8px;">
+                <div style="text-align:center; font-size:9.5px; color:#666; margin-top:6px;">
                     🐾 Met liefde gemaakt in Takkie & Siep's Keto Tracker — "Elke kleine stap telt!"
                 </div>
             </div>`;
 
         if (typeof window.html2pdf === 'function') {
             const wrapper = document.createElement('div');
+            wrapper.style.width = '760px';
+            wrapper.style.flexShrink = '0';
             wrapper.innerHTML = reportHtml;
             document.body.appendChild(wrapper);
             try {
                 await window.html2pdf()
                     .set({
-                        margin: [8, 8, 8, 8],
+                        margin: [6, 6, 6, 6],
                         filename: `Takkie-Siep-Logboek-${fileSlug}.pdf`,
                         image: { type: 'jpeg', quality: 0.96 },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
                         html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FFFDF9' },
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                     })
