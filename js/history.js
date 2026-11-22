@@ -381,7 +381,11 @@ window.deleteHistoryDayMeal = function(idx, btnEl) {
     const anchor = btnEl || document.getElementById('history-content');
     showInlineConfirm(anchor, "Weet je zeker dat je dit hapje wilt verwijderen?", async () => {
         const mealToDel = appState.meals[idx];
+        const drinkGlasses = getDrinkGlassesCount(mealToDel);
         appState.meals.splice(idx, 1);
+        if (drinkGlasses > 0) {
+            await updateWater(Math.max(0, appState.water - drinkGlasses));
+        }
         if (mealToDel && mealToDel.id) {
             await window.supabaseClient.from('meals').delete().eq('id', mealToDel.id);
             await calculateStreak();

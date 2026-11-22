@@ -8,6 +8,20 @@
 let editingDrinkOriginalAmount = 1;
 let editingDrinkPerGlass = { carbs: 0, fat: 0, protein: 0 };
 
+function getDrinkGlassesCount(meal) {
+    if (!meal || !(meal.type || '').includes('Drank')) return 0;
+    const rawName = (meal.name || '').trim();
+    const prefixMatch = rawName.match(/^(\d+)\s*x\s+(.+)$/i);
+    const prefixAmt = prefixMatch ? Math.max(1, parseInt(prefixMatch[1], 10) || 1) : 1;
+    if (prefixAmt > 1) return prefixAmt;
+    const restName = prefixMatch ? prefixMatch[2] : rawName;
+    const glassMatch = restName.match(/\b(\d+)\s*(?:glas|glazen|kop|kopje|kopjes|beker|bekers|mok|mokken)\b/i);
+    if (glassMatch) {
+        return Math.max(1, parseInt(glassMatch[1], 10) || 1);
+    }
+    return 1;
+}
+
 function toggleEditDrinkAmountVisibility() {
     const typeVal = document.getElementById('edit-meal-type')?.value || '';
     const isDrink = typeVal.includes('Drank');
@@ -160,8 +174,12 @@ async function saveEditedMeal() {
         }
     }
 
-    if (isDrink && newAmount !== editingDrinkOriginalAmount) {
-        const nextWater = Math.max(0, Math.min(8, appState.water + (newAmount - editingDrinkOriginalAmount)));
+    const wasDrink = (oldType || '').includes('Drank');
+    const oldWaterCount = wasDrink ? editingDrinkOriginalAmount : 0;
+    const newWaterCount = isDrink ? newAmount : 0;
+
+    if (newWaterCount !== oldWaterCount) {
+        const nextWater = Math.max(0, Math.min(8, appState.water + (newWaterCount - oldWaterCount)));
         await updateWater(nextWater);
     } else {
         renderApp();
@@ -195,8 +213,13 @@ window.deleteMeal = async function(idx, btnEl = null) {
     const anchor = btnEl || document.getElementById('meal-list');
     showInlineConfirm(anchor, "Weet je zeker dat je dit hapje wilt vergeten?", async () => {
         const mealToDel = appState.meals[idx];
+        const drinkGlasses = getDrinkGlassesCount(mealToDel);
         appState.meals.splice(idx, 1);
-        renderApp();
+        if (drinkGlasses > 0) {
+            await updateWater(Math.max(0, appState.water - drinkGlasses));
+        } else {
+            renderApp();
+        }
         if (mealToDel && mealToDel.id) {
             await window.supabaseClient.from('meals').delete().eq('id', mealToDel.id);
             await calculateStreak();
@@ -574,8 +597,10 @@ function initLogEvents() {
                 return;
             }
 
-            await saveMeal('🥤 Drank', a + "x " + n, c * a, f * a, p * a);
-            await updateWater(Math.min(8, appState.water + a));
+            const drinkMealName = a + "x " + n;
+            const glassesToAdd = getDrinkGlassesCount({ type: '🥤 Drank', name: drinkMealName });
+            await saveMeal('🥤 Drank', drinkMealName, c * a, f * a, p * a);
+            await updateWater(Math.min(8, appState.water + glassesToAdd));
             await addPoints(5);
 
             if (document.getElementById('save-favorite-drink').checked) {

@@ -42,6 +42,7 @@
   "updateProfileGoals",
   "editingDrinkOriginalAmount",
   "editingDrinkPerGlass",
+  "getDrinkGlassesCount",
   "toggleEditDrinkAmountVisibility",
   "window.openEditMeal",
   "saveEditedMeal",
