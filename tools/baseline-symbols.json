@@ -12,6 +12,7 @@
   "getActiveDateString",
   "isViewingOtherDay",
   "formatFriendlyDateNL",
+  "getRelativeDayBadgeNL",
   "getYesterdayString",
   "escapeHtml",
   "parseGramNumber",

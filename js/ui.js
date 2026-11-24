@@ -195,17 +195,30 @@ function renderApp() {
     if (document.getElementById('streak-count-text')) document.getElementById('streak-count-text').innerText = (appState.streak || 0);
 
     const homeTitleEl = document.getElementById('home-log-title');
+    const homeBadgeEl = document.getElementById('home-day-badge');
+    const homeNavBarEl = document.getElementById('home-day-nav-bar');
     const nextDayBtn = document.getElementById('btn-next-day');
     const returnTodayBtn = document.getElementById('btn-return-today');
-    if (isViewingOtherDay()) {
-        const friendly = formatFriendlyDateNL(getActiveDateString());
-        if (homeTitleEl) homeTitleEl.innerText = `📖 ${friendly}`;
-        if (nextDayBtn) nextDayBtn.style.display = 'inline-block';
-        if (returnTodayBtn) returnTodayBtn.style.display = 'inline-block';
-    } else {
-        if (homeTitleEl) homeTitleEl.innerText = '📖 Vandaag Loggen';
-        if (nextDayBtn) nextDayBtn.style.display = 'none';
-        if (returnTodayBtn) returnTodayBtn.style.display = 'none';
+    const activeDateStr = getActiveDateString();
+    const friendlyDate = formatFriendlyDateNL(activeDateStr);
+    const relBadge = (typeof getRelativeDayBadgeNL === 'function')
+        ? getRelativeDayBadgeNL(activeDateStr)
+        : (isViewingOtherDay() ? 'Eerdere dag' : 'Vandaag');
+
+    if (homeTitleEl) {
+        homeTitleEl.innerText = `📅 ${friendlyDate}`;
+    }
+    if (homeBadgeEl) {
+        homeBadgeEl.innerText = isViewingOtherDay() ? `⏪ ${relBadge}` : `✨ ${relBadge}`;
+    }
+    if (homeNavBarEl) {
+        homeNavBarEl.classList.toggle('day-nav-past', isViewingOtherDay());
+    }
+    if (nextDayBtn) {
+        nextDayBtn.disabled = !isViewingOtherDay();
+    }
+    if (returnTodayBtn) {
+        returnTodayBtn.style.display = isViewingOtherDay() ? 'inline-block' : 'none';
     }
 
     if (document.getElementById('water-text')) document.getElementById('water-text').innerText = appState.water + " / 8 glazen";

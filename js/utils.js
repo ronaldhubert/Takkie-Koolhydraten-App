@@ -27,8 +27,24 @@ function formatFriendlyDateNL(dateStr) {
     if (parts.length !== 3) return dateStr;
     const d = new Date(parts[0], parts[1] - 1, parts[2]);
     const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-    const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+    const months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
     return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function getRelativeDayBadgeNL(dateStr) {
+    const target = dateStr || getTodayString();
+    const today = getTodayString();
+    if (target === today) return 'Vandaag';
+    if (target === getYesterdayString()) return 'Gisteren';
+
+    const tParts = target.split('-').map(Number);
+    const nParts = today.split('-').map(Number);
+    const tDate = new Date(tParts[0], tParts[1] - 1, tParts[2]);
+    const nDate = new Date(nParts[0], nParts[1] - 1, nParts[2]);
+    const diffDays = Math.round((nDate - tDate) / 86400000);
+    if (diffDays === 2) return 'Eergisteren';
+    if (diffDays > 2) return `${diffDays} dagen geleden`;
+    return '';
 }
 
 function getYesterdayString() {
