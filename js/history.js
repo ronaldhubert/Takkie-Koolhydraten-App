@@ -596,13 +596,12 @@ async function renderHistory() {
             const heartIcon = isFav ? '❤️' : '🤍';
             const heartTitle = isFav ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten';
             return `
-            <div class="hist-meal meal-item" style="display:block;">
+            <div class="hist-meal meal-item meal-item-clickable" style="display:block;" onclick="openHistoryDayEditMeal(${idx})" title="Tik om details te bekijken of te wijzigen">
                 <div class="hist-meal-top">
                     <span>${escapeHtml(m.type || '🍽️')} — ${escapeHtml(m.name || '')}</span>
                     <span style="white-space:nowrap;">
-                        <button type="button" onclick="toggleHistoryDayFavorite(${idx})" title="${heartTitle}" style="background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0; margin-right:6px; vertical-align:middle;">${heartIcon}</button>
-                        <button type="button" onclick="openHistoryDayEditMeal(${idx})" style="background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; padding:0; margin-right:6px;">✏️ Wijzigen</button>
-                        <button type="button" onclick="deleteHistoryDayMeal(${idx}, this)" style="background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; padding:0;">Verwijderen</button>
+                        <button type="button" onclick="event.stopPropagation(); toggleHistoryDayFavorite(${idx})" title="${heartTitle}" style="background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0; margin-right:6px; vertical-align:middle;">${heartIcon}</button>
+                        <button type="button" onclick="event.stopPropagation(); deleteHistoryDayMeal(${idx}, this)" style="background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; padding:0;">Verwijderen</button>
                     </span>
                 </div>
                 <div class="hist-badge-row">

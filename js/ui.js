@@ -165,15 +165,14 @@ function renderApp() {
         const isFav = favInfo.favIdx !== -1;
         const heartIcon = isFav ? '❤️' : '🤍';
         const heartTitle = isFav ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten';
-        html += "<div class='meal-item'>" +
+        html += "<div class='meal-item meal-item-clickable' onclick='openEditMeal(" + idx + ")' title='Tik om details te bekijken of te wijzigen'>" +
             "<div style='flex-grow:1;'><strong>" + escapeHtml(m.type) + "</strong><br>" + escapeHtml(m.name) + "</div>" +
             "<div style='text-align: right; font-size: 0.8rem;'>" +
             "<span style='color:var(--takkie-red); font-weight:700;'>" + mc + "g</span> | " +
             "<span style='color:#B2530C; font-weight:700;'>" + mf + "g</span> | " +
             "<span style='color:#1b4332; font-weight:700;'>" + mp + "g</span><br>" +
-            "<button onclick='toggleMealFavorite(" + idx + ")' title='" + heartTitle + "' style='background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0; margin-top:4px; margin-right:8px; vertical-align:middle;'>" + heartIcon + "</button>" +
-            "<button onclick='openEditMeal(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
-            "<button onclick='deleteMeal(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
+            "<button onclick='event.stopPropagation(); toggleMealFavorite(" + idx + ")' title='" + heartTitle + "' style='background:none; border:none; cursor:pointer; font-size:0.85rem; padding:0; margin-top:4px; margin-right:8px; vertical-align:middle;'>" + heartIcon + "</button>" +
+            "<button onclick='event.stopPropagation(); deleteMeal(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
     });
     if (appState.meals.length === 0) {
@@ -249,14 +248,13 @@ function renderApp() {
         const ifat = Number(item.fat) || 0;
         const ip = Number(item.protein) || 0;
         const badgeLabel = item.type === 'drink' ? '🥤 Drank' : '🍽️ Maaltijd';
-        return "<div class='meal-item'>" +
+        return "<div class='meal-item meal-item-clickable' onclick='openEditFavorite(" + idx + ")' title='Tik om details te bekijken of te wijzigen'>" +
             "<div style='flex-grow:1;'><strong>" + badgeLabel + "</strong><br>" + escapeHtml(item.name) + "</div>" +
             "<div style='text-align: right; font-size: 0.8rem;'>" +
             "<span style='color:var(--takkie-red); font-weight:700;'>" + ic + "g</span> | " +
             "<span style='color:#B2530C; font-weight:700;'>" + ifat + "g</span> | " +
             "<span style='color:#1b4332; font-weight:700;'>" + ip + "g</span><br>" +
-            "<button onclick='openEditFavorite(" + idx + ")' style='background:none; border:none; color:var(--siep-blue); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:700; margin-top:4px; margin-right:8px;'>✏️ Wijzigen</button>" +
-            "<button onclick='deleteFavorite(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
+            "<button onclick='event.stopPropagation(); deleteFavorite(" + idx + ", this)' style='background:none; border:none; color:var(--takkie-red); cursor:pointer; font-size:0.75rem; font-family:inherit; font-weight:600; margin-top:4px;'>Verwijderen</button>" +
             "</div></div>";
     };
 
