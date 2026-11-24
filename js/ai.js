@@ -486,9 +486,11 @@ function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, name
     const explText = result.explanation || `Berekend op ${c}g KH, ${f}g vet en ${p}g eiwit.`;
     if (fbEl) {
         fbEl.style.display = 'block';
-        fbEl.innerHTML = `✨ <b>AI Analyse:</b> ${escapeHtml(explText)}`;
+        const isDbSource = result.source === 'nevo' || result.source === 'off' || result.source === 'db';
+        const prefixLabel = isDbSource ? '🏛️ <b>Direct uit Database:</b>' : '🤖 <b>AI Analyse:</b>';
+        fbEl.innerHTML = `${prefixLabel} ${escapeHtml(explText)}`;
     }
-    return { carbs: c, fat: f, protein: p, refinedName: finalName, explanation: explText };
+    return { carbs: c, fat: f, protein: p, refinedName: finalName, explanation: explText, source: result.source || 'ai' };
 }
 
 function applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl) {
@@ -590,47 +592,70 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     if (isWizard && wizardCallbacks.onEnterStep2) {
         wizardCallbacks.onEnterStep2();
     }
-    setAiLoadingState(btnEl, fbEl, 'Snuffel snuffel... Takkie & Siep splitsen je onderdelen uit...');
 
     let questionsToAsk = null;
     let directAssessment = null;
+    let isCatalogMatched = false;
 
-    try {
-        const assessment = await assessOrCalculateWithAI(description, contextType, forceStep2);
-        if (!forceStep2 && assessment && assessment.complete === true) {
-            if (assessment.carbs !== undefined) {
-                directAssessment = assessment;
-            } else {
-                directAssessment = await calculateNutritionDirect(description, [], contextType);
-            }
-        } else if (assessment && Array.isArray(assessment.questions) && assessment.questions.length > 0) {
-            questionsToAsk = assessment.questions;
-        } else {
-            questionsToAsk = localIngredientQuestionsFallback(description, contextType);
-        }
-    } catch (_err) {
-        if (isWizard) {
-            questionsToAsk = localIngredientQuestionsFallback(description, contextType);
-        } else {
-            clearAiLoadingButton(btnEl, originalBtnHtml);
-            return applyFallbackToDom(description, _err, carbsId, fatId, proteinId, fbEl);
+    // 1. Controleer EERST of alle genoemde onderdelen herkend zijn in NEVO of Open Food Facts / Producten-DB.
+    // Zo ja: bouw Stap 2 direct lokaal (0 ms, GEEN AI-analyse nodig!).
+    if (typeof tryBuildLocalQuestionsFromCatalog === 'function') {
+        const localQuestions = tryBuildLocalQuestionsFromCatalog(description, contextType);
+        if (localQuestions && localQuestions.length > 0) {
+            questionsToAsk = localQuestions;
+            isCatalogMatched = true;
         }
     }
 
-    clearAiLoadingButton(btnEl, originalBtnHtml);
+    // 2. Alleen als het product NIET in NEVO of Open Food Facts gevonden is, roepen we Gemini AI aan.
+    if (!questionsToAsk) {
+        setAiLoadingState(btnEl, fbEl, 'Niet in NEVO/Open Food Facts gevonden — Takkie & Siep vragen hulp aan AI...');
+        try {
+            const assessment = await assessOrCalculateWithAI(description, contextType, forceStep2);
+            if (!forceStep2 && assessment && assessment.complete === true) {
+                if (assessment.carbs !== undefined) {
+                    directAssessment = assessment;
+                } else {
+                    directAssessment = await calculateNutritionDirect(description, [], contextType);
+                }
+            } else if (assessment && Array.isArray(assessment.questions) && assessment.questions.length > 0) {
+                questionsToAsk = assessment.questions;
+            } else {
+                questionsToAsk = localIngredientQuestionsFallback(description, contextType);
+            }
+        } catch (_err) {
+            if (isWizard) {
+                questionsToAsk = localIngredientQuestionsFallback(description, contextType);
+            } else {
+                clearAiLoadingButton(btnEl, originalBtnHtml);
+                return applyFallbackToDom(description, _err, carbsId, fatId, proteinId, fbEl);
+            }
+        }
+        clearAiLoadingButton(btnEl, originalBtnHtml);
+    }
 
     if (questionsToAsk && fbEl) {
         return await new Promise((resolve) => {
             const runFinalCalculation = async (answersList) => {
+                // Probeer altijd eerst directe lokale berekening uit NEVO / Open Food Facts (0 ms, geen AI)
+                const localNevoFinal = (typeof tryCalculateFromNevoLocal === 'function')
+                    ? tryCalculateFromNevoLocal(description, answersList, contextType)
+                    : null;
+                if (localNevoFinal) {
+                    const summary = applyNutritionResultToDom(localNevoFinal, carbsId, fatId, proteinId, fbEl, answersList.length > 0 ? nameInputEl : null, contextType);
+                    if (isWizard && wizardCallbacks.onEnterStep3) {
+                        wizardCallbacks.onEnterStep3(summary);
+                    }
+                    resolve(summary);
+                    return;
+                }
+
                 const confirmBtnEl = fbEl.querySelector('#btn-ai-dialog-confirm') || btnEl;
                 const origConfirmHtml = confirmBtnEl ? confirmBtnEl.innerHTML : '';
-                setAiLoadingState(confirmBtnEl, fbEl, 'Takkie & Siep berekenen nu je samenvatting en macro\'s...');
+                setAiLoadingState(confirmBtnEl, fbEl, 'Takkie & Siep berekenen nu je samenvatting en macro\'s met AI...');
                 let summary;
                 try {
-                    const localNevoFinal = (typeof tryCalculateFromNevoLocal === 'function')
-                        ? tryCalculateFromNevoLocal(description, answersList, contextType)
-                        : null;
-                    const finalResult = localNevoFinal || await calculateNutritionDirect(description, answersList, contextType);
+                    const finalResult = await calculateNutritionDirect(description, answersList, contextType);
                     summary = applyNutritionResultToDom(finalResult, carbsId, fatId, proteinId, fbEl, answersList.length > 0 ? nameInputEl : null, contextType);
                 } catch (err2) {
                     const fallbackName = answersList.length > 0 ? `${description} (${answersList.join(', ')})` : description;
@@ -652,9 +677,11 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
                 () => runFinalCalculation([]),
                 {
                     isWizard,
-                    onPrefetchAnswers: (answers) => {
-                        calculateNutritionDirect(description, answers, contextType).catch(() => {});
-                    },
+                    onPrefetchAnswers: isCatalogMatched
+                        ? null
+                        : (answers) => {
+                            calculateNutritionDirect(description, answers, contextType).catch(() => {});
+                        },
                     onBackToStep1: isWizard && wizardCallbacks.onBackToStep1
                         ? () => {
                             wizardCallbacks.onBackToStep1();

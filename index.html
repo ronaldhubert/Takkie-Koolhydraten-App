@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261124c">
-    <link rel="stylesheet" href="css/auth.css?v=20261124c">
-    <link rel="stylesheet" href="css/layout.css?v=20261124c">
-    <link rel="stylesheet" href="css/pets.css?v=20261124c">
-    <link rel="stylesheet" href="css/widgets.css?v=20261124c">
-    <link rel="stylesheet" href="css/cards.css?v=20261124c">
-    <link rel="stylesheet" href="css/components.css?v=20261124c">
-    <link rel="stylesheet" href="css/team.css?v=20261124c">
-    <link rel="stylesheet" href="css/history.css?v=20261124c">
+    <link rel="stylesheet" href="css/base.css?v=20261124d">
+    <link rel="stylesheet" href="css/auth.css?v=20261124d">
+    <link rel="stylesheet" href="css/layout.css?v=20261124d">
+    <link rel="stylesheet" href="css/pets.css?v=20261124d">
+    <link rel="stylesheet" href="css/widgets.css?v=20261124d">
+    <link rel="stylesheet" href="css/cards.css?v=20261124d">
+    <link rel="stylesheet" href="css/components.css?v=20261124d">
+    <link rel="stylesheet" href="css/team.css?v=20261124d">
+    <link rel="stylesheet" href="css/history.css?v=20261124d">
 </head>
 <body>
 
@@ -502,7 +502,8 @@
                 <label>Naam Maaltijd of Drank:</label>
                 <input type="text" id="edit-meal-name" autocomplete="off" placeholder="Naam van hapje of drankje">
                 <div id="edit-meal-nutrition-autocomplete" class="nutrition-autocomplete" style="display: none;"></div>
-                <button class="btn btn-auto" id="btn-autofill-edit-meal" style="width: 100%;">🤖 Analyseer opnieuw met AI</button>
+                <div id="edit-meal-db-box" style="display: none; margin-bottom: 12px;"></div>
+                <button class="btn btn-auto" id="btn-autofill-edit-meal" style="width: 100%;">🤖 Niet gevonden in NEVO/OFF — Bereken met AI</button>
                 <div id="ai-edit-meal-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
 
                 <div id="edit-meal-amount-wrapper" style="display: none;">
@@ -546,8 +547,10 @@
                 </select>
 
                 <label>Naam Favoriet:</label>
-                <input type="text" id="edit-fav-name" placeholder="Naam van favoriet">
-                <button class="btn btn-auto" id="btn-autofill-edit-fav" style="width: 100%;">🤖 Analyseer opnieuw met AI</button>
+                <input type="text" id="edit-fav-name" autocomplete="off" placeholder="Naam van favoriet">
+                <div id="edit-fav-nutrition-autocomplete" class="nutrition-autocomplete" style="display: none;"></div>
+                <div id="edit-fav-db-box" style="display: none; margin-bottom: 12px;"></div>
+                <button class="btn btn-auto" id="btn-autofill-edit-fav" style="width: 100%;">🤖 Niet gevonden in NEVO/OFF — Bereken met AI</button>
                 <div id="ai-edit-fav-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
 
                 <label>Koolhydraten (gram):</label>
@@ -751,22 +754,22 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261124c"></script>
-<script src="js/quotes.js?v=20261124c"></script>
-<script src="js/utils.js?v=20261124c"></script>
-<script src="js/auth.js?v=20261124c"></script>
-<script src="js/data.js?v=20261124c"></script>
-<script src="js/meals.js?v=20261124c"></script>
-<script src="js/favorites.js?v=20261124c"></script>
-<script src="js/nutrition-db.js?v=20261124c"></script>
-<script src="js/ai.js?v=20261124c"></script>
-<script src="js/recipes.js?v=20261124c"></script>
-<script src="js/team.js?v=20261124c"></script>
-<script src="js/chat.js?v=20261124c"></script>
-<script src="js/notifications.js?v=20261124c"></script>
-<script src="js/history.js?v=20261124c"></script>
-<script src="js/ui.js?v=20261124c"></script>
-<script src="js/main.js?v=20261124c"></script>
+<script src="js/state.js?v=20261124d"></script>
+<script src="js/quotes.js?v=20261124d"></script>
+<script src="js/utils.js?v=20261124d"></script>
+<script src="js/auth.js?v=20261124d"></script>
+<script src="js/data.js?v=20261124d"></script>
+<script src="js/meals.js?v=20261124d"></script>
+<script src="js/favorites.js?v=20261124d"></script>
+<script src="js/nutrition-db.js?v=20261124d"></script>
+<script src="js/ai.js?v=20261124d"></script>
+<script src="js/recipes.js?v=20261124d"></script>
+<script src="js/team.js?v=20261124d"></script>
+<script src="js/chat.js?v=20261124d"></script>
+<script src="js/notifications.js?v=20261124d"></script>
+<script src="js/history.js?v=20261124d"></script>
+<script src="js/ui.js?v=20261124d"></script>
+<script src="js/main.js?v=20261124d"></script>
 
 </body>
 </html>

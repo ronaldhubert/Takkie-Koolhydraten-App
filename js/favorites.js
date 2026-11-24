@@ -88,6 +88,10 @@ window.openEditFavorite = function(idx) {
     const fb = document.getElementById('ai-edit-fav-feedback');
     if (fb) fb.style.display = 'none';
 
+    if (typeof updateEditFavSourceUI === 'function') {
+        updateEditFavSourceUI();
+    }
+
     switchTab('edit-favorite');
 };
 

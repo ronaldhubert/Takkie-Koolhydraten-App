@@ -420,20 +420,25 @@ async function searchOpenFoodFactsNL(query, contextType = 'meal', limit = 6) {
 // ==========================================
 // 5. NEVO-VERANKERING VOOR GEMINI AI & LOKALE BEREKENING
 // ==========================================
-function findSingleNevoMatch(partText, contextType = null) {
-    const normPart = normalizeFoodNameKey(partText);
-    if (!normPart) return null;
+function stripQuantityWordsFromPart(partText) {
+    // Verwijder ook een eventuele "(1 plak (20 g))" suffix die door autocomplete is toegevoegd
+    const withoutParenSuffix = String(partText || '').replace(/\([^)]*\)\s*$/, '').trim();
+    const normPart = normalizeFoodNameKey(withoutParenSuffix || partText);
+    if (!normPart) return '';
 
-    // Verwijder aantallen en eenheden aan het begin/einde om het kernwoord te vinden
-    const stripped = normPart
-        .replace(/\b\d+(?:[.,]\d+)?\s*(?:g|gr|gram|ml|l|cl|dl|el|tl|stuks?|plak(?:je|jes)?|glas|glazen|kop(?:je|jes)?|mok|handje|schaaltje|portie|eetlepels?|theelepels?|klontje)\b/g, ' ')
+    return normPart
+        .replace(/\b\d+(?:[.,]\d+)?\s*(?:g|gr|gram|ml|l|cl|dl|el|tl|stuks?|plak(?:je|jes)?|glas|glazen|kop(?:je|jes)?|mok|handje|schaaltje|portie|eetlepels?|theelepels?|klontje|blikje|flesje)\b/g, ' ')
         .replace(/^\b(?:een|twee|drie|vier|vijf|zes|halve|half|kwart|gebakken|gekookt|gekookte|gerookte|gerookt|verse|vers)\b\s*/g, '')
         .replace(/\s+/g, ' ')
         .trim();
+}
 
+function findSingleNevoMatch(partText, contextType = null) {
+    const normPart = normalizeFoodNameKey(partText);
+    if (!normPart) return null;
+    const stripped = stripQuantityWordsFromPart(partText);
     const candidates = [stripped, normPart].filter(Boolean);
 
-    // 1. Exacte match op alias of naam in NEVO_FOODS
     let bestMatch = null;
     let bestLen = 0;
 
@@ -453,6 +458,120 @@ function findSingleNevoMatch(partText, contextType = null) {
         }
     }
     return bestMatch;
+}
+
+function findSingleCatalogMatch(partText, contextType = null) {
+    const nevoItem = findSingleNevoMatch(partText, contextType);
+    if (nevoItem) {
+        return {
+            source: 'nevo',
+            badge: '🏛️ NEVO / Voedingscentrum',
+            name: nevoItem.name,
+            category: nevoItem.category,
+            unit: nevoItem.unit || 'g',
+            portionLabel: nevoItem.portionLabel,
+            portionGrams: Number(nevoItem.portionGrams) || 100,
+            carbs100: Number(nevoItem.carbs100) || 0,
+            fat100: Number(nevoItem.fat100) || 0,
+            protein100: Number(nevoItem.protein100) || 0,
+            options: nevoItem.options || null,
+            defaultOption: nevoItem.defaultOption || null
+        };
+    }
+
+    const stripped = stripQuantityWordsFromPart(partText);
+    const normFull = normalizeFoodNameKey(partText);
+    const candidates = [stripped, normFull].filter(s => s && s.length >= 2);
+    if (candidates.length === 0) return null;
+
+    // 2. Zoek in de gedeelde food_products database (incl. Open Food Facts)
+    let bestDb = null;
+    let bestDbLen = 0;
+    for (const prod of (appState.foodProducts || [])) {
+        if (contextType && prod.category && prod.category !== contextType) continue;
+        const pKey = prod.name_key || normalizeFoodNameKey(prod.name);
+        if (!pKey || pKey.length < 2) continue;
+        for (const cand of candidates) {
+            if (cand === pKey || ` ${cand} `.includes(` ${pKey} `) || ` ${pKey} `.includes(` ${cand} `)) {
+                const matchLen = Math.min(cand.length, pKey.length);
+                if (matchLen > bestDbLen) {
+                    bestDbLen = matchLen;
+                    bestDb = prod;
+                }
+            }
+        }
+    }
+
+    if (bestDb) {
+        const isOff = bestDb.source === 'off';
+        const isNevoDb = bestDb.source === 'nevo';
+        const unit = bestDb.unit || (bestDb.category === 'drink' ? 'glazen' : 'g');
+        const pGrams = Number(bestDb.portion_grams) || 100;
+        const pLabel = bestDb.portion_label || `${pGrams} ${unit === 'glazen' ? 'ml' : 'g'}`;
+        const defaultOpts = unit === 'glazen'
+            ? [`½ portie (${Math.round(pGrams * 0.5)} ml)`, `1 portie (${pGrams} ml)`, `2 porties (${pGrams * 2} ml)`, '100 ml']
+            : [`${Math.round(pGrams * 0.5)} g`, `${pGrams} g (${pLabel})`, `${Math.round(pGrams * 1.5)} g`, '100 g'];
+
+        return {
+            source: bestDb.source || 'db',
+            badge: isOff ? '🛒 Open Food Facts' : (isNevoDb ? '🏛️ NEVO / Voedingscentrum' : '📦 Productendatabase'),
+            name: bestDb.name,
+            category: bestDb.category || contextType || 'meal',
+            unit: unit === 'portie' ? 'g' : unit,
+            portionLabel: pLabel,
+            portionGrams: pGrams,
+            carbs100: Number(bestDb.carbs_100g) || 0,
+            fat100: Number(bestDb.fat_100g) || 0,
+            protein100: Number(bestDb.protein_100g) || 0,
+            options: defaultOpts,
+            defaultOption: defaultOpts[1]
+        };
+    }
+
+    return null;
+}
+
+function tryBuildLocalQuestionsFromCatalog(description, contextType = 'meal') {
+    const parts = String(description || '')
+        .split(/\s*(?:,|\bmet\b|\ben\b|\bplus\b|&)\s*/i)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 4);
+    if (parts.length === 0) return null;
+
+    const questions = [];
+    for (let idx = 0; idx < parts.length; idx++) {
+        const part = parts[idx];
+        const match = findSingleCatalogMatch(part, null);
+        if (!match) return null; // Als één onderdeel onbekend is, laat AI helpen
+
+        const unit = match.unit || (contextType === 'drink' ? 'glazen' : 'g');
+        const opts = Array.isArray(match.options) && match.options.length > 0
+            ? [...match.options]
+            : ['50 g', '100 g', '150 g', '200 g'];
+        let defOpt = match.defaultOption && opts.includes(match.defaultOption)
+            ? match.defaultOption
+            : (opts[1] || opts[0]);
+
+        const countMatch = part.match(/^(\d+)\s+/);
+        if (countMatch) {
+            const n = parseInt(countMatch[1], 10);
+            const foundOpt = opts.find(o => o.startsWith(`${n} `));
+            if (foundOpt) defOpt = foundOpt;
+        }
+
+        const icon = match.category === 'drink' ? '🥤' : (match.source === 'off' ? '🛒' : '🏛️');
+        questions.push({
+            id: 'q' + idx,
+            subject: `${icon} ${match.name}`,
+            question: `Hoeveel (${match.badge})?`,
+            unit,
+            options: opts,
+            defaultOption: defOpt
+        });
+    }
+
+    return questions;
 }
 
 function findMatchedNevoReferences(description, contextType = null) {
@@ -552,27 +671,29 @@ function tryCalculateFromNevoLocal(description, answersList = [], contextType = 
     let totalF = 0;
     let totalP = 0;
     const matchedLabels = [];
+    const badgesUsed = new Set();
 
     for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
-        const nevoItem = findSingleNevoMatch(part, null);
-        if (!nevoItem) return null;
+        const catItem = findSingleCatalogMatch(part, null);
+        if (!catItem) return null;
+
+        badgesUsed.add(catItem.badge);
 
         // Kijk of er in answersList een specifiek antwoord voor dit onderdeel staat
         const answerForPart = (answersList || []).find(a => {
             const normA = normalizeFoodNameKey(a);
-            const normName = normalizeFoodNameKey(nevoItem.name);
+            const normName = normalizeFoodNameKey(catItem.name);
             return normA.includes(normName.split(' ')[0]) || normA.includes(normalizeFoodNameKey(part).split(' ')[0]);
         }) || (answersList && answersList[i]) || '';
 
-        const combinedText = answerForPart ? `${part} (${answerForPart})` : part;
-        const grams = estimateGramsFromTextAndItem(answerForPart || part, nevoItem);
+        const grams = estimateGramsFromTextAndItem(answerForPart || part, catItem);
         const factor = grams / 100;
 
-        totalC += (Number(nevoItem.carbs100) || 0) * factor;
-        totalF += (Number(nevoItem.fat100) || 0) * factor;
-        totalP += (Number(nevoItem.protein100) || 0) * factor;
-        matchedLabels.push(`${nevoItem.name} (${Math.round(grams)}${nevoItem.category === 'drink' ? 'ml' : 'g'})`);
+        totalC += (Number(catItem.carbs100) || 0) * factor;
+        totalF += (Number(catItem.fat100) || 0) * factor;
+        totalP += (Number(catItem.protein100) || 0) * factor;
+        matchedLabels.push(`${catItem.name} (${Math.round(grams)}${catItem.category === 'drink' ? 'ml' : 'g'})`);
     }
 
     // Controleer of er nog een losse bereidingsvraag (bijv. roomboter/olijfolie) in answersList zat
@@ -591,6 +712,7 @@ function tryCalculateFromNevoLocal(description, answersList = [], contextType = 
     const c = Math.max(0, Math.round(totalC));
     const f = Math.max(0, Math.round(totalF));
     const p = Math.max(0, Math.round(totalP));
+    const badgeSummary = [...badgesUsed].join(' & ');
 
     return {
         carbs: c,
@@ -599,8 +721,8 @@ function tryCalculateFromNevoLocal(description, answersList = [], contextType = 
         refinedName: answersList && answersList.length > 0
             ? `${description} (${answersList.map(a => a.replace(/^[^:]+:\s*/, '')).join(', ')})`
             : description,
-        explanation: `🏛️ Berekend met officiële RIVM NEVO / Voedingscentrum cijfers voor ${matchedLabels.join(' + ')}.`,
-        source: 'nevo'
+        explanation: `${badgeSummary} — Direct berekend zonder AI voor ${matchedLabels.join(' + ')}.`,
+        source: badgesUsed.has('🛒 Open Food Facts') ? 'off' : 'nevo'
     };
 }
 
@@ -652,7 +774,138 @@ function selectAutocompleteProduct(item, config) {
             fbEl.style.display = 'block';
             fbEl.innerHTML = `✨ <b>Bron:</b> ${escapeHtml(expl)}`;
         }
+        if (config.mode === 'edit-meal') {
+            updateEditMealSourceUI();
+        } else if (config.mode === 'edit-fav') {
+            updateEditFavSourceUI();
+        }
     }
+}
+
+function updateWizardStep1ButtonState(inputId, btnId, contextType) {
+    const inputEl = document.getElementById(inputId);
+    const btnEl = document.getElementById(btnId);
+    if (!inputEl || !btnEl) return;
+
+    const val = inputEl.value.trim();
+    if (!val || val.length < 2) {
+        btnEl.innerHTML = '🐾 Volgende stap →';
+        return;
+    }
+
+    const parts = val.split(/\s*(?:,|\bmet\b|\ben\b|\bplus\b|&)\s*/i).map(s => s.trim()).filter(Boolean);
+    const allMatched = parts.length > 0 && parts.every(p => !!findSingleCatalogMatch(p, null));
+    if (allMatched) {
+        const firstMatch = findSingleCatalogMatch(parts[0], null);
+        const isOff = firstMatch && firstMatch.source === 'off';
+        btnEl.innerHTML = isOff
+            ? '🛒 Direct uit Open Food Facts (geen AI nodig) →'
+            : '🏛️ Direct uit NEVO-database (geen AI nodig) →';
+    } else {
+        btnEl.innerHTML = '🤖 Niet in NEVO/OFF — Analyseer met AI →';
+    }
+}
+
+function renderEditScreenCatalogBox(boxId, aiBtnId, nameInputId, carbsId, fatId, proteinId, feedbackId, isDrinkFn) {
+    const boxEl = document.getElementById(boxId);
+    const aiBtnEl = document.getElementById(aiBtnId);
+    const nameEl = document.getElementById(nameInputId);
+    if (!boxEl || !nameEl) return;
+
+    const rawVal = nameEl.value.trim();
+    const match = rawVal.length >= 2 ? findSingleCatalogMatch(rawVal, null) : null;
+
+    if (!match) {
+        boxEl.style.display = 'none';
+        boxEl.innerHTML = '';
+        if (aiBtnEl) {
+            aiBtnEl.style.display = 'block';
+            aiBtnEl.innerHTML = '🤖 Niet gevonden in NEVO/OFF — Bereken met AI';
+        }
+        return;
+    }
+
+    // Product IS herkend in NEVO of Open Food Facts -> AI-analyse is niet meer nodig!
+    if (aiBtnEl) {
+        aiBtnEl.style.display = 'none';
+    }
+
+    const opts = Array.isArray(match.options) && match.options.length > 0
+        ? match.options
+        : ['50 g', '100 g', '150 g', '200 g'];
+
+    const chipsHtml = opts.map(opt => `
+        <button type="button" class="ai-q-chip" data-db-portion-chip="${escapeHtml(opt)}">${escapeHtml(opt)}</button>
+    `).join('');
+
+    boxEl.style.display = 'block';
+    boxEl.innerHTML = `
+        <div class="db-recognized-box">
+            <div class="db-recognized-header">
+                <span>${escapeHtml(match.badge)} — <b>${escapeHtml(match.name)}</b></span>
+                <span class="db-recognized-tag">✅ Geen AI nodig</span>
+            </div>
+            <div class="db-recognized-sub">Tik op een hoeveelheid om de macro's direct uit de database bij te werken:</div>
+            <div class="ai-q-chips" style="margin-bottom:0;">${chipsHtml}</div>
+        </div>`;
+
+    boxEl.querySelectorAll('[data-db-portion-chip]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const chosenOpt = chip.getAttribute('data-db-portion-chip');
+            boxEl.querySelectorAll('[data-db-portion-chip]').forEach(b => b.classList.remove('active'));
+            chip.classList.add('active');
+
+            const grams = estimateGramsFromTextAndItem(chosenOpt, match);
+            const factor = grams / 100;
+            const c1 = Math.max(0, Math.round((Number(match.carbs100) || 0) * factor));
+            const f1 = Math.max(0, Math.round((Number(match.fat100) || 0) * factor));
+            const p1 = Math.max(0, Math.round((Number(match.protein100) || 0) * factor));
+
+            const isDrink = typeof isDrinkFn === 'function' ? isDrinkFn() : false;
+            const amt = isDrink ? Math.max(1, parseInt(document.getElementById('edit-meal-amount')?.value, 10) || 1) : 1;
+
+            if (isDrink && typeof editingDrinkPerGlass !== 'undefined') {
+                editingDrinkPerGlass = { carbs: c1, fat: f1, protein: p1 };
+            }
+
+            if (document.getElementById(carbsId)) document.getElementById(carbsId).value = c1 * amt;
+            if (document.getElementById(fatId)) document.getElementById(fatId).value = f1 * amt;
+            if (document.getElementById(proteinId)) document.getElementById(proteinId).value = p1 * amt;
+
+            nameEl.value = `${match.name} (${chosenOpt})`;
+            const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
+            if (fbEl) {
+                fbEl.style.display = 'block';
+                fbEl.innerHTML = `${escapeHtml(match.badge)}: Direct bijgewerkt naar <b>${escapeHtml(chosenOpt)}</b> (${c1 * amt}g KH, ${f1 * amt}g vet, ${p1 * amt}g eiwit).`;
+            }
+        });
+    });
+}
+
+function updateEditMealSourceUI() {
+    renderEditScreenCatalogBox(
+        'edit-meal-db-box',
+        'btn-autofill-edit-meal',
+        'edit-meal-name',
+        'edit-meal-carbs',
+        'edit-meal-fat',
+        'edit-meal-protein',
+        'ai-edit-meal-feedback',
+        () => (document.getElementById('edit-meal-type')?.value || '').includes('Drank')
+    );
+}
+
+function updateEditFavSourceUI() {
+    renderEditScreenCatalogBox(
+        'edit-fav-db-box',
+        'btn-autofill-edit-fav',
+        'edit-fav-name',
+        'edit-fav-carbs',
+        'edit-fav-fat',
+        'edit-fav-protein',
+        'ai-edit-fav-feedback',
+        () => false
+    );
 }
 
 function renderAutocompleteDropdown(dropdownEl, query, items, config, offLoading = false, offResults = null) {
@@ -729,6 +982,14 @@ function attachAutocompleteToField(config) {
 
     const updateSuggestions = () => {
         const q = inputEl.value.trim();
+        if (config.step1BtnId) {
+            updateWizardStep1ButtonState(config.inputId, config.step1BtnId, config.contextType);
+        }
+        if (config.mode === 'edit-meal') {
+            updateEditMealSourceUI();
+        } else if (config.mode === 'edit-fav') {
+            updateEditFavSourceUI();
+        }
         if (q.length < 2) {
             dropdownEl.style.display = 'none';
             return;
@@ -755,6 +1016,7 @@ function initNutritionSearchEvents() {
     attachAutocompleteToField({
         inputId: 'new-meal-name',
         dropdownId: 'meal-nutrition-autocomplete',
+        step1BtnId: 'btn-autofill-meal',
         contextType: 'meal',
         carbsId: 'new-meal-carbs',
         fatId: 'new-meal-fat',
@@ -765,6 +1027,7 @@ function initNutritionSearchEvents() {
     attachAutocompleteToField({
         inputId: 'drink-name',
         dropdownId: 'drink-nutrition-autocomplete',
+        step1BtnId: 'btn-autofill-drink',
         contextType: 'drink',
         carbsId: 'drink-carbs',
         fatId: 'drink-fat',
@@ -781,5 +1044,16 @@ function initNutritionSearchEvents() {
         proteinId: 'edit-meal-protein',
         feedbackId: 'ai-edit-meal-feedback',
         mode: 'edit-meal'
+    });
+
+    attachAutocompleteToField({
+        inputId: 'edit-fav-name',
+        dropdownId: 'edit-fav-nutrition-autocomplete',
+        contextType: null,
+        carbsId: 'edit-fav-carbs',
+        fatId: 'edit-fav-fat',
+        proteinId: 'edit-fav-protein',
+        feedbackId: 'ai-edit-fav-feedback',
+        mode: 'edit-fav'
     });
 }

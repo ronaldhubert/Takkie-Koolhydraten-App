@@ -84,6 +84,10 @@ window.openEditMeal = function(idx) {
     const fb = document.getElementById('ai-edit-meal-feedback');
     if (fb) fb.style.display = 'none';
 
+    if (typeof updateEditMealSourceUI === 'function') {
+        updateEditMealSourceUI();
+    }
+
     switchTab('edit-meal');
 };
 
@@ -353,6 +357,9 @@ function setMealWizardStep(step, summaryData = null) {
     if (step === 1) {
         if (petEl) petEl.className = 'takkie-avatar';
         if (speechEl) speechEl.innerText = '"Woef! Wat heb je lekker gegeten? 🍽️"';
+        if (typeof updateWizardStep1ButtonState === 'function') {
+            updateWizardStep1ButtonState('new-meal-name', 'btn-autofill-meal', 'meal');
+        }
         const hour = new Date().getHours();
         const typeEl = document.getElementById('new-meal-type');
         if (typeEl) {
@@ -396,6 +403,9 @@ function setDrinkWizardStep(step, summaryData = null) {
     if (step === 1) {
         if (petEl) petEl.className = 'siep-avatar';
         if (speechEl) speechEl.innerText = '"Miauw! Wat heb je lekker gedronken? 🥤"';
+        if (typeof updateWizardStep1ButtonState === 'function') {
+            updateWizardStep1ButtonState('drink-name', 'btn-autofill-drink', 'drink');
+        }
     } else if (step === 2) {
         if (petEl) petEl.className = 'takkie-avatar';
         if (speechEl) speechEl.innerText = '"Woef! Hoe groot was je glas of kopje? 🐾"';

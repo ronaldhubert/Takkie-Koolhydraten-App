@@ -555,3 +555,36 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
     align-items: center;
     gap: 6px;
 }
+
+/* Kaartje op het detailscherm wanneer een product al herkend is in NEVO of Open Food Facts */
+.db-recognized-box {
+    background: #F1FAEE;
+    border: 2.5px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 2px 2px 0px var(--border-color);
+}
+.db-recognized-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+}
+.db-recognized-tag {
+    background: #D8F3DC;
+    color: #1B4332;
+    border: 1.5px solid var(--border-color);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.db-recognized-sub {
+    font-size: 0.75rem;
+    color: #444;
+    margin-bottom: 8px;
+}
