@@ -88,6 +88,96 @@ function getRandomQuote() {
     if (document.getElementById('current-author')) {
         document.getElementById('current-author').innerText = q.author;
     }
+    spawnHomePetEmote();
+}
+
+let homePetAmbientTimer = null;
+
+function pickAmbientPetEmote() {
+    const hour = new Date().getHours();
+    const isNight = (hour >= 22 || hour < 6);
+    const totalCarbs = (appState.meals || []).reduce((acc, m) => acc + (Number(m.carbs) || 0), 0);
+    const withinCarbGoal = (appState.meals || []).length > 0 && totalCarbs <= (appState.goals?.carbs || 25);
+
+    const pool = ['❤️', '❤️', '🐾', '💕'];
+    if (isNight) {
+        pool.push('💤', '💤', '🌙');
+    } else if (hour >= 6 && hour < 10) {
+        pool.push('☀️', '✨');
+    }
+    if (withinCarbGoal) {
+        pool.push('✨', '🌟');
+    }
+    if ((appState.water || 0) >= 8) {
+        pool.push('💧');
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function spawnHomePetEmote(customSymbol = null) {
+    const homeAvatar = document.getElementById('home-pet-avatar');
+    if (!homeAvatar) return;
+
+    const emote = document.createElement('span');
+    emote.className = 'pet-float-emote';
+    emote.innerText = customSymbol || pickAmbientPetEmote();
+    const drift = Math.round((Math.random() * 20) - 10);
+    emote.style.setProperty('--drift-x', `${drift}px`);
+    emote.style.right = `${Math.round(Math.random() * 18)}px`;
+    homeAvatar.appendChild(emote);
+
+    setTimeout(() => {
+        if (emote.parentNode) emote.remove();
+    }, 2400);
+}
+
+function celebrateHomePet(kind = 'meal') {
+    const homeAvatar = document.getElementById('home-pet-avatar');
+    const speechEl = document.getElementById('takkie-speech');
+    const isSiep = (lastShownPet === 'siepie');
+
+    if (homeAvatar) {
+        homeAvatar.classList.remove('pet-happy-jump');
+        void homeAvatar.offsetWidth;
+        homeAvatar.classList.add('pet-happy-jump');
+        setTimeout(() => homeAvatar.classList.remove('pet-happy-jump'), 750);
+    }
+
+    const burstIcons = kind === 'water'
+        ? ['💧', '❤️', '✨']
+        : (kind === 'drink'
+            ? ['🥤', '❤️', '🐾']
+            : (isSiep ? ['🐟', '❤️', '✨'] : ['🦴', '❤️', '🐾']));
+
+    burstIcons.forEach((icon, i) => {
+        setTimeout(() => spawnHomePetEmote(icon), i * 260);
+    });
+
+    if (speechEl) {
+        if (kind === 'water') {
+            speechEl.innerText = isSiep
+                ? '"Prrrr! Goed gedronken lieverd, slokje voor slokje! 💧❤️"'
+                : '"Woef! Kwispel! Weer een fris glas water erbij! 💧🐾"';
+        } else if (kind === 'drink') {
+            speechEl.innerText = isSiep
+                ? '"Miauw! Lekker drankje gelogd, goed bezig! 🥤💕"'
+                : '"Woef! Dat drankje staat er weer netjes in! 🥤🐾"';
+        } else {
+            speechEl.innerText = isSiep
+                ? '"Prrrr! Smullen maar, ik ben supertrots op hoe je logt! 🐟❤️"'
+                : '"Woef! Kwispel-de-kwispel, dat hapje staat genoteerd! 🦴❤️"';
+        }
+    }
+}
+
+function startHomePetAmbientLoop() {
+    if (homePetAmbientTimer) clearInterval(homePetAmbientTimer);
+    homePetAmbientTimer = setInterval(() => {
+        const homeTab = document.getElementById('tab-home');
+        if (homeTab && homeTab.classList.contains('active')) {
+            spawnHomePetEmote();
+        }
+    }, 6500);
 }
 
 function updateSlidersLive() {
@@ -150,6 +240,7 @@ function renderApp() {
             await updateWater(nextWater);
             if (nextWater > prevWater) {
                 await addPoints(2);
+                celebrateHomePet('water');
             }
         }));
     }
@@ -328,6 +419,7 @@ function renderApp() {
 }
 
 function initNavEvents() {
+    startHomePetAmbientLoop();
     document.querySelectorAll('.nav-item').forEach(btn => {
         btn.addEventListener('click', (e) => switchTab(e.currentTarget.getAttribute('data-tab')));
     });

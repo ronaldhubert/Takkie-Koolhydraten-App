@@ -227,6 +227,10 @@ async function saveMeal(type, name, carbs, fat, protein) {
     appState.meals.push(inserted || newMeal);
     await calculateStreak();
     renderApp();
+    if (typeof celebrateHomePet === 'function') {
+        const isDrink = (type || '').includes('Drank');
+        celebrateHomePet(isDrink ? 'drink' : 'meal');
+    }
     if (appState.teamId) {
         refreshTeamMembersCoop();
         if (isShareLogsEnabled() && !isViewingOtherDay()) {

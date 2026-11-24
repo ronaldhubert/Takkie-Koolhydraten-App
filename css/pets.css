@@ -26,6 +26,8 @@
     height: 52px;
     background: url('../takkie.png') no-repeat center / contain;
     position: relative;
+    animation: petIdleBreathe 3.6s ease-in-out infinite;
+    transform-origin: bottom center;
 }
 
 .siep-avatar {
@@ -33,6 +35,66 @@
     height: 56px;
     background: url('../siepie.png') no-repeat center / contain;
     position: relative;
+    animation: petIdleBreathe 3.6s ease-in-out infinite;
+    transform-origin: bottom center;
+}
+
+/* Levendige animaties voor Takkie & Siepie op Home */
+@keyframes petIdleBreathe {
+    0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+    35% { transform: translateY(-2px) rotate(-1.6deg) scale(1.02, 0.99); }
+    70% { transform: translateY(-1px) rotate(1.6deg) scale(0.99, 1.02); }
+}
+
+@keyframes petHappyJump {
+    0% { transform: translateY(0) scale(1); }
+    25% { transform: translateY(-11px) rotate(-5deg) scale(1.08); }
+    50% { transform: translateY(0) rotate(4deg) scale(0.96, 1.04); }
+    75% { transform: translateY(-6px) rotate(-3deg) scale(1.04); }
+    100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+@keyframes petFloatEmote {
+    0% {
+        opacity: 0;
+        transform: translate(0, 6px) scale(0.5);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(calc(var(--drift-x, 6px) * 0.4), -6px) scale(1);
+    }
+    80% {
+        opacity: 0.95;
+        transform: translate(var(--drift-x, 6px), -22px) scale(1.05);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--drift-x, 6px), -30px) scale(0.8);
+    }
+}
+
+.pet-happy-jump {
+    animation: petHappyJump 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.pet-float-emote {
+    position: absolute;
+    top: -4px;
+    right: 4px;
+    font-size: 0.92rem;
+    pointer-events: none;
+    user-select: none;
+    z-index: 5;
+    animation: petFloatEmote 2.3s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .takkie-avatar,
+    .siep-avatar,
+    .pet-happy-jump,
+    .pet-float-emote {
+        animation: none !important;
+    }
 }
 
 .speech-bubble {
