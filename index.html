@@ -14,15 +14,15 @@
     <!-- Supabase Config -->
     <script src="supabase-config.js"></script>
 
-    <link rel="stylesheet" href="css/base.css?v=20261122m">
-    <link rel="stylesheet" href="css/auth.css?v=20261122m">
-    <link rel="stylesheet" href="css/layout.css?v=20261122m">
-    <link rel="stylesheet" href="css/pets.css?v=20261122m">
-    <link rel="stylesheet" href="css/widgets.css?v=20261122m">
-    <link rel="stylesheet" href="css/cards.css?v=20261122m">
-    <link rel="stylesheet" href="css/components.css?v=20261122m">
-    <link rel="stylesheet" href="css/team.css?v=20261122m">
-    <link rel="stylesheet" href="css/history.css?v=20261122m">
+    <link rel="stylesheet" href="css/base.css?v=20261124a">
+    <link rel="stylesheet" href="css/auth.css?v=20261124a">
+    <link rel="stylesheet" href="css/layout.css?v=20261124a">
+    <link rel="stylesheet" href="css/pets.css?v=20261124a">
+    <link rel="stylesheet" href="css/widgets.css?v=20261124a">
+    <link rel="stylesheet" href="css/cards.css?v=20261124a">
+    <link rel="stylesheet" href="css/components.css?v=20261124a">
+    <link rel="stylesheet" href="css/team.css?v=20261124a">
+    <link rel="stylesheet" href="css/history.css?v=20261124a">
 </head>
 <body>
 
@@ -316,7 +316,8 @@
                     </select>
 
                     <label>Wat heb je gegeten?</label>
-                    <input type="text" id="new-meal-name" placeholder="Bijv. gebakken eieren met spek en melk">
+                    <input type="text" id="new-meal-name" autocomplete="off" placeholder="Bijv. gebakken eieren met spek en melk">
+                    <div id="meal-nutrition-autocomplete" class="nutrition-autocomplete" style="display: none;"></div>
 
                     <button type="button" class="btn btn-primary" id="btn-autofill-meal" style="width: 100%; margin-bottom: 14px;">🐾 Volgende stap →</button>
 
@@ -417,7 +418,8 @@
                 <!-- STAP 1: WAT HEB JE GEDRONKEN? -->
                 <div id="drink-wizard-step-1">
                     <label>Wat heb je gedronken?</label>
-                    <input type="text" id="drink-name" placeholder="Bijv. droge witte wijn, cappuccino met room">
+                    <input type="text" id="drink-name" autocomplete="off" placeholder="Bijv. droge witte wijn, cappuccino met room">
+                    <div id="drink-nutrition-autocomplete" class="nutrition-autocomplete" style="display: none;"></div>
 
                     <button type="button" class="btn btn-primary" id="btn-autofill-drink" style="width: 100%; background-color: var(--accent-yellow); margin-bottom: 14px;">🐾 Volgende stap →</button>
 
@@ -498,7 +500,8 @@
                 </select>
 
                 <label>Naam Maaltijd of Drank:</label>
-                <input type="text" id="edit-meal-name" placeholder="Naam van hapje of drankje">
+                <input type="text" id="edit-meal-name" autocomplete="off" placeholder="Naam van hapje of drankje">
+                <div id="edit-meal-nutrition-autocomplete" class="nutrition-autocomplete" style="display: none;"></div>
                 <button class="btn btn-auto" id="btn-autofill-edit-meal" style="width: 100%;">🤖 Analyseer opnieuw met AI</button>
                 <div id="ai-edit-meal-feedback" style="display: none; font-size: 0.8rem; background: white; border: 2px solid var(--border-color); border-radius: 10px; padding: 8px; margin-bottom: 12px;"></div>
 
@@ -748,21 +751,22 @@
     </div>
 </div>
 
-<script src="js/state.js?v=20261122m"></script>
-<script src="js/quotes.js?v=20261122m"></script>
-<script src="js/utils.js?v=20261122m"></script>
-<script src="js/auth.js?v=20261122m"></script>
-<script src="js/data.js?v=20261122m"></script>
-<script src="js/meals.js?v=20261122m"></script>
-<script src="js/favorites.js?v=20261122m"></script>
-<script src="js/ai.js?v=20261122m"></script>
-<script src="js/recipes.js?v=20261122m"></script>
-<script src="js/team.js?v=20261122m"></script>
-<script src="js/chat.js?v=20261122m"></script>
-<script src="js/notifications.js?v=20261122m"></script>
-<script src="js/history.js?v=20261122m"></script>
-<script src="js/ui.js?v=20261122m"></script>
-<script src="js/main.js?v=20261122m"></script>
+<script src="js/state.js?v=20261124a"></script>
+<script src="js/quotes.js?v=20261124a"></script>
+<script src="js/utils.js?v=20261124a"></script>
+<script src="js/auth.js?v=20261124a"></script>
+<script src="js/data.js?v=20261124a"></script>
+<script src="js/meals.js?v=20261124a"></script>
+<script src="js/favorites.js?v=20261124a"></script>
+<script src="js/nutrition-db.js?v=20261124a"></script>
+<script src="js/ai.js?v=20261124a"></script>
+<script src="js/recipes.js?v=20261124a"></script>
+<script src="js/team.js?v=20261124a"></script>
+<script src="js/chat.js?v=20261124a"></script>
+<script src="js/notifications.js?v=20261124a"></script>
+<script src="js/history.js?v=20261124a"></script>
+<script src="js/ui.js?v=20261124a"></script>
+<script src="js/main.js?v=20261124a"></script>
 
 </body>
 </html>

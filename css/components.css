@@ -456,3 +456,102 @@ input[type="range"] { accent-color: var(--takkie-red); cursor: pointer; }
 }
 
 /* TEAMS & HUISKAMER CHAT STYLING */
+/* Directe Autocomplete voor RIVM NEVO, Open Food Facts & Productendatabase */
+.nutrition-autocomplete {
+    margin-top: -6px;
+    margin-bottom: 12px;
+}
+.nutrition-ac-box {
+    background: #FFFDF9;
+    border: 3px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 3px 3px 0px var(--border-color);
+    overflow: hidden;
+    max-height: 270px;
+    overflow-y: auto;
+}
+.nutrition-ac-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: white;
+    border: none;
+    border-bottom: 2px dashed #E5E5E5;
+    padding: 8px 10px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.12s;
+}
+.nutrition-ac-item:hover,
+.nutrition-ac-item:active {
+    background-color: #FFF9E6;
+}
+.nutrition-ac-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+.nutrition-ac-name {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+.nutrition-ac-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: var(--bubble-bg);
+    border: 1.5px solid var(--border-color);
+    border-radius: 999px;
+    padding: 1px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.nutrition-ac-sub {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.74rem;
+    color: #555;
+}
+.nutrition-ac-macros {
+    color: var(--text-main);
+    white-space: nowrap;
+}
+.nutrition-ac-empty {
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    color: #555;
+    background: #FFFDF9;
+    border-bottom: 2px dashed #E5E5E5;
+}
+.nutrition-ac-off-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: var(--accent-yellow);
+    border: none;
+    padding: 9px 10px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-main);
+    cursor: pointer;
+}
+.nutrition-ac-off-btn:hover,
+.nutrition-ac-off-btn:active {
+    background: #FFE082;
+}
+.nutrition-ac-off-status {
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #444;
+    background: #FFF9E6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}

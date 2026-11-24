@@ -23,7 +23,7 @@ const BASELINE_FILE = path.join(__dirname, 'baseline-symbols.json');
 
 const JS_ORDER = [
     'js/state.js', 'js/quotes.js', 'js/utils.js', 'js/auth.js', 'js/data.js', 'js/meals.js',
-    'js/favorites.js', 'js/ai.js', 'js/recipes.js', 'js/team.js', 'js/chat.js',
+    'js/favorites.js', 'js/nutrition-db.js', 'js/ai.js', 'js/recipes.js', 'js/team.js', 'js/chat.js',
     'js/notifications.js', 'js/history.js', 'js/ui.js', 'js/main.js'
 ];
 // Nieuwe functies die bewust zijn toegevoegd en dus niet in de baseline staan

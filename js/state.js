@@ -21,6 +21,7 @@ let appState = {
     returnToHistoryDay: false,
     recipes: [],
     savedItems: [],
+    foodProducts: [],
     goals: { carbs: 25, fat: 110, protein: 90, kcal: 2000 },
     points: 0,
     streak: 0,

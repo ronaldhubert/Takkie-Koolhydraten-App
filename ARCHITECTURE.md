@@ -33,14 +33,15 @@ Alle bestanden in `js/` zijn **klassieke scripts**. Ze delen één globale scope
 | 5 | `js/data.js` | Gebruikersdata laden en opslaan, streak, punten, water, `saveMeal`, `saveRecipe`, profieldoelen |
 | 6 | `js/meals.js` | Gelogde maaltijd/drank wijzigen en verwijderen; formulieren om nieuwe te loggen (`initMealEvents`, `initLogEvents`) |
 | 7 | `js/favorites.js` | Favorieten (`saved_items`) beheren (`initFavoriteEvents`) |
-| 8 | `js/ai.js` | Gemini AI: interactieve dialoog voor macro-analyse (met vervolgvragen & snelknoppen voor gram, ml, plakjes, aantal), receptgeneratie, lokale fallback |
-| 9 | `js/recipes.js` | Receptenboek: receptpagina, bewerken, verwijderen, "Bedenk een recept" (`initRecipeEvents`) |
-| 10 | `js/team.js` | Clubje: aanmaken, joinen, verlaten, ledenstatus, co-op dashboard, clubje-tabblad (`initTeamEvents`) |
-| 11 | `js/chat.js` | Huiskamer-chat: berichten, privéberichten, SOS, gedeelde recepten, realtime (`initChatEvents`) |
-| 12 | `js/notifications.js` | Meldingen en Web Push (`initNotificationEvents`) |
-| 13 | `js/history.js` | Logboek met grafieken: weken, dagen, dagdetails |
-| 14 | `js/ui.js` | Tabbladen (`switchTab`), quotes tonen, level, sliders, `renderApp` (`initNavEvents`, `initProfileEvents`) |
-| 15 | `js/main.js` | **Laatste.** Roept alle `init...Events()` aan op `DOMContentLoaded` en daarna `checkUser()` |
+| 8 | `js/nutrition-db.js` | Nederlandse voedingsdatabase (RIVM NEVO-online referentie, Open Food Facts zoeker, zelfgroeiende Supabase `food_products` tabel & directe autocomplete, `initNutritionSearchEvents`) |
+| 9 | `js/ai.js` | Gemini AI: interactieve dialoog voor macro-analyse (verankerd op NEVO-cijfers, met vervolgvragen & snelknoppen voor gram, ml, plakjes, aantal), receptgeneratie, lokale fallback |
+| 10 | `js/recipes.js` | Receptenboek: receptpagina, bewerken, verwijderen, "Bedenk een recept" (`initRecipeEvents`) |
+| 11 | `js/team.js` | Clubje: aanmaken, joinen, verlaten, ledenstatus, co-op dashboard, clubje-tabblad (`initTeamEvents`) |
+| 12 | `js/chat.js` | Huiskamer-chat: berichten, privéberichten, SOS, gedeelde recepten, realtime (`initChatEvents`) |
+| 13 | `js/notifications.js` | Meldingen en Web Push (`initNotificationEvents`) |
+| 14 | `js/history.js` | Logboek met grafieken: weken, dagen, dagdetails |
+| 15 | `js/ui.js` | Tabbladen (`switchTab`), quotes tonen, level, sliders, `renderApp` (`initNavEvents`, `initProfileEvents`) |
+| 16 | `js/main.js` | **Laatste.** Roept alle `init...Events()` aan op `DOMContentLoaded` en daarna `checkUser()` |
 
 Functies worden pas tijdens het gebruik aangeroepen, dus de volgorde doet er vooral toe voor top-level `let`/`const` en voor `main.js`, dat als laatste moet staan.
 
@@ -104,8 +105,9 @@ Elk tabblad is een `<div id="tab-...">`. `switchTab('naam')` in `js/ui.js` toont
 | `supabase-direct-messages.sql` | Kolom `recipient_id` voor privéberichten en de bijbehorende rechten |
 | `supabase-push-setup.sql` | Tabel `push_subscriptions` |
 | `supabase-push-trigger.sql` | Trigger die de Edge Function `send-push` aanroept bij een nieuw bericht |
+| `supabase-food-products.sql` | Zelfgroeiende tabel `food_products` voor gedeelde producten uit NEVO, Open Food Facts en Gemini AI |
 
-Tabellen die de app gebruikt: `profiles`, `daily_logs`, `meals`, `recipes`, `saved_items`, `app_settings`, `teams`, `team_messages`, `push_subscriptions`. Een wijziging aan de database vraagt altijd een bijbehorend `supabase-*.sql`-bestand in de root, dat de gebruiker zelf in de Supabase SQL Editor uitvoert.
+Tabellen die de app gebruikt: `profiles`, `daily_logs`, `meals`, `recipes`, `saved_items`, `food_products`, `app_settings`, `teams`, `team_messages`, `push_subscriptions`. Een wijziging aan de database vraagt altijd een bijbehorend `supabase-*.sql`-bestand in de root, dat de gebruiker zelf in de Supabase SQL Editor uitvoert.
 
 ## Controleren
 

@@ -45,6 +45,12 @@ const UNIT_SELECT_OPTIONS = [
 ];
 
 function localFallbackNutrition(inputName) {
+    if (typeof tryCalculateFromNevoLocal === 'function') {
+        const nevoRes = tryCalculateFromNevoLocal(inputName, [], 'meal');
+        if (nevoRes) {
+            return { carbs: nevoRes.carbs, fat: nevoRes.fat, protein: nevoRes.protein, explanation: nevoRes.explanation };
+        }
+    }
     const name = inputName.toLowerCase();
     let c = 0, f = 0, p = 0;
     if (name.includes('wijn') || name.includes('alcohol')) { c = 3; f = 0; p = 0; }
@@ -220,8 +226,11 @@ async function assessOrCalculateWithAI(description, contextType, forceWizardQues
     }
 
     const isDrink = contextType === 'drink';
+    const nevoRefBlock = (typeof buildNevoReferencePromptBlock === 'function')
+        ? buildNevoReferencePromptBlock(description, contextType)
+        : '';
     const prompt = `Je bent de keto-voedingsexpert van Takkie & Siep.
-Invoer (${isDrink ? 'drankje' : 'maaltijd'}): "${description}"
+Invoer (${isDrink ? 'drankje' : 'maaltijd'}): "${description}"${nevoRefBlock}
 
 TAAK:
 ${forceWizardQuestions
@@ -238,7 +247,7 @@ EENHEDEN (bij "complete": false):
 
 Geef ALLEEN JSON terug:
 Bij "complete": true:
-{"complete":true,"carbs":0,"fat":0,"protein":0,"refinedName":"...","explanation":"Korte warme Takkie & Siep toelichting (1-2 zinnen)"}
+{"complete":true,"carbs":0,"fat":0,"protein":0,"refinedName":"...","explanation":"Korte warme Takkie & Siep toelichting (1-2 zinnen, noem NEVO/Voedingscentrum indien gebruikt)"}
 Bij "complete": false:
 {"complete":false,"questions":[{"id":"q1","subject":"🥚 Onderdeel","question":"Hoeveel ...?","unit":"stuks","options":["..."],"defaultOption":"..."}]}`;
 
@@ -261,10 +270,13 @@ async function calculateNutritionDirect(description, answersList, contextType) {
     const extraDetails = normAnswers.length > 0
         ? `\nHoeveelheden: ${normAnswers.join(', ')}`
         : '';
+    const nevoRefBlock = (typeof buildNevoReferencePromptBlock === 'function')
+        ? buildNevoReferencePromptBlock(`${description} ${normAnswers.join(' ')}`, contextType)
+        : '';
 
     const prompt = `Je bent de keto-voedingsexpert van Takkie & Siep.
 Bereken netto koolhydraten (carbs), vetten (fat) en eiwitten (protein) in hele grammen voor dit ${isDrink ? 'drankje' : 'gerecht'}:
-"${description}"${extraDetails}
+"${description}"${extraDetails}${nevoRefBlock}
 
 Geef ALLEEN JSON terug:
 {
@@ -272,7 +284,7 @@ Geef ALLEEN JSON terug:
   "fat": <geheel getal in g>,
   "protein": <geheel getal in g>,
   "refinedName": "<natuurlijke Nederlandse naam inclusief hoeveelheden, bijv. '3 gebakken eieren met 2 plakjes spek en 1 glas melk'>",
-  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep>"
+  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep (vermeld RIVM NEVO / Voedingscentrum als referentiecijfers gebruikt zijn)>"
 }`;
 
     const reqPromise = callGeminiJson(prompt).catch(err => {
@@ -437,7 +449,7 @@ function renderClarifyingDialog(fbEl, questions, onConfirmAnswers, onSkip, dialo
     }
 }
 
-function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, nameInputEl) {
+function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, nameInputEl, contextType = 'meal') {
     const c = Math.max(0, Math.round(Number(result.carbs) || 0));
     const f = Math.max(0, Math.round(Number(result.fat) || 0));
     const p = Math.max(0, Math.round(Number(result.protein) || 0));
@@ -446,8 +458,29 @@ function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, name
     if (document.getElementById(fatId)) document.getElementById(fatId).value = f;
     if (document.getElementById(proteinId)) document.getElementById(proteinId).value = p;
 
-    if (nameInputEl && result.refinedName && typeof result.refinedName === 'string' && result.refinedName.trim()) {
-        nameInputEl.value = result.refinedName.trim();
+    const finalName = (result.refinedName && typeof result.refinedName === 'string' && result.refinedName.trim())
+        ? result.refinedName.trim()
+        : (nameInputEl ? nameInputEl.value.trim() : '');
+
+    if (nameInputEl && finalName) {
+        nameInputEl.value = finalName;
+    }
+
+    if (finalName && typeof saveProductToDatabase === 'function') {
+        saveProductToDatabase({
+            name: finalName,
+            category: contextType || 'meal',
+            source: result.source || 'ai',
+            unit: 'portie',
+            portion_label: 'Berekende portie',
+            portion_grams: 100,
+            carbs_100g: c,
+            fat_100g: f,
+            protein_100g: p,
+            carbs_portion: c,
+            fat_portion: f,
+            protein_portion: p
+        });
     }
 
     const explText = result.explanation || `Berekend op ${c}g KH, ${f}g vet en ${p}g eiwit.`;
@@ -455,7 +488,7 @@ function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, name
         fbEl.style.display = 'block';
         fbEl.innerHTML = `✨ <b>AI Analyse:</b> ${escapeHtml(explText)}`;
     }
-    return { carbs: c, fat: f, protein: p, refinedName: result.refinedName || '', explanation: explText };
+    return { carbs: c, fat: f, protein: p, refinedName: finalName, explanation: explText };
 }
 
 function applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl) {
@@ -464,13 +497,17 @@ function applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl) {
     if (document.getElementById(fatId)) document.getElementById(fatId).value = fallback.fat;
     if (document.getElementById(proteinId)) document.getElementById(proteinId).value = fallback.protein;
 
-    const explText = (err && err.message === 'NO_API_KEY')
-        ? 'Gemini API-key niet gevonden: snelle standaard schatting ingevuld.'
-        : `Standaard schatting ingevuld voor "${description}".`;
+    const explText = fallback.explanation
+        ? fallback.explanation
+        : ((err && err.message === 'NO_API_KEY')
+            ? 'Gemini API-key niet gevonden: snelle standaard schatting ingevuld.'
+            : `Standaard schatting ingevuld voor "${description}".`);
 
     if (fbEl) {
         fbEl.style.display = 'block';
-        fbEl.innerHTML = `⚠️ <b>Schatting:</b> ${escapeHtml(explText)}`;
+        fbEl.innerHTML = fallback.explanation
+            ? `🏛️ <b>NEVO / Voedingscentrum:</b> ${escapeHtml(explText)}`
+            : `⚠️ <b>Schatting:</b> ${escapeHtml(explText)}`;
     }
     return { carbs: fallback.carbs, fat: fallback.fat, protein: fallback.protein, refinedName: description, explanation: explText };
 }
@@ -521,13 +558,24 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
     const originalBtnHtml = btnEl ? btnEl.innerHTML : '';
 
     // Als elk onderdeel al een duidelijke hoeveelheid heeft (bijv. "1 glas melk" of "2 gebakken eieren met 1 plakje spek"),
-    // sla Stap 2 dan direct over en bereken meteen de samenvatting voor Stap 3!
+    // controleer eerst of alle onderdelen direct lokaal in de RIVM NEVO database zitten (0 ms wachttijd!).
     if (alreadyComplete) {
+        const localNevoDirect = (typeof tryCalculateFromNevoLocal === 'function')
+            ? tryCalculateFromNevoLocal(description, [], contextType)
+            : null;
+        if (localNevoDirect) {
+            const summary = applyNutritionResultToDom(localNevoDirect, carbsId, fatId, proteinId, fbEl, nameInputEl, contextType);
+            if (isWizard && wizardCallbacks.onEnterStep3) {
+                wizardCallbacks.onEnterStep3(summary);
+            }
+            return summary;
+        }
+
         setAiLoadingState(btnEl, fbEl, 'Alles is al duidelijk! Takkie & Siep berekenen direct je samenvatting...');
         let summary;
         try {
             const directResult = await calculateNutritionDirect(description, [], contextType);
-            summary = applyNutritionResultToDom(directResult, carbsId, fatId, proteinId, fbEl, nameInputEl);
+            summary = applyNutritionResultToDom(directResult, carbsId, fatId, proteinId, fbEl, nameInputEl, contextType);
         } catch (errDirect) {
             summary = applyFallbackToDom(description, errDirect, carbsId, fatId, proteinId, fbEl);
         } finally {
@@ -579,8 +627,11 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
                 setAiLoadingState(confirmBtnEl, fbEl, 'Takkie & Siep berekenen nu je samenvatting en macro\'s...');
                 let summary;
                 try {
-                    const finalResult = await calculateNutritionDirect(description, answersList, contextType);
-                    summary = applyNutritionResultToDom(finalResult, carbsId, fatId, proteinId, fbEl, answersList.length > 0 ? nameInputEl : null);
+                    const localNevoFinal = (typeof tryCalculateFromNevoLocal === 'function')
+                        ? tryCalculateFromNevoLocal(description, answersList, contextType)
+                        : null;
+                    const finalResult = localNevoFinal || await calculateNutritionDirect(description, answersList, contextType);
+                    summary = applyNutritionResultToDom(finalResult, carbsId, fatId, proteinId, fbEl, answersList.length > 0 ? nameInputEl : null, contextType);
                 } catch (err2) {
                     const fallbackName = answersList.length > 0 ? `${description} (${answersList.join(', ')})` : description;
                     if (nameInputEl && answersList.length > 0) nameInputEl.value = fallbackName;

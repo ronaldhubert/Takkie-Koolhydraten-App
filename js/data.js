@@ -158,6 +158,10 @@ async function loadUserData() {
         .eq('user_id', currentUser.id);
     appState.savedItems = savedItemsData || [];
 
+    if (typeof loadFoodProductsDatabase === 'function') {
+        await loadFoodProductsDatabase();
+    }
+
     await calculateStreak();
     await loadTeamData();
     renderApp();
