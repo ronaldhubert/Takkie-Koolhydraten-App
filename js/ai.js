@@ -247,7 +247,7 @@ EENHEDEN (bij "complete": false):
 
 Geef ALLEEN JSON terug:
 Bij "complete": true:
-{"complete":true,"carbs":0,"fat":0,"protein":0,"refinedName":"...","explanation":"Korte warme Takkie & Siep toelichting (1-2 zinnen, noem NEVO/Voedingscentrum indien gebruikt)"}
+{"complete":true,"carbs":0,"fat":0,"protein":0,"refinedName":"...","explanation":"Korte warme Takkie & Siep toelichting (1-2 zinnen, noem geen technische termen zoals NEVO)"}
 Bij "complete": false:
 {"complete":false,"questions":[{"id":"q1","subject":"🥚 Onderdeel","question":"Hoeveel ...?","unit":"stuks","options":["..."],"defaultOption":"..."}]}`;
 
@@ -284,7 +284,7 @@ Geef ALLEEN JSON terug:
   "fat": <geheel getal in g>,
   "protein": <geheel getal in g>,
   "refinedName": "<natuurlijke Nederlandse naam inclusief hoeveelheden, bijv. '3 gebakken eieren met 2 plakjes spek en 1 glas melk'>",
-  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep (vermeld RIVM NEVO / Voedingscentrum als referentiecijfers gebruikt zijn)>"
+  "explanation": "<korte, warme Nederlandse toelichting van 1-2 zinnen namens Takkie & Siep (gebruik geen technische termen zoals NEVO)>"
 }`;
 
     const reqPromise = callGeminiJson(prompt).catch(err => {
@@ -486,9 +486,7 @@ function applyNutritionResultToDom(result, carbsId, fatId, proteinId, fbEl, name
     const explText = result.explanation || `Berekend op ${c}g KH, ${f}g vet en ${p}g eiwit.`;
     if (fbEl) {
         fbEl.style.display = 'block';
-        const isDbSource = result.source === 'nevo' || result.source === 'off' || result.source === 'db';
-        const prefixLabel = isDbSource ? '🏛️ <b>Direct uit Database:</b>' : '🤖 <b>AI Analyse:</b>';
-        fbEl.innerHTML = `${prefixLabel} ${escapeHtml(explText)}`;
+        fbEl.innerHTML = `✨ <b>Samenvatting:</b> ${escapeHtml(explText)}`;
     }
     return { carbs: c, fat: f, protein: p, refinedName: finalName, explanation: explText, source: result.source || 'ai' };
 }
@@ -502,13 +500,13 @@ function applyFallbackToDom(description, err, carbsId, fatId, proteinId, fbEl) {
     const explText = fallback.explanation
         ? fallback.explanation
         : ((err && err.message === 'NO_API_KEY')
-            ? 'Gemini API-key niet gevonden: snelle standaard schatting ingevuld.'
+            ? 'Snelle standaard schatting ingevuld.'
             : `Standaard schatting ingevuld voor "${description}".`);
 
     if (fbEl) {
         fbEl.style.display = 'block';
         fbEl.innerHTML = fallback.explanation
-            ? `🏛️ <b>NEVO / Voedingscentrum:</b> ${escapeHtml(explText)}`
+            ? `✅ ${escapeHtml(explText)}`
             : `⚠️ <b>Schatting:</b> ${escapeHtml(explText)}`;
     }
     return { carbs: fallback.carbs, fat: fallback.fat, protein: fallback.protein, refinedName: description, explanation: explText };
@@ -607,9 +605,9 @@ async function analyzeNutritionWithAI(inputName, contextType, carbsId, fatId, pr
         }
     }
 
-    // 2. Alleen als het product NIET in NEVO of Open Food Facts gevonden is, roepen we Gemini AI aan.
+    // 2. Alleen als het product nog niet herkend is, roepen we Gemini AI aan.
     if (!questionsToAsk) {
-        setAiLoadingState(btnEl, fbEl, 'Niet in NEVO/Open Food Facts gevonden — Takkie & Siep vragen hulp aan AI...');
+        setAiLoadingState(btnEl, fbEl, 'Snuffel snuffel... Takkie & Siep splitsen je onderdelen uit...');
         try {
             const assessment = await assessOrCalculateWithAI(description, contextType, forceStep2);
             if (!forceStep2 && assessment && assessment.complete === true) {

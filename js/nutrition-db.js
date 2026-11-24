@@ -288,7 +288,7 @@ function searchNutritionCatalog(query, contextType = 'meal', limit = 7) {
         const pm = getNevoPortionMacros(item);
         results.push({
             source: 'nevo',
-            badge: '🏛️ NEVO / Voedingscentrum',
+            badge: '✅ Bekend product',
             name: item.name,
             category: item.category,
             unit: item.unit,
@@ -318,8 +318,8 @@ function searchNutritionCatalog(query, contextType = 'meal', limit = 7) {
         seenKeys.add(pKey);
 
         const badge = prod.source === 'off'
-            ? '🛒 Open Food Facts (DB)'
-            : (prod.source === 'nevo' ? '🏛️ NEVO (DB)' : '📦 Productendatabase');
+            ? '🛒 Supermarktproduct'
+            : '✅ Bekend product';
 
         results.push({
             source: prod.source || 'db',
@@ -394,7 +394,7 @@ async function searchOpenFoodFactsNL(query, contextType = 'meal', limit = 6) {
 
             items.push({
                 source: 'off',
-                badge: '🛒 Open Food Facts',
+                badge: '🛒 Supermarktproduct',
                 name: fullName,
                 brand,
                 category: contextType,
@@ -465,7 +465,7 @@ function findSingleCatalogMatch(partText, contextType = null) {
     if (nevoItem) {
         return {
             source: 'nevo',
-            badge: '🏛️ NEVO / Voedingscentrum',
+            badge: '✅ Bekend product',
             name: nevoItem.name,
             category: nevoItem.category,
             unit: nevoItem.unit || 'g',
@@ -504,7 +504,6 @@ function findSingleCatalogMatch(partText, contextType = null) {
 
     if (bestDb) {
         const isOff = bestDb.source === 'off';
-        const isNevoDb = bestDb.source === 'nevo';
         const unit = bestDb.unit || (bestDb.category === 'drink' ? 'glazen' : 'g');
         const pGrams = Number(bestDb.portion_grams) || 100;
         const pLabel = bestDb.portion_label || `${pGrams} ${unit === 'glazen' ? 'ml' : 'g'}`;
@@ -514,7 +513,7 @@ function findSingleCatalogMatch(partText, contextType = null) {
 
         return {
             source: bestDb.source || 'db',
-            badge: isOff ? '🛒 Open Food Facts' : (isNevoDb ? '🏛️ NEVO / Voedingscentrum' : '📦 Productendatabase'),
+            badge: isOff ? '🛒 Supermarktproduct' : '✅ Bekend product',
             name: bestDb.name,
             category: bestDb.category || contextType || 'meal',
             unit: unit === 'portie' ? 'g' : unit,
@@ -560,11 +559,11 @@ function tryBuildLocalQuestionsFromCatalog(description, contextType = 'meal') {
             if (foundOpt) defOpt = foundOpt;
         }
 
-        const icon = match.category === 'drink' ? '🥤' : (match.source === 'off' ? '🛒' : '🏛️');
+        const icon = match.category === 'drink' ? '🥤' : (match.source === 'off' ? '🛒' : '🍽️');
         questions.push({
             id: 'q' + idx,
             subject: `${icon} ${match.name}`,
-            question: `Hoeveel (${match.badge})?`,
+            question: `Hoeveel had je hiervan?`,
             unit,
             options: opts,
             defaultOption: defOpt
@@ -712,7 +711,6 @@ function tryCalculateFromNevoLocal(description, answersList = [], contextType = 
     const c = Math.max(0, Math.round(totalC));
     const f = Math.max(0, Math.round(totalF));
     const p = Math.max(0, Math.round(totalP));
-    const badgeSummary = [...badgesUsed].join(' & ');
 
     return {
         carbs: c,
@@ -721,8 +719,8 @@ function tryCalculateFromNevoLocal(description, answersList = [], contextType = 
         refinedName: answersList && answersList.length > 0
             ? `${description} (${answersList.map(a => a.replace(/^[^:]+:\s*/, '')).join(', ')})`
             : description,
-        explanation: `${badgeSummary} — Direct berekend zonder AI voor ${matchedLabels.join(' + ')}.`,
-        source: badgesUsed.has('🛒 Open Food Facts') ? 'off' : 'nevo'
+        explanation: `Voedingswaarden berekend voor ${matchedLabels.join(' + ')}.`,
+        source: badgesUsed.has('🛒 Supermarktproduct') ? 'off' : 'nevo'
     };
 }
 
@@ -761,7 +759,7 @@ function selectAutocompleteProduct(item, config) {
     if (document.getElementById(config.fatId)) document.getElementById(config.fatId).value = item.fatPortion;
     if (document.getElementById(config.proteinId)) document.getElementById(config.proteinId).value = item.proteinPortion;
 
-    const expl = `${item.badge}: ${item.name} (${item.portionLabel}) — ${item.carbsPortion}g KH, ${item.fatPortion}g vet, ${item.proteinPortion}g eiwit.`;
+    const expl = `${item.name} (${item.portionLabel}) — ${item.carbsPortion}g KH, ${item.fatPortion}g vet, ${item.proteinPortion}g eiwit.`;
 
     if (config.mode === 'meal-wizard' && typeof setMealWizardStep === 'function') {
         setMealWizardStep(3, { explanation: expl });
@@ -772,7 +770,7 @@ function selectAutocompleteProduct(item, config) {
         const fbEl = document.getElementById(config.feedbackId);
         if (fbEl) {
             fbEl.style.display = 'block';
-            fbEl.innerHTML = `✨ <b>Bron:</b> ${escapeHtml(expl)}`;
+            fbEl.innerHTML = `✅ ${escapeHtml(expl)}`;
         }
         if (config.mode === 'edit-meal') {
             updateEditMealSourceUI();
@@ -796,13 +794,9 @@ function updateWizardStep1ButtonState(inputId, btnId, contextType) {
     const parts = val.split(/\s*(?:,|\bmet\b|\ben\b|\bplus\b|&)\s*/i).map(s => s.trim()).filter(Boolean);
     const allMatched = parts.length > 0 && parts.every(p => !!findSingleCatalogMatch(p, null));
     if (allMatched) {
-        const firstMatch = findSingleCatalogMatch(parts[0], null);
-        const isOff = firstMatch && firstMatch.source === 'off';
-        btnEl.innerHTML = isOff
-            ? '🛒 Direct uit Open Food Facts (geen AI nodig) →'
-            : '🏛️ Direct uit NEVO-database (geen AI nodig) →';
+        btnEl.innerHTML = '✅ Product herkend — Kies hoeveelheid →';
     } else {
-        btnEl.innerHTML = '🤖 Niet in NEVO/OFF — Analyseer met AI →';
+        btnEl.innerHTML = '🐾 Volgende stap →';
     }
 }
 
@@ -820,12 +814,12 @@ function renderEditScreenCatalogBox(boxId, aiBtnId, nameInputId, carbsId, fatId,
         boxEl.innerHTML = '';
         if (aiBtnEl) {
             aiBtnEl.style.display = 'block';
-            aiBtnEl.innerHTML = '🤖 Niet gevonden in NEVO/OFF — Bereken met AI';
+            aiBtnEl.innerHTML = '🤖 Bereken voedingswaarden';
         }
         return;
     }
 
-    // Product IS herkend in NEVO of Open Food Facts -> AI-analyse is niet meer nodig!
+    // Product is herkend -> AI-knop is niet nodig, toon direct de portie-knoppen
     if (aiBtnEl) {
         aiBtnEl.style.display = 'none';
     }
@@ -842,10 +836,10 @@ function renderEditScreenCatalogBox(boxId, aiBtnId, nameInputId, carbsId, fatId,
     boxEl.innerHTML = `
         <div class="db-recognized-box">
             <div class="db-recognized-header">
-                <span>${escapeHtml(match.badge)} — <b>${escapeHtml(match.name)}</b></span>
-                <span class="db-recognized-tag">✅ Geen AI nodig</span>
+                <span>🍽️ <b>${escapeHtml(match.name)}</b></span>
+                <span class="db-recognized-tag">✅ Herkend</span>
             </div>
-            <div class="db-recognized-sub">Tik op een hoeveelheid om de macro's direct uit de database bij te werken:</div>
+            <div class="db-recognized-sub">Pas snel de hoeveelheid aan:</div>
             <div class="ai-q-chips" style="margin-bottom:0;">${chipsHtml}</div>
         </div>`;
 
@@ -876,7 +870,7 @@ function renderEditScreenCatalogBox(boxId, aiBtnId, nameInputId, carbsId, fatId,
             const fbEl = feedbackId ? document.getElementById(feedbackId) : null;
             if (fbEl) {
                 fbEl.style.display = 'block';
-                fbEl.innerHTML = `${escapeHtml(match.badge)}: Direct bijgewerkt naar <b>${escapeHtml(chosenOpt)}</b> (${c1 * amt}g KH, ${f1 * amt}g vet, ${p1 * amt}g eiwit).`;
+                fbEl.innerHTML = `✅ Bijgewerkt naar <b>${escapeHtml(chosenOpt)}</b> (${c1 * amt}g KH, ${f1 * amt}g vet, ${p1 * amt}g eiwit).`;
             }
         });
     });
@@ -937,20 +931,27 @@ function renderAutocompleteDropdown(dropdownEl, query, items, config, offLoading
     `).join('');
 
     let offSectionHtml = '';
+    const isMultiPartMeal = /\s+(?:met|en|plus|&)\s+|,/i.test(query);
     if (offLoading) {
-        offSectionHtml = `<div class="nutrition-ac-off-status"><span class="ai-spinner"></span> Zoeken bij Open Food Facts (NL supermarkten)...</div>`;
+        offSectionHtml = `<div class="nutrition-ac-off-status"><span class="ai-spinner"></span> Zoeken in supermarktproducten...</div>`;
     } else if (offResults && offResults.length === 0) {
-        offSectionHtml = `<div class="nutrition-ac-off-status">Geen verpakt merkproduct gevonden op Open Food Facts voor "${escapeHtml(query)}".</div>`;
-    } else if (!offResults) {
+        offSectionHtml = `<div class="nutrition-ac-off-status">Geen supermarktproduct gevonden voor "${escapeHtml(query)}".</div>`;
+    } else if (!offResults && !isMultiPartMeal) {
         offSectionHtml = `
             <button type="button" class="nutrition-ac-off-btn" data-ac-off-search="1">
-                🔎 Zoek "${escapeHtml(query)}" als supermarkt-/merkproduct (Open Food Facts)
+                🛒 Zoek "${escapeHtml(query)}" bij supermarkt-/merkproducten
             </button>`;
+    }
+
+    if (!rowsHtml && !offSectionHtml) {
+        dropdownEl.style.display = 'none';
+        dropdownEl.innerHTML = '';
+        return;
     }
 
     dropdownEl.innerHTML = `
         <div class="nutrition-ac-box">
-            ${rowsHtml || '<div class="nutrition-ac-empty">Geen directe NEVO-match — druk op <b>Volgende stap</b> voor AI-analyse of zoek bij Open Food Facts:</div>'}
+            ${rowsHtml}
             ${offSectionHtml}
         </div>`;
     dropdownEl.style.display = 'block';
